@@ -1,0 +1,11 @@
+nutanix_username    = "<PC User>"
+nutanix_password    = "<PC Password>"
+nutanix_insecure    = false
+nutanix_endpoint    = "<PC Endpoint>"
+nutanix_port = 9440
+nutanix_cluster = "<my-cluster-name>"
+nutanix_subnet = "<subnet-name>"
+centos_iso_image_name = "<name of a centos 7/8 iso from the Nutanix image library>"
+centos_disk_image_name =  "<name of a centos 7/8 qcow2 cloud image from the Nutanix image library>"
+windows_2016_iso_image_name = "<name of a windows iso from the Nutanix image library>"
+virtio_iso_image_name = "<name of VirtIO tools iso from the Nutanix image library>"
