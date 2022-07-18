@@ -21,7 +21,7 @@ type Driver interface {
 	//GetImage(string) (*nutanixImage, error)
 	GetHost(string) (*nutanixHost, error)
 	PowerOff(string) error
-	UploadImage(string) (*nutanixImage, error)
+	UploadImage(string, VmConfig) (*nutanixImage, error)
 	DeleteImage(string) error
 	SaveVMDisk(string, string) (*nutanixImage, error)
 	WaitForShutdown(string, <-chan struct{}) bool
@@ -321,7 +321,7 @@ func (d *NutanixDriver) CreateRequest(vm VmConfig) (*v3.VMIntentInput, error) {
 	} else if vm.ClusterName != "" {
 		cluster, err = findClusterByName(conn, vm.ClusterName)
 		if err != nil {
-			return nil, fmt.Errorf("subnet not found %s", vm.ClusterName)
+			return nil, fmt.Errorf("cluster not found %s", vm.ClusterName)
 		}
 	}
 
@@ -423,8 +423,8 @@ func (d *NutanixDriver) Delete(vmUUID string) error {
 	return nil
 }
 
-//UploadImage (string) (*nutanixImage, error)
-func (d *NutanixDriver) UploadImage(imagePath string) (*nutanixImage, error) {
+//UploadImage (string, VmConfig) (*nutanixImage, error)
+func (d *NutanixDriver) UploadImage(imagePath string, vm VmConfig) (*nutanixImage, error) {
 	configCreds := client.Credentials{
 		URL:      fmt.Sprintf("%s:%d", d.ClusterConfig.Endpoint, d.ClusterConfig.Port),
 		Endpoint: d.ClusterConfig.Endpoint,
@@ -441,10 +441,28 @@ func (d *NutanixDriver) UploadImage(imagePath string) (*nutanixImage, error) {
 
 	_, file := path.Split(imagePath)
 
+	cluster := &v3.ClusterIntentResponse{}
+	if vm.ClusterUUID != "" {
+		cluster, err = conn.V3.GetCluster(vm.ClusterUUID)
+		if err != nil {
+			return nil, fmt.Errorf("cluster not found %s", vm.ClusterUUID)
+		}
+	} else if vm.ClusterName != "" {
+		cluster, err = findClusterByName(conn, vm.ClusterName)
+		if err != nil {
+			return nil, fmt.Errorf("cluster not found %s", vm.ClusterName)
+		}
+	}
+
+	refvalue := BuildReferenceValue(*cluster.Metadata.UUID, "cluster")
+	InitialPlacementRef := []*v3.ReferenceValues{refvalue}
 	req := &v3.ImageIntentInput{
 		Spec: &v3.Image{
-			Name:      &file,
-			Resources: &v3.ImageResources{},
+			Name: &file,
+			Resources: &v3.ImageResources{
+				ImageType:               StringPtr("ISO_IMAGE"),
+				InitialPlacementRefList: InitialPlacementRef,
+			},
 		},
 		Metadata: &v3.Metadata{
 			Kind: StringPtr("image"),
@@ -460,7 +478,7 @@ func (d *NutanixDriver) UploadImage(imagePath string) (*nutanixImage, error) {
 	for {
 		running, err := conn.V3.GetImage(*image.Metadata.UUID)
 		if err != nil {
-			log.Printf("Error while image create, %s", err.Error())
+			log.Printf("Error while retrieve image create status, %s", err.Error())
 			return nil, err
 		}
 		log.Printf("Creating Image: %s", *running.Status.State)
@@ -478,7 +496,7 @@ func (d *NutanixDriver) UploadImage(imagePath string) (*nutanixImage, error) {
 	for {
 		running, err := conn.V3.GetImage(*image.Metadata.UUID)
 		if err != nil {
-			log.Printf("Error while upload, %s", err.Error())
+			log.Printf("Error while retrieve upload status, %s", err.Error())
 			return nil, err
 		}
 		if *running.Status.State == "COMPLETE" {
@@ -502,10 +520,12 @@ func (d *NutanixDriver) DeleteImage(imageUUID string) error {
 
 	conn, err := v3.NewV3Client(configCreds)
 	if err != nil {
+		log.Printf("Error while creating new client connection, %s", err.Error())
 		return err
 	}
 	_, err = conn.V3.DeleteImage(imageUUID)
 	if err != nil {
+		log.Printf("Error while deleting image, %s", err.Error())
 		return err
 	}
 	return nil
@@ -617,6 +637,7 @@ func (d *NutanixDriver) SaveVMDisk(diskUUID string, imageName string) (*nutanixI
 	if err != nil {
 		return nil, err
 	}
+
 	req := &v3.ImageIntentInput{
 		Spec: &v3.Image{
 			Name: &imageName,

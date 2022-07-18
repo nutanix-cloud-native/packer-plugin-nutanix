@@ -15,3 +15,11 @@ func BuildReference(uuid, kind string) *v3.Reference {
 		UUID: StringPtr(uuid),
 	}
 }
+
+// BuildReferenceValue create referencevalue from defined object
+func BuildReferenceValue(uuid, kind string) *v3.ReferenceValues {
+	return &v3.ReferenceValues{
+		Kind: kind,
+		UUID: uuid,
+	}
+}
