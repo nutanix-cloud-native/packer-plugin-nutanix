@@ -19,7 +19,7 @@ func (s *stepCopyImage) Run(ctx context.Context, state multistep.StateBag) multi
 	d := state.Get("driver").(Driver)
 	vm, _ := d.GetVM(vmUUID)
 
-	ui.Say("Saving VM for uuid: " + vmUUID)
+	ui.Say("Creating image for uuid: " + vmUUID)
 
 	ui.Message("Initiatiating save VM DISK task.")
 	// Choose disk to replicate - looking for first "DISK"
@@ -46,7 +46,7 @@ func (s *stepCopyImage) Run(ctx context.Context, state multistep.StateBag) multi
 		state.Put("error", err)
 		return multistep.ActionHalt
 	}
-	ui.Message("Successfully saved vm disk: " + *imageResponse.image.Metadata.UUID)
+	ui.Message("Successfully created image: " + *imageResponse.image.Metadata.UUID)
 	state.Put("vm_disk_uuid", (*imageResponse.image.Metadata.UUID))
 	return multistep.ActionContinue
 }

@@ -21,12 +21,14 @@ func (s *stepBuildVM) Run(ctx context.Context, state multistep.StateBag) multist
 	config := state.Get("config").(*Config)
 	
 	// Determine if we even have a cd_files disk to attach
+	log.Println("Check for temporary iso-disks to attach")
 	if cdPathRaw, ok := state.GetOk("cd_path"); ok {
 		cdFilesPath := cdPathRaw.(string)
-		log.Println("cdrom found, "+cdFilesPath)
-		cdfilesImage, err := d.UploadImage(cdFilesPath)
+		log.Println("temporary iso found, "+cdFilesPath)
+		cdfilesImage, err := d.UploadImage(cdFilesPath, config.VmConfig)
 		if err != nil {
-			ui.Error("Error uploading image"+ err.Error())
+			ui.Error("Error uploading temporary image:")
+			ui.Error(err.Error())
 			return multistep.ActionHalt
 		}
 		ui.Say("Temporary ISO uploaded")
@@ -37,7 +39,7 @@ func (s *stepBuildVM) Run(ctx context.Context, state multistep.StateBag) multist
 		}
 		config.VmConfig.VmDisks=append(config.VmConfig.VmDisks,temp_cd)
 	} else {
-		log.Println("No cdrom, not attaching.")
+		log.Println("No temporary iso, not attaching.")
 	}
 
 	//CreateRequest()
