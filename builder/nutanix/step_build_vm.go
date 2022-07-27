@@ -3,6 +3,7 @@ package nutanix
 import (
 	"context"
 	"log"
+
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	"github.com/hashicorp/packer-plugin-sdk/packer"
 )
@@ -19,12 +20,12 @@ func (s *stepBuildVM) Run(ctx context.Context, state multistep.StateBag) multist
 	ui.Say("Creating Packer Builder VM on Nutanix Cluster.")
 	d := state.Get("driver").(Driver)
 	config := state.Get("config").(*Config)
-	
+
 	// Determine if we even have a cd_files disk to attach
 	log.Println("Check for temporary iso-disks to attach")
 	if cdPathRaw, ok := state.GetOk("cd_path"); ok {
 		cdFilesPath := cdPathRaw.(string)
-		log.Println("temporary iso found, "+cdFilesPath)
+		log.Println("temporary iso found, " + cdFilesPath)
 		cdfilesImage, err := d.UploadImage(cdFilesPath, config.VmConfig)
 		if err != nil {
 			ui.Error("Error uploading temporary image:")
@@ -33,11 +34,11 @@ func (s *stepBuildVM) Run(ctx context.Context, state multistep.StateBag) multist
 		}
 		ui.Say("Temporary ISO uploaded")
 		state.Put("imageUUID", *cdfilesImage.image.Metadata.UUID)
-		temp_cd:= VmDisk{
-			ImageType: "ISO_IMAGE",
+		temp_cd := VmDisk{
+			ImageType:       "ISO_IMAGE",
 			SourceImageUUID: *cdfilesImage.image.Metadata.UUID,
 		}
-		config.VmConfig.VmDisks=append(config.VmConfig.VmDisks,temp_cd)
+		config.VmConfig.VmDisks = append(config.VmConfig.VmDisks, temp_cd)
 	} else {
 		log.Println("No temporary iso, not attaching.")
 	}
@@ -45,10 +46,10 @@ func (s *stepBuildVM) Run(ctx context.Context, state multistep.StateBag) multist
 	//CreateRequest()
 	vmRequest, err := d.CreateRequest(config.VmConfig)
 	if err != nil {
-		ui.Error("Error creating Request: "+ err.Error())
+		ui.Error("Error creating Request: " + err.Error())
 		return multistep.ActionHalt
 	}
-	vmInstance, err:= d.Create(vmRequest)
+	vmInstance, err := d.Create(vmRequest)
 
 	if err != nil {
 		ui.Error("Unable to create Nutanix VM request: " + err.Error())
@@ -59,7 +60,7 @@ func (s *stepBuildVM) Run(ctx context.Context, state multistep.StateBag) multist
 	state.Put("vmUUID", *vmInstance.nutanix.Metadata.UUID)
 	state.Put("ip", vmInstance.Addresses()[0])
 	ui.Say("IP for Nutanix device: " + vmInstance.Addresses()[0])
-			
+
 	return multistep.ActionContinue
 }
 
@@ -77,6 +78,6 @@ func (s *stepBuildVM) Cleanup(state multistep.StateBag) {
 		if vmUUID != "" {
 			ui.Say("Cleaning up Nutanix VM.")
 
-			}
+		}
 	}
 }
