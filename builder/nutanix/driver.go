@@ -212,7 +212,7 @@ func (d *NutanixDriver) CreateRequest(vm VmConfig) (*v3.VMIntentInput, error) {
 			if disk.SourceImageUUID != "" {
 				image, err = findImageByUUID(conn, disk.SourceImageUUID)
 				if err != nil {
-					return nil, fmt.Errorf("error while findImageByUUID, Error %s" , err.Error())
+					return nil, fmt.Errorf("error while findImageByUUID, Error %s", err.Error())
 				}
 			} else if disk.SourceImageName != "" {
 				image, err = findImageByName(conn, disk.SourceImageName)
@@ -373,13 +373,13 @@ func (d *NutanixDriver) Create(req *v3.VMIntentInput) (*nutanixInstance, error) 
 
 	log.Printf("waiting for vm (%s) to create: %s", uuid, taskUUID)
 
-	vm := &v3.VMIntentResponse{}
+	var vm *v3.VMIntentResponse
 	for {
 		vm, err = conn.V3.GetVM(uuid)
 		if err == nil {
 			if *vm.Status.State == "COMPLETE" {
 				log.Printf("vm created successfully: " + *vm.Status.State)
-				break				
+				break
 			} else if *vm.Status.State == "ERROR" {
 				var errTxt string
 				for i := 0; i < len(vm.Status.MessageList); i++ {
@@ -411,7 +411,7 @@ func (d *NutanixDriver) Create(req *v3.VMIntentInput) (*nutanixInstance, error) 
 		log.Printf("VM (%s) configured with ip address %s", uuid, IPAddress)
 		return &nutanixInstance{nutanix: *vm}, err
 	}
-	return nil, fmt.Errorf("not able to get ip address for vm (%s)",uuid)
+	return nil, fmt.Errorf("not able to get ip address for vm (%s)", uuid)
 }
 
 func (d *NutanixDriver) Delete(vmUUID string) error {
