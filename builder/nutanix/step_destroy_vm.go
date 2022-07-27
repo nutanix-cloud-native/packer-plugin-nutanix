@@ -3,7 +3,7 @@ package nutanix
 import (
 	"context"
 	//"log"
-	
+
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	"github.com/hashicorp/packer-plugin-sdk/packer"
 )
@@ -22,18 +22,18 @@ func (s *stepDestroyVM) Run(ctx context.Context, state multistep.StateBag) multi
 		if err != nil {
 			ui.Error("An error occurred while deleting temporary image")
 			return multistep.ActionHalt
-		} else  {
+		} else {
 			ui.Say("Temporary Image successfully deleted.")
-		} 
+		}
 	}
 
 	err := d.Delete(vmUUID)
 	if err != nil {
 		ui.Error("An error occurred destroying the VM.")
 		return multistep.ActionHalt
-	} else  {
+	} else {
 		ui.Say("Nutanix VM has been successfully deleted.")
-	} 
+	}
 	return multistep.ActionContinue
 }
 
