@@ -139,8 +139,8 @@ func findImageByName(conn *v3.Client, name string) (*v3.ImageIntentResponse, err
 
 func (d *nutanixInstance) Addresses() []string {
 	var addresses []string
-	if len(d.nutanix.Spec.Resources.NicList) > 0 {
-		for _, n := range d.nutanix.Spec.Resources.NicList {
+	if len(d.nutanix.Status.Resources.NicList) > 0 {
+		for _, n := range d.nutanix.Status.Resources.NicList {
 			addresses = append(addresses, *n.IPEndpointList[0].IP)
 		}
 	}
@@ -373,12 +373,13 @@ func (d *NutanixDriver) Create(req *v3.VMIntentInput) (*nutanixInstance, error) 
 
 	log.Printf("waiting for vm (%s) to create: %s", uuid, taskUUID)
 
+	vm := &v3.VMIntentResponse{}
 	for {
-		vm, err := conn.V3.GetVM(uuid)
+		vm, err = conn.V3.GetVM(uuid)
 		if err == nil {
 			if *vm.Status.State == "COMPLETE" {
-				return &nutanixInstance{nutanix: *vm}, err
-
+				log.Printf("vm created successfully: " + *vm.Status.State)
+				break				
 			} else if *vm.Status.State == "ERROR" {
 				var errTxt string
 				for i := 0; i < len(vm.Status.MessageList); i++ {
@@ -398,6 +399,19 @@ func (d *NutanixDriver) Create(req *v3.VMIntentInput) (*nutanixInstance, error) 
 		}
 	}
 
+	// Wait for the VM obtain an IP address
+	for i := 0; i < 60; i++ {
+		vm, err = conn.V3.GetVM(uuid)
+		if err != nil || len(vm.Status.Resources.NicList[0].IPEndpointList) == (0) {
+			log.Printf("Waiting VM (%s) ip configuration", uuid)
+			<-time.After(5 * time.Second)
+			continue
+		}
+		IPAddress := *vm.Status.Resources.NicList[0].IPEndpointList[0].IP
+		log.Printf("VM (%s) configured with ip address %s", uuid, IPAddress)
+		return &nutanixInstance{nutanix: *vm}, err
+	}
+	return nil, fmt.Errorf("not able to get ip address for vm (%s)",uuid)
 }
 
 func (d *NutanixDriver) Delete(vmUUID string) error {
