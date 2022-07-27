@@ -2,6 +2,19 @@
 The `Nutanix` multi-component plugin can be used with HashiCorp [Packer](https://www.packer.io)
 to create custom images. For the full list of available features for this plugin see [docs](docs).
 
+---
+
+[![Go Report Card](https://goreportcard.com/badge/github.com/nutanix-cloud-native/packer-plugin-nutanix)](https://goreportcard.com/report/github.com/nutanix-cloud-native/packer-plugin-nutanix)
+![CI](https://github.com/nutanix-cloud-native/packer-plugin-nutanix/actions/workflows/integration.yml/badge.svg)
+![Release](https://github.com/nutanix-cloud-native/packer-plugin-nutanix/actions/workflows/release.yml/badge.svg)
+
+[![release](https://img.shields.io/github/release-pre/nutanix-cloud-native/packer-plugin-nutanix.svg)](https://github.com/nutanix-cloud-native/packer-plugin-nutanix/releases)
+[![License](https://img.shields.io/badge/License-MPL%202.0-blue.svg)](https://github.com/nutanix-cloud-native/packer-plugin-nutanix/blob/master/LICENSE)
+![Proudly written in Golang](https://img.shields.io/badge/written%20in-Golang-92d1e7.svg)
+[![Releases](https://img.shields.io/github/downloads/nutanix-cloud-native/packer-plugin-nutanix/total.svg)](https://github.com/nutanix-cloud-native/packer-plugin-nutanix/releases)
+
+---
+
 ## Installation
 
 ### Using pre-built releases
