@@ -1,6 +1,7 @@
 package nutanix
 
 import (
+	"strings"
 	"time"
 
 	"fmt"
@@ -341,6 +342,14 @@ func (d *NutanixDriver) CreateRequest(vm VmConfig) (*v3.VMIntentInput, error) {
 		Metadata: &v3.Metadata{
 			Kind: StringPtr("vm"),
 		},
+	}
+
+	if vm.BootType == NutanixIdentifierBootTypeUEFI {
+		bootType := strings.ToUpper(vm.BootType)
+
+		req.Spec.Resources.BootConfig = &v3.VMBootConfig{
+			BootType: &bootType,
+		}
 	}
 
 	return req, nil
