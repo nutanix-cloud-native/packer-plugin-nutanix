@@ -57,7 +57,7 @@ type VmConfig struct {
 	ImageName   string   `mapstructure:"image_name" json:"image_name" required:"false"`
 	ClusterUUID string   `mapstructure:"cluster_uuid" json:"cluster_uuid" required:"false"`
 	ClusterName string   `mapstructure:"cluster_name" json:"cluster_name" required:"false"`
-	CPU         int32    `mapstructure:"cpu" json:"cpu" required:"false"`
+	CPU         int64    `mapstructure:"cpu" json:"cpu" required:"false"`
 	MemoryMB    int64    `mapstructure:"memory_mb" json:"memory_mb" required:"false"`
 	UserData    string   `mapstructure:"user_data" json:"user_data" required:"false"`
 }
@@ -93,6 +93,11 @@ func (c *Config) Prepare(raws ...interface{}) ([]string, error) {
 			log.Println("No Communicator Type set, setting to 'none'")
 			c.CommConfig.Type = "none"
 		}
+	}
+
+	if c.CPU == 0 {
+		log.Println("No CPU configured, defaulting to '1'")
+		c.CPU = 1
 	}
 
 	if c.MemoryMB == 0 {
