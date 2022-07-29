@@ -330,6 +330,7 @@ func (d *NutanixDriver) CreateRequest(vm VmConfig) (*v3.VMIntentInput, error) {
 			Name: &vm.VMName,
 			Resources: &v3.VMResources{
 				GuestCustomization: guestCustomization,
+				NumSockets:         &vm.CPU,
 				MemorySizeMib:      &vm.MemoryMB,
 				PowerState:         &PowerStateOn,
 				DiskList:           DiskList,
