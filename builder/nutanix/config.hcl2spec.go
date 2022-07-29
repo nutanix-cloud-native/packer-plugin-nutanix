@@ -110,6 +110,7 @@ type FlatConfig struct {
 	Port                      *int32            `mapstructure:"nutanix_port" required:"false" cty:"nutanix_port" hcl:"nutanix_port"`
 	VMName                    *string           `mapstructure:"vm_name" json:"vm_name" required:"false" cty:"vm_name" hcl:"vm_name"`
 	OSType                    *string           `mapstructure:"os_type" json:"os_type" required:"true" cty:"os_type" hcl:"os_type"`
+	BootType                  *string           `mapstructure:"boot_type" json:"boot_type" required:"false" cty:"boot_type" hcl:"boot_type"`
 	VmDisks                   []FlatVmDisk      `mapstructure:"vm_disks" cty:"vm_disks" hcl:"vm_disks"`
 	VmNICs                    []FlatVmNIC       `mapstructure:"vm_nics" cty:"vm_nics" hcl:"vm_nics"`
 	ImageName                 *string           `mapstructure:"image_name" json:"image_name" required:"false" cty:"image_name" hcl:"image_name"`
@@ -201,6 +202,7 @@ func (*FlatConfig) HCL2Spec() map[string]hcldec.Spec {
 		"nutanix_port":                 &hcldec.AttrSpec{Name: "nutanix_port", Type: cty.Number, Required: false},
 		"vm_name":                      &hcldec.AttrSpec{Name: "vm_name", Type: cty.String, Required: false},
 		"os_type":                      &hcldec.AttrSpec{Name: "os_type", Type: cty.String, Required: false},
+		"boot_type":                    &hcldec.AttrSpec{Name: "boot_type", Type: cty.String, Required: false},
 		"vm_disks":                     &hcldec.BlockListSpec{TypeName: "vm_disks", Nested: hcldec.ObjectSpec((*FlatVmDisk)(nil).HCL2Spec())},
 		"vm_nics":                      &hcldec.BlockListSpec{TypeName: "vm_nics", Nested: hcldec.ObjectSpec((*FlatVmNIC)(nil).HCL2Spec())},
 		"image_name":                   &hcldec.AttrSpec{Name: "image_name", Type: cty.String, Required: false},
@@ -218,6 +220,7 @@ func (*FlatConfig) HCL2Spec() map[string]hcldec.Spec {
 type FlatVmConfig struct {
 	VMName      *string      `mapstructure:"vm_name" json:"vm_name" required:"false" cty:"vm_name" hcl:"vm_name"`
 	OSType      *string      `mapstructure:"os_type" json:"os_type" required:"true" cty:"os_type" hcl:"os_type"`
+	BootType    *string      `mapstructure:"boot_type" json:"boot_type" required:"false" cty:"boot_type" hcl:"boot_type"`
 	VmDisks     []FlatVmDisk `mapstructure:"vm_disks" cty:"vm_disks" hcl:"vm_disks"`
 	VmNICs      []FlatVmNIC  `mapstructure:"vm_nics" cty:"vm_nics" hcl:"vm_nics"`
 	ImageName   *string      `mapstructure:"image_name" json:"image_name" required:"false" cty:"image_name" hcl:"image_name"`
@@ -242,6 +245,7 @@ func (*FlatVmConfig) HCL2Spec() map[string]hcldec.Spec {
 	s := map[string]hcldec.Spec{
 		"vm_name":      &hcldec.AttrSpec{Name: "vm_name", Type: cty.String, Required: false},
 		"os_type":      &hcldec.AttrSpec{Name: "os_type", Type: cty.String, Required: false},
+		"boot_type":    &hcldec.AttrSpec{Name: "boot_type", Type: cty.String, Required: false},
 		"vm_disks":     &hcldec.BlockListSpec{TypeName: "vm_disks", Nested: hcldec.ObjectSpec((*FlatVmDisk)(nil).HCL2Spec())},
 		"vm_nics":      &hcldec.BlockListSpec{TypeName: "vm_nics", Nested: hcldec.ObjectSpec((*FlatVmNIC)(nil).HCL2Spec())},
 		"image_name":   &hcldec.AttrSpec{Name: "image_name", Type: cty.String, Required: false},

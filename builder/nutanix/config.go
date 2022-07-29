@@ -19,6 +19,14 @@ import (
 	"github.com/hashicorp/packer-plugin-sdk/template/interpolate"
 )
 
+const (
+	// NutanixIdentifierBootTypeLegacy is a resource identifier identifying the legacy boot type for virtual machines.
+	NutanixIdentifierBootTypeLegacy string = "legacy"
+
+	// NutanixIdentifierBootTypeUEFI is a resource identifier identifying the UEFI boot type for virtual machines.
+	NutanixIdentifierBootTypeUEFI string = "uefi"
+)
+
 type Config struct {
 	common.PackerConfig            `mapstructure:",squash"`
 	CommConfig                     communicator.Config `mapstructure:",squash"`
@@ -52,6 +60,7 @@ type VmNIC struct {
 type VmConfig struct {
 	VMName      string   `mapstructure:"vm_name" json:"vm_name" required:"false"`
 	OSType      string   `mapstructure:"os_type" json:"os_type" required:"true"`
+	BootType    string   `mapstructure:"boot_type" json:"boot_type" required:"false"`
 	VmDisks     []VmDisk `mapstructure:"vm_disks"`
 	VmNICs      []VmNIC  `mapstructure:"vm_nics"`
 	ImageName   string   `mapstructure:"image_name" json:"image_name" required:"false"`
@@ -102,6 +111,11 @@ func (c *Config) Prepare(raws ...interface{}) ([]string, error) {
 	if c.ClusterConfig.Port == 0 {
 		log.Println("No Nutanix Port configured, defaulting to '9440'")
 		c.ClusterConfig.Port = 9440
+	}
+
+	if c.BootType != NutanixIdentifierBootTypeLegacy && c.BootType != NutanixIdentifierBootTypeUEFI {
+		log.Println("No correct VM Boot Type configured, defaulting to 'legacy'")
+		c.BootType = string(NutanixIdentifierBootTypeLegacy)
 	}
 
 	// Validate Cluster Username
