@@ -1,0 +1,31 @@
+name: Trivy Scan
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 17 * * *"
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    permissions:
+      contents: read
+      security-events: write
+    name: Scan
+    runs-on: "ubuntu-18.04"
+    steps:
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@0.6.1
+        with:
+          scan-type: "fs"
+          format: "template"
+          template: "@/contrib/sarif.tpl"
+          output: "trivy-results.sarif"
+          severity: "CRITICAL,HIGH"
+
+      - name: Upload Trivy scan results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+          sarif_file: "trivy-results.sarif"
