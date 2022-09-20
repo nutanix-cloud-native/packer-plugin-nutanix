@@ -17,7 +17,8 @@ source "nutanix" "centos" {
     subnet_name       = var.nutanix_subnet
   }
   
-  image_name        ="centos-{{isotime `Jan-_2-15:04:05`}}"
+  image_name        = "centos-packer-image"
+  force_deregister  = true
   user_data         = "I2Nsb3VkLWNvbmZpZwp1c2VyczoKICAtIG5hbWU6IGNlbnRvcwogICAgc3VkbzogWydBTEw9KEFMTCkgTk9QQVNTV0Q6QUxMJ10KY2hwYXNzd2Q6CiAgbGlzdDogfAogICAgY2VudG9zOnBhY2tlcgogIGV4cGlyZTogRmFsc2UKc3NoX3B3YXV0aDogVHJ1ZQ=="
 
   shutdown_command  = "echo 'packer' | sudo -S shutdown -P now"

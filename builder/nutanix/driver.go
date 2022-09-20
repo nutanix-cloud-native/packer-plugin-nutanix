@@ -665,12 +665,10 @@ func (d *NutanixDriver) SaveVMDisk(diskUUID string, imageName string, ForceDereg
 		}
 		if *ImageList.Metadata.TotalMatches==0 {
 			log.Println("Image with given Name not found, no need to deregister")
-		}
-		if *ImageList.Metadata.TotalMatches>1 {
-			log.Println("More than one mage with given Name found, will not deregister")
-		}
-		if *ImageList.Metadata.TotalMatches==1 {
-			log.Println("Exactly one mage with given Name found, will deregister")
+		} else if *ImageList.Metadata.TotalMatches>1 {
+			log.Println("More than one image with given Name found, will not deregister")
+		} else if *ImageList.Metadata.TotalMatches==1 {
+			log.Println("Exactly one image with given Name found, will deregister")
 			resp,err:= conn.V3.DeleteImage(*ImageList.Entities[0].Metadata.UUID)
 			if err != nil {
 				return nil, fmt.Errorf("error while DeleteImage, %s", err.Error())
@@ -678,22 +676,19 @@ func (d *NutanixDriver) SaveVMDisk(diskUUID string, imageName string, ForceDereg
 			taskUUID := resp.Status.ExecutionContext.TaskUUID.(string)
 			log.Printf("Wait until delete Image %s is finished, %s\n",*ImageList.Entities[0].Metadata.UUID,taskUUID)
 			// Wait for the Image to be deleted
-			for {
+			for i := 0; i < 1200; i++ {
 				resp, err := conn.V3.GetTask(taskUUID)
-				if err == nil {
-					if *resp.Status == "SUCCEEDED" {
-						log.Printf("existing image deleted")
-						break
-					} else {
-						log.Printf("Current status is: " + *resp.Status)
-						time.Sleep(5 * time.Second)
-					}
-				} else {
-					log.Printf("Error while Image Delete getting Task Status, %s", err.Error())
-					return nil, err
+				if err != nil || *resp.Status != "SUCCEEDED" {
+					<-time.After(1 * time.Second)
+					continue
 				}
-
+				if *resp.Status == "SUCCEEDED" {
+					break
+				}
+				return nil, fmt.Errorf("error while Image Delete getting Task Status, %s", err.Error())
 			}
+			
+
 		}
 	}
 	req := &v3.ImageIntentInput{

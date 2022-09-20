@@ -29,12 +29,12 @@ const (
 
 type Config struct {
 	common.PackerConfig            `mapstructure:",squash"`
-	CommConfig                     communicator.Config `mapstructure:",squash"`
+	CommConfig communicator.Config `mapstructure:",squash"`
 	commonsteps.CDConfig           `mapstructure:",squash"`
 	shutdowncommand.ShutdownConfig `mapstructure:",squash"`
 	ClusterConfig                  `mapstructure:",squash"`
 	VmConfig                       `mapstructure:",squash"`
-	ForceDeregister      			bool   `mapstructure:"force_deregister" json:"force_deregister" required:"false"`
+	ForceDeregister         bool   `mapstructure:"force_deregister" json:"force_deregister" required:"false"`
 	
 
 	ctx interpolate.Context
