@@ -53,6 +53,9 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 	state.Put("ui", ui)
 
 	steps := []multistep.Step{
+		&stepPrepareImage{
+			Config: &b.config,
+		},
 		&commonsteps.StepCreateCD{
 			Files:   b.config.CDConfig.CDFiles,
 			Content: b.config.CDConfig.CDContent,
