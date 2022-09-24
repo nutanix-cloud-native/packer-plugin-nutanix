@@ -52,7 +52,7 @@ type VmDisk struct {
 	ImageType       string `mapstructure:"image_type" json:"image_type" required:"false"`
 	SourceImageName string `mapstructure:"source_image_name" json:"source_image_name" required:"false"`
 	SourceImageUUID string `mapstructure:"source_image_uuid" json:"source_image_uuid" required:"false"`
-	SourceImageURL string `mapstructure:"source_image_url" json:"source_image_url" required:"false"`
+	SourceImageURI string `mapstructure:"source_image_uri" json:"source_image_uri" required:"false"`
 	DiskSizeGB      int64  `mapstructure:"disk_size_gb" json:"disk_size_gb" required:"false"`
 }
 

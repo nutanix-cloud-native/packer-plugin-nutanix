@@ -266,6 +266,7 @@ type FlatVmDisk struct {
 	ImageType       *string `mapstructure:"image_type" json:"image_type" required:"false" cty:"image_type" hcl:"image_type"`
 	SourceImageName *string `mapstructure:"source_image_name" json:"source_image_name" required:"false" cty:"source_image_name" hcl:"source_image_name"`
 	SourceImageUUID *string `mapstructure:"source_image_uuid" json:"source_image_uuid" required:"false" cty:"source_image_uuid" hcl:"source_image_uuid"`
+	SourceImageURI  *string `mapstructure:"source_image_uri" json:"source_image_uri" required:"false" cty:"source_image_uri" hcl:"source_image_uri"`
 	DiskSizeGB      *int64  `mapstructure:"disk_size_gb" json:"disk_size_gb" required:"false" cty:"disk_size_gb" hcl:"disk_size_gb"`
 }
 
@@ -284,6 +285,7 @@ func (*FlatVmDisk) HCL2Spec() map[string]hcldec.Spec {
 		"image_type":        &hcldec.AttrSpec{Name: "image_type", Type: cty.String, Required: false},
 		"source_image_name": &hcldec.AttrSpec{Name: "source_image_name", Type: cty.String, Required: false},
 		"source_image_uuid": &hcldec.AttrSpec{Name: "source_image_uuid", Type: cty.String, Required: false},
+		"source_image_uri":  &hcldec.AttrSpec{Name: "source_image_uri", Type: cty.String, Required: false},
 		"disk_size_gb":      &hcldec.AttrSpec{Name: "disk_size_gb", Type: cty.Number, Required: false},
 	}
 	return s
