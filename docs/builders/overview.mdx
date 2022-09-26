@@ -1,0 +1,91 @@
+---
+description: >
+  The Nutanix packer plugin overview
+page_title: Nutanix plugin Overview
+nav_title: Overview
+---
+# Nutanix Plugin Overview
+
+<!--
+  Include a short overview about the plugin.
+
+  This document is a great location for creating a table of contents for each
+  of the components the plugin may provide. This document should load automatically
+  when navigating to the docs directory for a plugin.
+
+-->
+The `Nutanix` multi-component plugin can be used with HashiCorp [Packer](https://www.packer.io)
+to create custom images.
+
+## Installation
+
+### Using pre-built releases
+
+#### Using the `packer init` command
+
+Starting from version 1.7, Packer supports a new `packer init` command allowing
+automatic installation of Packer plugins. Read the
+[Packer documentation](https://www.packer.io/docs/commands/init) for more information.
+
+To install this plugin, copy and paste this code into your Packer configuration .
+Then, run [`packer init`](https://www.packer.io/docs/commands/init).
+
+```hcl
+packer {
+  required_plugins {
+    nutanix = {
+      version = ">= 0.2.0"
+      source  = "github.com/nutanix-cloud-native/nutanix"
+    }
+  }
+}
+```
+
+#### Manual installation
+
+You can find pre-built binary releases of the plugin [here](https://github.com/nutanix-cloud-native/packer-plugin-nutanix/releases).
+Once you have downloaded the latest archive corresponding to your target OS,
+uncompress it to retrieve the plugin binary file corresponding to your platform.
+To install the plugin, please follow the official Packer documentation on [installing a plugin](https://www.packer.io/docs/extending/plugins/#installing-plugins).
+
+
+#### From Source
+
+If you prefer to build the plugin from its source code, clone the GitHub repository locally and run the command `make build` from the root directory.
+Upon successful compilation, a `packer-plugin-nutanix` plugin binary file can be found in the root directory.
+To install the compiled plugin, please follow the official Packer documentation on [installing a plugin](https://www.packer.io/docs/extending/plugins/#installing-plugins).
+
+### Configuration
+
+For more information on how to configure the plugin, please find some examples in the  [`example/`](https://github.com/nutanix-cloud-native/packer-plugin-nutanix/example) directory.
+
+
+## Builder
+
+- The builder of the plugin is detailed [here](plugin).
+
+## Limitations
+### Building temporary ISOs on MacOS
+If you want to use the cd_files Option to create an additional iso-image for kickstart-files or similiar be aware that MacOS won´t create a suitable file.
+Please install xorriso for support on MacOS.
+```
+ brew install xorriso
+```
+### Image Creation
+Right now the plugin cannot upload source-images directly, but Terraform can be used to create a source image before running packer itself.
+Create a Terraform Manifest using the Nutanix Provider to create your Image and define an output with your image uuid. You can pass this uuid into a Packer Variable. In that case the centos_iso_image_name Variable in the example settings file must be commented.
+```
+export PKR_VAR_centos_iso_image_name=$(terraform output -raw centos_uuid)
+```
+## Contributing
+See the [contributing docs](CONTRIBUTING.md).
+
+## Support
+### Community Plus
+
+This code is developed in the open with input from the community through issues and PRs. A Nutanix engineering team serves as the maintainer. Documentation is available in the project repository.
+
+Issues and enhancement requests can be submitted in the [Issues tab of this repository](../../issues). Please search for and review the existing open issues before submitting a new issue.
+
+## License
+The project is released under version 2.0 of the [Apache license](http://www.apache.org/licenses/LICENSE-2.0).
