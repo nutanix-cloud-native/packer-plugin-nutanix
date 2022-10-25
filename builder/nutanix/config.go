@@ -160,6 +160,7 @@ func (c *Config) Prepare(raws ...interface{}) ([]string, error) {
 
 	errs = packersdk.MultiErrorAppend(errs, c.ShutdownConfig.Prepare(&c.ctx)...)
 	errs = packersdk.MultiErrorAppend(errs, c.CDConfig.Prepare(&c.ctx)...)
+	errs = packersdk.MultiErrorAppend(errs, c.CommConfig.Prepare(&c.ctx)...)
 
 	if errs != nil && len(errs.Errors) > 0 {
 		return warnings, errs
