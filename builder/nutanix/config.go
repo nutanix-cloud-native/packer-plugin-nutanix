@@ -29,12 +29,13 @@ const (
 
 type Config struct {
 	common.PackerConfig            `mapstructure:",squash"`
-	CommConfig                     communicator.Config `mapstructure:",squash"`
+	CommConfig communicator.Config `mapstructure:",squash"`
 	commonsteps.CDConfig           `mapstructure:",squash"`
 	shutdowncommand.ShutdownConfig `mapstructure:",squash"`
 	ClusterConfig                  `mapstructure:",squash"`
 	VmConfig                       `mapstructure:",squash"`
-	ForceDeregister      			bool   `mapstructure:"force_deregister" json:"force_deregister" required:"false"`
+	ForceDeregister         bool   `mapstructure:"force_deregister" json:"force_deregister" required:"false"`
+
 	
 
 	ctx interpolate.Context
@@ -161,6 +162,7 @@ func (c *Config) Prepare(raws ...interface{}) ([]string, error) {
 
 	errs = packersdk.MultiErrorAppend(errs, c.ShutdownConfig.Prepare(&c.ctx)...)
 	errs = packersdk.MultiErrorAppend(errs, c.CDConfig.Prepare(&c.ctx)...)
+	errs = packersdk.MultiErrorAppend(errs, c.CommConfig.Prepare(&c.ctx)...)
 
 	if errs != nil && len(errs.Errors) > 0 {
 		return warnings, errs

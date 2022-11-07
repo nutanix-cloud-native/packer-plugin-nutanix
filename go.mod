@@ -1,6 +1,6 @@
 module github.com/nutanix-cloud-native/packer-plugin-nutanix
 
-go 1.17
+go 1.19
 
 replace (
 	github.com/hashicorp/consul => github.com/hashicorp/consul v1.10.4
@@ -8,7 +8,7 @@ replace (
 )
 
 require (
-	github.com/hashicorp/hcl/v2 v2.14.0
+	github.com/hashicorp/hcl/v2 v2.14.1
 	github.com/hashicorp/packer-plugin-sdk v0.3.2
 	github.com/nutanix-cloud-native/prism-go-client v0.2.0
 	github.com/zclconf/go-cty v1.10.0
@@ -94,7 +94,7 @@ require (
 	golang.org/x/oauth2 v0.0.0-20210819190943-2bc19b11175f // indirect
 	golang.org/x/sys v0.0.0-20220728004956-3c1f35247d10 // indirect
 	golang.org/x/term v0.0.0-20210927222741-03fcf44c2211 // indirect
-	golang.org/x/text v0.3.7 // indirect
+	golang.org/x/text v0.4.0 // indirect
 	golang.org/x/time v0.0.0-20210723032227-1f47c861a9ac // indirect
 	google.golang.org/api v0.56.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
