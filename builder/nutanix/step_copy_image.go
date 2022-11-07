@@ -40,7 +40,7 @@ func (s *stepCopyImage) Run(ctx context.Context, state multistep.StateBag) multi
 		return multistep.ActionHalt
 	}
 
-	imageResponse, err := d.SaveVMDisk(diskToCopy, s.Config.VmConfig.ImageName)
+	imageResponse, err := d.SaveVMDisk(diskToCopy, s.Config.VmConfig.ImageName, s.Config.ForceDeregister)
 	if err != nil {
 		ui.Error("Unexpected Nutanix Task status: " + err.Error())
 		state.Put("error", err)

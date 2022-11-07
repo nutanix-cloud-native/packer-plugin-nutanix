@@ -119,6 +119,7 @@ type FlatConfig struct {
 	CPU                       *int64            `mapstructure:"cpu" json:"cpu" required:"false" cty:"cpu" hcl:"cpu"`
 	MemoryMB                  *int64            `mapstructure:"memory_mb" json:"memory_mb" required:"false" cty:"memory_mb" hcl:"memory_mb"`
 	UserData                  *string           `mapstructure:"user_data" json:"user_data" required:"false" cty:"user_data" hcl:"user_data"`
+	ForceDeregister           *bool             `mapstructure:"force_deregister" json:"force_deregister" required:"false" cty:"force_deregister" hcl:"force_deregister"`
 }
 
 // FlatMapstructure returns a new FlatConfig.
@@ -211,6 +212,7 @@ func (*FlatConfig) HCL2Spec() map[string]hcldec.Spec {
 		"cpu":                          &hcldec.AttrSpec{Name: "cpu", Type: cty.Number, Required: false},
 		"memory_mb":                    &hcldec.AttrSpec{Name: "memory_mb", Type: cty.Number, Required: false},
 		"user_data":                    &hcldec.AttrSpec{Name: "user_data", Type: cty.String, Required: false},
+		"force_deregister":             &hcldec.AttrSpec{Name: "force_deregister", Type: cty.Bool, Required: false},
 	}
 	return s
 }

@@ -24,7 +24,7 @@ type Driver interface {
 	PowerOff(string) error
 	UploadImage(string, VmConfig) (*nutanixImage, error)
 	DeleteImage(string) error
-	SaveVMDisk(string, string) (*nutanixImage, error)
+	SaveVMDisk(string, string, bool) (*nutanixImage, error)
 	WaitForShutdown(string, <-chan struct{}) bool
 }
 
@@ -640,7 +640,7 @@ func (d *NutanixDriver) PowerOff(vmUUID string) error {
 	log.Printf("PowerOff task: %s", taskUUID)
 	return nil
 }
-func (d *NutanixDriver) SaveVMDisk(diskUUID string, imageName string) (*nutanixImage, error) {
+func (d *NutanixDriver) SaveVMDisk(diskUUID string, imageName string, ForceDeregister bool) (*nutanixImage, error) {
 
 	configCreds := client.Credentials{
 		URL:      fmt.Sprintf("%s:%d", d.ClusterConfig.Endpoint, d.ClusterConfig.Port),
@@ -656,6 +656,41 @@ func (d *NutanixDriver) SaveVMDisk(diskUUID string, imageName string) (*nutanixI
 		return nil, fmt.Errorf("error while NewV3Client, %s", err.Error())
 	}
 
+	// When force_deregister, check if image already exists
+	if ForceDeregister {
+		log.Println("force_deregister is set, check if image already exists")
+		ImageList, err:=conn.V3.ListAllImage(fmt.Sprintf("name==%s",imageName))
+		if err != nil {
+			return nil, fmt.Errorf("error while ListAllImage, %s", err.Error())
+		}
+		if *ImageList.Metadata.TotalMatches==0 {
+			log.Println("Image with given Name not found, no need to deregister")
+		} else if *ImageList.Metadata.TotalMatches>1 {
+			log.Println("More than one image with given Name found, will not deregister")
+		} else if *ImageList.Metadata.TotalMatches==1 {
+			log.Println("Exactly one image with given Name found, will deregister")
+			resp,err:= conn.V3.DeleteImage(*ImageList.Entities[0].Metadata.UUID)
+			if err != nil {
+				return nil, fmt.Errorf("error while DeleteImage, %s", err.Error())
+			}
+			taskUUID := resp.Status.ExecutionContext.TaskUUID.(string)
+			log.Printf("Wait until delete Image %s is finished, %s\n",*ImageList.Entities[0].Metadata.UUID,taskUUID)
+			// Wait for the Image to be deleted
+			for i := 0; i < 1200; i++ {
+				resp, err := conn.V3.GetTask(taskUUID)
+				if err != nil || *resp.Status != "SUCCEEDED" {
+					<-time.After(1 * time.Second)
+					continue
+				}
+				if *resp.Status == "SUCCEEDED" {
+					break
+				}
+				return nil, fmt.Errorf("error while Image Delete getting Task Status, %s", err.Error())
+			}
+			
+
+		}
+	}
 	req := &v3.ImageIntentInput{
 		Spec: &v3.Image{
 			Name: &imageName,
