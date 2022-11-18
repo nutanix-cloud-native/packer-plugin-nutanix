@@ -26,7 +26,7 @@ func (s *stepBuildVM) Run(ctx context.Context, state multistep.StateBag) multist
 	if cdPathRaw, ok := state.GetOk("cd_path"); ok {
 		cdFilesPath := cdPathRaw.(string)
 		log.Println("temporary iso found, " + cdFilesPath)
-		cdfilesImage, err := d.UploadImage(cdFilesPath, config.VmConfig)
+		cdfilesImage, err := d.UploadImage(cdFilesPath, "PATH", "ISO_IMAGE",config.VmConfig)
 		if err != nil {
 			ui.Error("Error uploading temporary image:")
 			ui.Error(err.Error())
