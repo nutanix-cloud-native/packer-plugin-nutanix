@@ -15,13 +15,15 @@ import (
 // but ultimately forcefully shuts it down if that fails.
 //
 // Uses:
-//   communicator packersdk.Communicator
-//   driver Driver
-//   ui     packersdk.Ui
-//   vmName string
+//
+//	communicator packersdk.Communicator
+//	driver Driver
+//	ui     packersdk.Ui
+//	vmName string
 //
 // Produces:
-//   <nothing>
+//
+//	<nothing>
 type StepShutdown struct {
 	Command string
 	Timeout time.Duration
