@@ -12,6 +12,12 @@ import (
 	v3 "github.com/nutanix-cloud-native/prism-go-client/pkg/nutanix/v3"
 )
 
+const (
+	defaultImageBuiltDescription = "built by Packer"
+	defaultImageDLDescription    = "added by Packer"
+	vmDescription                = "Packer vm building image %s"
+)
+
 // A driver is able to talk to Nutanix PrismCentral and perform certain
 // operations with it.
 type Driver interface {
@@ -25,11 +31,12 @@ type Driver interface {
 	UploadImage(string, string, string, VmConfig) (*nutanixImage, error)
 	DeleteImage(string) error
 	GetImage(string) (*nutanixImage, error)
-	SaveVMDisk(string, string, bool) (*nutanixImage, error)
+	SaveVMDisk(string) (*nutanixImage, error)
 	WaitForShutdown(string, <-chan struct{}) bool
 }
 
 type NutanixDriver struct {
+	Config        Config
 	ClusterConfig ClusterConfig
 	vmEndCh       <-chan int
 }
@@ -378,6 +385,7 @@ func (d *NutanixDriver) CreateRequest(vm VmConfig) (*v3.VMIntentInput, error) {
 				NicList:            NICList,
 			},
 			ClusterReference: BuildReference(*cluster.Metadata.UUID, "cluster"),
+			Description:      StringPtr(fmt.Sprintf(vmDescription, d.Config.VmConfig.ImageName)),
 		},
 		Metadata: &v3.Metadata{
 			Kind: StringPtr("vm"),
@@ -527,6 +535,7 @@ func (d *NutanixDriver) UploadImage(imagePath string, sourceType string, imageTy
 				ImageType:               &imageType,
 				InitialPlacementRefList: InitialPlacementRef,
 			},
+			Description: StringPtr(defaultImageDLDescription),
 		},
 		Metadata: &v3.Metadata{
 			Kind: StringPtr("image"),
@@ -713,7 +722,7 @@ func (d *NutanixDriver) PowerOff(vmUUID string) error {
 	log.Printf("PowerOff task: %s", taskUUID)
 	return nil
 }
-func (d *NutanixDriver) SaveVMDisk(diskUUID string, imageName string, ForceDeregister bool) (*nutanixImage, error) {
+func (d *NutanixDriver) SaveVMDisk(diskUUID string) (*nutanixImage, error) {
 
 	configCreds := client.Credentials{
 		URL:      fmt.Sprintf("%s:%d", d.ClusterConfig.Endpoint, d.ClusterConfig.Port),
@@ -730,9 +739,9 @@ func (d *NutanixDriver) SaveVMDisk(diskUUID string, imageName string, ForceDereg
 	}
 
 	// When force_deregister, check if image already exists
-	if ForceDeregister {
+	if d.Config.ForceDeregister {
 		log.Println("force_deregister is set, check if image already exists")
-		ImageList, err := conn.V3.ListAllImage(fmt.Sprintf("name==%s", imageName))
+		ImageList, err := conn.V3.ListAllImage(fmt.Sprintf("name==%s", d.Config.VmConfig.ImageName))
 		if err != nil {
 			return nil, fmt.Errorf("error while ListAllImage, %s", err.Error())
 		}
@@ -763,13 +772,20 @@ func (d *NutanixDriver) SaveVMDisk(diskUUID string, imageName string, ForceDereg
 			}
 		}
 	}
+
+	imgDescription := defaultImageBuiltDescription
+	if d.Config.ImageDescription != "" {
+		imgDescription = d.Config.ImageDescription
+	}
+
 	req := &v3.ImageIntentInput{
 		Spec: &v3.Image{
-			Name: &imageName,
+			Name: &d.Config.VmConfig.ImageName,
 			Resources: &v3.ImageResources{
 				ImageType:           StringPtr("DISK_IMAGE"),
 				DataSourceReference: BuildReference(diskUUID, "vm_disk"),
 			},
+			Description: StringPtr(imgDescription),
 		},
 		Metadata: &v3.Metadata{
 			Kind: StringPtr("image"),
