@@ -128,7 +128,7 @@ func sourceImageExists(conn *v3.Client, name string, uri string) (*v3.ImageInten
 	}
 
 	if len(found) == 0 {
-			return nil, nil
+		return nil, nil
 	}
 	return found[0], nil
 }
@@ -236,12 +236,12 @@ func (d *NutanixDriver) CreateRequest(vm VmConfig) (*v3.VMIntentInput, error) {
 	for _, disk := range vm.VmDisks {
 		if disk.ImageType == "DISK_IMAGE" {
 			image := &v3.ImageIntentResponse{}
-			if disk.SourceImageURI !="" {
-				image, err := d.UploadImage(disk.SourceImageURI, "URI", disk.ImageType,vm)
+			if disk.SourceImageURI != "" {
+				image, err := d.UploadImage(disk.SourceImageURI, "URI", disk.ImageType, vm)
 				if err != nil {
-					return nil,  fmt.Errorf("error while findImageByUUID, Error %s", err.Error())
+					return nil, fmt.Errorf("error while findImageByUUID, Error %s", err.Error())
 				}
-				disk.SourceImageUUID= *image.image.Metadata.UUID
+				disk.SourceImageUUID = *image.image.Metadata.UUID
 			}
 			if disk.SourceImageUUID != "" {
 				image, err = findImageByUUID(conn, disk.SourceImageUUID)
@@ -293,12 +293,12 @@ func (d *NutanixDriver) CreateRequest(vm VmConfig) (*v3.VMIntentInput, error) {
 		}
 		if disk.ImageType == "ISO_IMAGE" {
 			image := &v3.ImageIntentResponse{}
-			if disk.SourceImageURI !="" {
-				image, err := d.UploadImage(disk.SourceImageURI, "URI", disk.ImageType,vm)
+			if disk.SourceImageURI != "" {
+				image, err := d.UploadImage(disk.SourceImageURI, "URI", disk.ImageType, vm)
 				if err != nil {
-					return nil,  fmt.Errorf("error while findImageByUUID, Error %s", err.Error())
+					return nil, fmt.Errorf("error while findImageByUUID, Error %s", err.Error())
 				}
-				disk.SourceImageUUID= *image.image.Metadata.UUID
+				disk.SourceImageUUID = *image.image.Metadata.UUID
 			}
 			if disk.SourceImageUUID != "" {
 				image, err = findImageByUUID(conn, disk.SourceImageUUID)
@@ -487,7 +487,7 @@ func (d *NutanixDriver) Delete(vmUUID string) error {
 	return nil
 }
 
-//UploadImage (string, VmConfig) (*nutanixImage, error)
+// UploadImage (string, VmConfig) (*nutanixImage, error)
 func (d *NutanixDriver) UploadImage(imagePath string, sourceType string, imageType string, vm VmConfig) (*nutanixImage, error) {
 	configCreds := client.Credentials{
 		URL:      fmt.Sprintf("%s:%d", d.ClusterConfig.Endpoint, d.ClusterConfig.Port),
@@ -532,15 +532,15 @@ func (d *NutanixDriver) UploadImage(imagePath string, sourceType string, imageTy
 			Kind: StringPtr("image"),
 		},
 	}
-	if sourceType=="URI" {
-		image, err:=sourceImageExists(conn, file, imagePath)
+	if sourceType == "URI" {
+		image, err := sourceImageExists(conn, file, imagePath)
 		if err != nil {
 			return nil, fmt.Errorf("error while check if Image exists, %s", err.Error())
 		}
-		if image !=nil {
+		if image != nil {
 			return &nutanixImage{image: *image}, nil
 		}
-		req.Spec.Resources.SourceURI=&imagePath
+		req.Spec.Resources.SourceURI = &imagePath
 	}
 	image, err := conn.V3.CreateImage(req)
 	if err != nil {
@@ -559,7 +559,7 @@ func (d *NutanixDriver) UploadImage(imagePath string, sourceType string, imageTy
 		time.Sleep(5 * time.Second)
 	}
 
-	if sourceType=="PATH" {
+	if sourceType == "PATH" {
 		err = conn.V3.UploadImage(*image.Metadata.UUID, imagePath)
 		if err != nil {
 			return nil, fmt.Errorf("error while upload, %s", err.Error())
@@ -573,12 +573,11 @@ func (d *NutanixDriver) UploadImage(imagePath string, sourceType string, imageTy
 				break
 			}
 			time.Sleep(5 * time.Second)
-		}	
+		}
 	}
 	return &nutanixImage{image: *image}, nil
 
 }
-
 
 func (d *NutanixDriver) DeleteImage(imageUUID string) error {
 	configCreds := client.Credentials{
@@ -616,7 +615,7 @@ func (d *NutanixDriver) GetImage(imagename string) (*nutanixImage, error) {
 		return nil, fmt.Errorf("error while NewV3Client, %s", err.Error())
 	}
 
-	image, err := findImageByName(conn,imagename)
+	image, err := findImageByName(conn, imagename)
 	if err != nil {
 		return nil, fmt.Errorf("error while GetImage, %s", err.Error())
 	}
@@ -733,23 +732,23 @@ func (d *NutanixDriver) SaveVMDisk(diskUUID string, imageName string, ForceDereg
 	// When force_deregister, check if image already exists
 	if ForceDeregister {
 		log.Println("force_deregister is set, check if image already exists")
-		ImageList, err:=conn.V3.ListAllImage(fmt.Sprintf("name==%s",imageName))
+		ImageList, err := conn.V3.ListAllImage(fmt.Sprintf("name==%s", imageName))
 		if err != nil {
 			return nil, fmt.Errorf("error while ListAllImage, %s", err.Error())
 		}
-		if *ImageList.Metadata.TotalMatches==0 {
+		if *ImageList.Metadata.TotalMatches == 0 {
 			log.Println("Image with given Name not found, no need to deregister")
-		} else if *ImageList.Metadata.TotalMatches>1 {
+		} else if *ImageList.Metadata.TotalMatches > 1 {
 			log.Println("More than one image with given Name found, will not deregister")
-		} else if *ImageList.Metadata.TotalMatches==1 {
+		} else if *ImageList.Metadata.TotalMatches == 1 {
 			log.Println("Exactly one image with given Name found, will deregister")
 
-			resp,err:= conn.V3.DeleteImage(*ImageList.Entities[0].Metadata.UUID)
+			resp, err := conn.V3.DeleteImage(*ImageList.Entities[0].Metadata.UUID)
 			if err != nil {
 				return nil, fmt.Errorf("error while DeleteImage, %s", err.Error())
 			}
 			taskUUID := resp.Status.ExecutionContext.TaskUUID.(string)
-			log.Printf("Wait until delete Image %s is finished, %s\n",*ImageList.Entities[0].Metadata.UUID,taskUUID)
+			log.Printf("Wait until delete Image %s is finished, %s\n", *ImageList.Entities[0].Metadata.UUID, taskUUID)
 			// Wait for the Image to be deleted
 			for i := 0; i < 1200; i++ {
 				resp, err := conn.V3.GetTask(taskUUID)
