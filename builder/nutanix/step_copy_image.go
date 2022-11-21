@@ -3,6 +3,7 @@ package nutanix
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	"github.com/hashicorp/packer-plugin-sdk/packer"
@@ -40,13 +41,13 @@ func (s *stepCopyImage) Run(ctx context.Context, state multistep.StateBag) multi
 		return multistep.ActionHalt
 	}
 
-	imageResponse, err := d.SaveVMDisk(diskToCopy, s.Config.VmConfig.ImageName, s.Config.ForceDeregister)
+	imageResponse, err := d.SaveVMDisk(diskToCopy)
 	if err != nil {
 		ui.Error("Unexpected Nutanix Task status: " + err.Error())
 		state.Put("error", err)
 		return multistep.ActionHalt
 	}
-	ui.Message("Successfully created image: " + *imageResponse.image.Metadata.UUID)
+	ui.Message(fmt.Sprintf("Successfully created image: %s (%s)", *imageResponse.image.Spec.Name, *imageResponse.image.Metadata.UUID))
 	state.Put("vm_disk_uuid", (*imageResponse.image.Metadata.UUID))
 	return multistep.ActionContinue
 }

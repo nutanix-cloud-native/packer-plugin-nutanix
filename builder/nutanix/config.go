@@ -34,7 +34,8 @@ type Config struct {
 	shutdowncommand.ShutdownConfig `mapstructure:",squash"`
 	ClusterConfig                  `mapstructure:",squash"`
 	VmConfig                       `mapstructure:",squash"`
-	ForceDeregister                bool `mapstructure:"force_deregister" json:"force_deregister" required:"false"`
+	ForceDeregister                bool   `mapstructure:"force_deregister" json:"force_deregister" required:"false"`
+	ImageDescription               string `mapstructure:"image_description" json:"image_description" required:"false"`
 
 	ctx interpolate.Context
 }

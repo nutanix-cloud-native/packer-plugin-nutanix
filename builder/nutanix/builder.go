@@ -99,6 +99,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 // builder.go
 func (b *Builder) newDriver(cConfig ClusterConfig) (Driver, error) {
 	driver := &NutanixDriver{
+		Config:        b.config,
 		ClusterConfig: cConfig,
 	}
 
