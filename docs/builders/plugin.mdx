@@ -1,0 +1,124 @@
+---
+description: >
+  The Nutanix packer plugin allow to use Packer on Nutanix AHV platform.
+page_title: Nutanix plugin
+nav_title: Nutanix
+---
+
+# Nutanix Builder
+
+This document is going to detail all Nutanix plugin source parameters.
+
+## Principle
+The Nutanix plugin will create a temporary VM as foundation of your Packer image, apply all providers your want to customize your image, then clone the VM disk image as your final Packer image.
+
+## Environment configuration
+These parameters allow to define information about platform and temporary VM used to create the image.
+
+### Required
+  - `nutanix_username` (string) - User used for Prism Central login 
+  - `nutanix_password` (string) - Password of this user for Prism Central login 
+  - `nutanix_endpoint` (string) - Prism Central FQDN or IP
+  - `cluster_name` or  `cluster_uuid` (string) - Nutanix cluster name or uuid used to create and store image
+  - `os_type` (string) - OS Type ("Linux" or "Windows")
+  
+### Optional
+  - `nutanix_port` (integer) - Port configured on Prism Central to connect on
+  - `nutanix_insecure` (boolean) - Authorize connection on Prism Central without valid certificate
+  - `cpu` (integer) - Number of vCPU for temporary VM
+  - `memory_mb` (integer) - Size of vRAM for temporary VM (in megabytes)
+  - `cd_files` (array of strings) - A list of files to place onto a CD that is attached when the VM is booted. This can include either files or directories; any directories will be copied onto the CD recursively, preserving directory structure hierarchy
+  - `cd_label` (string) - Label of this CD Drive
+  - `boot_type` (string) - Type of boot used on the temporary VM ("legacy" or "UEFI")
+
+## Output configuration
+These parameters allow to configure everything around image creation, from the temporary VM connection to the final image definition.
+
+### All OS
+- `image_name` (string) - Name of the output image
+- `image_description` (string) - Description for output image
+- `force_deregister` (boolean) - Allow output image override if already exists
+- `shutdown_command` (string) - Command line to shutdown your temporary VM
+- `shutdown_timeout` (string) - Timeout for VM shutdown (format : 2m)
+- `communicator` (string) - Protocol used for Packer connection (ex "winrm" or "ssh"). Default is : "ssh"
+
+### Dedicated to Linux
+- `user_data` (string) - cloud-init (Linux) content base64 coded.  
+- `ssh_username` (string) - user for ssh connection initiated by Packer.
+- `ssh_password` (string) - password for the this ssh user.
+
+### Dedicated to Windows
+- `winrm_port` (integer) - Port for WinRM communication (Default is 5986)
+- `winrm_insecure` (boolean) - Allow insecure connection on WinRM
+- `winrm_use_ssl` (boolean) - Request SSL connection with WinRM
+- `winrm_timeout` (string) - Timeout for WinRM (format 45m)
+- `winrm_username` (string) - User login for WinRM connection 
+- `winrm_password` (string) - Password this User
+
+## Disk configuration
+Use `vm_disks{}` entry to configure disk to your VM image. If you want to configure several disks, use this entry multiple times.
+
+All parameters of this `vm_disks` section are described below.
+
+3 types of disk configurations can be used 
+- disk (create an empty disk)
+- disk image (create disk from Nutanix image library)
+- ISO image (create disk from ISO image).
+
+### Disk 
+- `image_type` (string) - "DISK"
+- `disk_size_gb` (integer) - size of th disk (in gigabytes)
+
+Sample:
+```hcl
+  vm_disks {
+      image_type = "DISK"
+      disk_size_gb = 30
+  }
+```
+
+### Disk image
+- `image_type` (string) - "DISK_IMAGE" (You must use one of the three following parameter to source the image)
+- `source_image_name` (string) - Name of the image used as disk source
+- `source_image_uuid` (string) - UUID of the image used as disk source
+- `source_image_uri`  (string) - URI of the image used as disk source (If image is not already on the cluster, it will download and store it before launching output image creation process)
+- `disk_size_gb` (integer) - size of th disk (in gigabytes)
+
+Sample:
+```hcl
+  vm_disks {
+      image_type = "DISK_IMAGE"
+      source_image_name = "<myDiskImage>"
+      disk_size_gb = 40
+  }
+```
+### ISO Image
+- `image_type` (string) - "ISO_IMAGE"
+- `source_image_name` (string) - Name of the ISO image to mount
+- `source_image_uuid` (string) - UUID of the ISO image to mount
+
+Sample:
+```hcl
+  vm_disks {
+      image_type = "ISO_IMAGE"
+      source_image_name = "<myISOimage>"
+  }
+```
+
+## Network Configuration
+Use `vm_nics{}` entry to configure NICs in your image
+
+In this section, you have to define network you will connect on with this keyword :
+
+- `subnet_name` (string) - Name of the cluster subnet to use
+- `subnet_uuid` (string) - UUID of the cluster subnet to use
+
+Sample
+```hcl
+  vm_nics {
+    subnet_name       = "<mySubnet>"
+  }
+```
+
+## Samples
+You can find samples [here](https://github.com/nutanix-cloud-native/packer-plugin-nutanix/example) for these instructions usage.
