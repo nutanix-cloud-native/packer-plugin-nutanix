@@ -36,6 +36,8 @@ These parameters allow to configure everything around image creation, from the t
 
 ### All OS
 - `image_name` (string) - Name of the output image
+- `image_description` (string) - Description for output image
+- `force_deregister` (boolean) - Allow output image override if already exists
 - `shutdown_command` (string) - Command line to shutdown your temporary VM
 - `shutdown_timeout` (string) - Timeout for VM shutdown (format : 2m)
 - `communicator` (string) - Protocol used for Packer connection (ex "winrm" or "ssh"). Default is : "ssh"
@@ -58,10 +60,10 @@ Use `vm_disks{}` entry to configure disk to your VM image. If you want to config
 
 All parameters of this `vm_disks` section are described below.
 
-3 types of disk configurations can by used 
+3 types of disk configurations can be used 
 - disk (create an empty disk)
-- disk image (create disk from image)
-- ISO image (create disk from image).
+- disk image (create disk from Nutanix image library)
+- ISO image (create disk from ISO image).
 
 ### Disk 
 - `image_type` (string) - "DISK"
@@ -76,9 +78,10 @@ Sample:
 ```
 
 ### Disk image
-- `image_type` (string) - "DISK_IMAGE"
-- `source_image_name` (string) - Name of the image used as disk source (If you want an empty disk, do not specify source)
-- `source_image_uuid` (string) - UUID of the image used as disk source (If you want an empty disk, do not specify source)
+- `image_type` (string) - "DISK_IMAGE" (You must use one of the three following parameter to source the image)
+- `source_image_name` (string) - Name of the image used as disk source
+- `source_image_uuid` (string) - UUID of the image used as disk source
+- `source_image_uri`  (string) - URI of the image used as disk source (If image is not already on the cluster, it will download and store it before launching output image creation process)
 - `disk_size_gb` (integer) - size of th disk (in gigabytes)
 
 Sample:
