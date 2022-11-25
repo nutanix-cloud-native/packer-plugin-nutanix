@@ -57,35 +57,30 @@ To install the compiled plugin, please follow the official Packer documentation 
 
 ### Configuration
 
-For more information on how to configure the plugin, please find some examples in the  [`example/`](https://github.com/nutanix-cloud-native/packer-plugin-nutanix/example) directory.
+For more information on how to configure the plugin, please find some examples in the  [`example`](https://github.com/nutanix-cloud-native/packer-plugin-nutanix/tree/main/example) directory.
 
 
 ## Builder
 
-- The builder of the plugin is detailed [here](plugin).
+- Documentation of the builder plugin is detailed [here](/packer/plugins/builders/nutanix/plugin).
 
 ## Limitations
 ### Building temporary ISOs on MacOS
-If you want to use the cd_files Option to create an additional iso-image for kickstart-files or similiar be aware that MacOS won´t create a suitable file.
+If you want to use the cd_files Option to create an additional iso-image for kickstart-files or similar be aware that MacOS won´t create a suitable file.
 Please install xorriso for support on MacOS.
 ```
  brew install xorriso
 ```
-### Image Creation
-Right now the plugin cannot upload source-images directly, but Terraform can be used to create a source image before running packer itself.
-Create a Terraform Manifest using the Nutanix Provider to create your Image and define an output with your image uuid. You can pass this uuid into a Packer Variable. In that case the centos_iso_image_name Variable in the example settings file must be commented.
-```
-export PKR_VAR_centos_iso_image_name=$(terraform output -raw centos_uuid)
-```
+
 ## Contributing
-See the [contributing docs](CONTRIBUTING.md).
+See the [contributing docs](https://github.com/nutanix-cloud-native/packer-plugin-nutanix/blob/main/CONTRIBUTING.md).
 
 ## Support
 ### Community Plus
 
 This code is developed in the open with input from the community through issues and PRs. A Nutanix engineering team serves as the maintainer. Documentation is available in the project repository.
 
-Issues and enhancement requests can be submitted in the [Issues tab of this repository](../../issues). Please search for and review the existing open issues before submitting a new issue.
+Issues and enhancement requests can be submitted in the [Issues tab of this repository](https://github.com/nutanix-cloud-native/packer-plugin-nutanix/issues). Please search for and review the existing open issues before submitting a new issue.
 
 ## License
 The project is released under version 2.0 of the [Apache license](http://www.apache.org/licenses/LICENSE-2.0).
