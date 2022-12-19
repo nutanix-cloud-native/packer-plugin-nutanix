@@ -64,12 +64,7 @@ Please install xorriso for support on MacOS.
 ```
  brew install xorriso
 ```
-### Image Creation
-Right now the plugin cannot upload source-images directly, but Terraform can be used to create a source image before running packer itself.
-Create a Terraform Manifest using the Nutanix Provider to create your Image and define an output with your image uuid. You can pass this uuid into a Packer Variable. In that case the centos_iso_image_name Variable in the example settings file must be commented.
-```
-export PKR_VAR_centos_iso_image_name=$(terraform output -raw centos_uuid)
-```
+
 ## Contributing
 See the [contributing docs](CONTRIBUTING.md).
 
