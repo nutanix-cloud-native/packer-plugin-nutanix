@@ -161,11 +161,11 @@ func findImageByName(conn *v3.Client, name string) (*v3.ImageIntentResponse, err
 	}
 
 	if len(found) > 1 {
-		return nil, fmt.Errorf("your query returned more than one result. Please use soure_image_uuid argument instead")
+		return nil, fmt.Errorf("your query returned multiple results with name %s. Please use soure_image_uuid argument instead", name)
 	}
 
 	if len(found) == 0 {
-		return nil, fmt.Errorf("image with the given name, not found")
+		return nil, fmt.Errorf("image %s not found", name)
 	}
 
 	return findImageByUUID(conn, *found[0].Metadata.UUID)
