@@ -23,10 +23,10 @@ These parameters allow to define information about platform and temporary VM use
   - `os_type` (string) - OS Type ("Linux" or "Windows").
   
 ### Optional
-  - `nutanix_port` (integer) - Port used for connection to Prism Central.
-  - `nutanix_insecure` (boolean) - Authorize connection to Prism Central without valid certificate.
-  - `cpu` (integer) - Number of vCPU for temporary VM.
-  - `memory_mb` (integer) - Size of vRAM for temporary VM (in megabytes).
+  - `nutanix_port` (number) - Port used for connection to Prism Central.
+  - `nutanix_insecure` (bool) - Authorize connection to Prism Central without valid certificate.
+  - `cpu` (number) - Number of vCPU for temporary VM.
+  - `memory_mb` (number) - Size of vRAM for temporary VM (in megabytes).
   - `cd_files` (array of strings) - A list of files to place onto a CD that is attached when the VM is booted. This can include either files or directories; any directories will be copied onto the CD recursively, preserving directory structure hierarchy.
   - `cd_label` (string) - Label of this CD Drive.
   - `boot_type` (string) - Type of boot used on the temporary VM ("legacy" or "UEFI").
@@ -37,7 +37,7 @@ These parameters allow to configure everything around image creation, from the t
 ### All OS
 - `image_name` (string) - Name of the output image.
 - `image_description` (string) - Description for output image.
-- `force_deregister` (boolean) - Allow output image override if already exists.
+- `force_deregister` (bool) - Allow output image override if already exists.
 - `shutdown_command` (string) - Command line to shutdown your temporary VM.
 - `shutdown_timeout` (string) - Timeout for VM shutdown (format : 2m).
 - `communicator` (string) - Protocol used for Packer connection (ex "winrm" or "ssh"). Default is : "ssh".
@@ -48,9 +48,9 @@ These parameters allow to configure everything around image creation, from the t
 - `ssh_password` (string) - password for the ssh user.
 
 ### Dedicated to Windows
-- `winrm_port` (integer) - Port for WinRM communication (default is 5986).
-- `winrm_insecure` (boolean) - Allow insecure connection to WinRM.
-- `winrm_use_ssl` (boolean) - Request SSL connection with WinRM.
+- `winrm_port` (number) - Port for WinRM communication (default is 5986).
+- `winrm_insecure` (bool) - Allow insecure connection to WinRM.
+- `winrm_use_ssl` (bool) - Request SSL connection with WinRM.
 - `winrm_timeout` (string) - Timeout for WinRM (format 45m).
 - `winrm_username` (string) - User login for WinRM connection.
 - `winrm_password` (string) - Password this User.
@@ -67,7 +67,7 @@ All parameters of this `vm_disks` section are described below.
 
 ### Disk 
 - `image_type` (string) - "DISK".
-- `disk_size_gb` (integer) - size of th disk (in gigabytes).
+- `disk_size_gb` (number) - size of th disk (in gigabytes).
 
 Sample:
 ```hcl
@@ -82,7 +82,7 @@ Sample:
 - `source_image_name` (string) - Name of the image used as disk source.
 - `source_image_uuid` (string) - UUID of the image used as disk source.
 - `source_image_uri` (string) - URI of the image used as disk source (if image is not already on the cluster, it will download and store it before launching output image creation process).
-- `disk_size_gb` (integer) - size of the disk (in gigabytes).
+- `disk_size_gb` (number) - size of the disk (in gigabytes).
 
 Sample:
 ```hcl
