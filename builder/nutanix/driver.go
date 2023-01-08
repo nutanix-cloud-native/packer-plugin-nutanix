@@ -458,7 +458,12 @@ func (d *NutanixDriver) Create(req *v3.VMIntentInput) (*nutanixInstance, error) 
 	}
 
 	// Wait for the VM obtain an IP address
-	for i := 0; i < 60; i++ {
+
+	log.Printf("[INFO] Waiting for IP, up to timeout: %s", d.Config.WaitTimeout)
+
+	iteration := int(d.Config.WaitTimeout.Seconds()) / 5
+
+	for i := 0; i < iteration; i++ {
 		vm, err = conn.V3.GetVM(uuid)
 		if err != nil || len(vm.Status.Resources.NicList[0].IPEndpointList) == (0) {
 			log.Printf("Waiting VM (%s) ip configuration", uuid)
