@@ -21,7 +21,7 @@ These parameters allow to define information about platform and temporary VM use
   - `nutanix_endpoint` (string) - Prism Central FQDN or IP.
   - `cluster_name` or `cluster_uuid` (string) - Nutanix cluster name or uuid used to create and store image.
   - `os_type` (string) - OS Type ("Linux" or "Windows").
-  
+
 ### Optional
   - `nutanix_port` (number) - Port used for connection to Prism Central.
   - `nutanix_insecure` (bool) - Authorize connection to Prism Central without valid certificate.
@@ -30,6 +30,7 @@ These parameters allow to define information about platform and temporary VM use
   - `cd_files` (array of strings) - A list of files to place onto a CD that is attached when the VM is booted. This can include either files or directories; any directories will be copied onto the CD recursively, preserving directory structure hierarchy.
   - `cd_label` (string) - Label of this CD Drive.
   - `boot_type` (string) - Type of boot used on the temporary VM ("legacy" or "UEFI").
+  - `ip_wait_timeout` (duration string | ex: "0h42m0s") - Amount of time to wait for VM's IP, similar to 'ssh_timeout'. Defaults to 15m (15 minutes). See the Golang [ParseDuration](https://golang.org/pkg/time/#ParseDuration) documentation for full details.
 
 ## Output configuration
 These parameters allow to configure everything around image creation, from the temporary VM connection to the final image definition.

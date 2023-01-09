@@ -16,7 +16,6 @@ type stepBuildVM struct {
 func (s *stepBuildVM) Run(ctx context.Context, state multistep.StateBag) multistep.StepAction {
 	//Update UI
 	ui := state.Get("ui").(packer.Ui)
-	//config := state.Get("config").(*Config)
 	ui.Say("Creating Packer Builder VM on Nutanix Cluster.")
 	d := state.Get("driver").(Driver)
 	config := state.Get("config").(*Config)

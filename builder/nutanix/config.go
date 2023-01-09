@@ -34,8 +34,9 @@ type Config struct {
 	shutdowncommand.ShutdownConfig `mapstructure:",squash"`
 	ClusterConfig                  `mapstructure:",squash"`
 	VmConfig                       `mapstructure:",squash"`
-	ForceDeregister                bool   `mapstructure:"force_deregister" json:"force_deregister" required:"false"`
-	ImageDescription               string `mapstructure:"image_description" json:"image_description" required:"false"`
+	ForceDeregister                bool          `mapstructure:"force_deregister" json:"force_deregister" required:"false"`
+	ImageDescription               string        `mapstructure:"image_description" json:"image_description" required:"false"`
+	WaitTimeout                    time.Duration `mapstructure:"ip_wait_timeout" json:"ip_wait_timeout" required:"false"`
 
 	ctx interpolate.Context
 }
@@ -157,6 +158,11 @@ func (c *Config) Prepare(raws ...interface{}) ([]string, error) {
 	if c.CommConfig.SSHTimeout == 0 {
 		log.Println("SSHTimeout not set, defaulting to 20min")
 		c.CommConfig.SSHTimeout = 20 * time.Minute
+	}
+
+	// Define default ip_wait_timeout to 15 min
+	if c.WaitTimeout == 0 {
+		c.WaitTimeout = 15 * time.Minute
 	}
 
 	errs = packersdk.MultiErrorAppend(errs, c.ShutdownConfig.Prepare(&c.ctx)...)
