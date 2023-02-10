@@ -16,22 +16,22 @@ type stepBuildVM struct {
 func (s *stepBuildVM) Run(ctx context.Context, state multistep.StateBag) multistep.StepAction {
 	//Update UI
 	ui := state.Get("ui").(packer.Ui)
-	ui.Say("Creating Packer Builder VM on Nutanix Cluster.")
 	d := state.Get("driver").(Driver)
 	config := state.Get("config").(*Config)
 
 	// Determine if we even have a cd_files disk to attach
-	log.Println("Check for temporary iso-disks to attach")
+	log.Println("check for CD disk to attach")
 	if cdPathRaw, ok := state.GetOk("cd_path"); ok {
+		ui.Say("Uploading CD disk...")
 		cdFilesPath := cdPathRaw.(string)
-		log.Println("temporary iso found, " + cdFilesPath)
+		log.Println("CD disk found, " + cdFilesPath)
 		cdfilesImage, err := d.UploadImage(cdFilesPath, "PATH", "ISO_IMAGE", config.VmConfig)
 		if err != nil {
-			ui.Error("Error uploading temporary image:" + err.Error())
+			ui.Error("Error uploading CD disk:" + err.Error())
 			state.Put("error", err)
 			return multistep.ActionHalt
 		}
-		ui.Say("Temporary ISO uploaded")
+		ui.Say("CD disk uploaded")
 		state.Put("imageUUID", *cdfilesImage.image.Metadata.UUID)
 		temp_cd := VmDisk{
 			ImageType:       "ISO_IMAGE",
@@ -39,9 +39,10 @@ func (s *stepBuildVM) Run(ctx context.Context, state multistep.StateBag) multist
 		}
 		config.VmConfig.VmDisks = append(config.VmConfig.VmDisks, temp_cd)
 	} else {
-		log.Println("No temporary iso, not attaching.")
+		log.Println("no CD disk, not attaching.")
 	}
 
+	ui.Say("Creating Packer Builder VM on Nutanix Cluster...")
 	//CreateRequest()
 	vmRequest, err := d.CreateRequest(config.VmConfig)
 	if err != nil {
