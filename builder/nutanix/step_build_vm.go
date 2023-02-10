@@ -27,8 +27,8 @@ func (s *stepBuildVM) Run(ctx context.Context, state multistep.StateBag) multist
 		log.Println("temporary iso found, " + cdFilesPath)
 		cdfilesImage, err := d.UploadImage(cdFilesPath, "PATH", "ISO_IMAGE", config.VmConfig)
 		if err != nil {
-			ui.Error("Error uploading temporary image:")
-			ui.Error(err.Error())
+			ui.Error("Error uploading temporary image:" + err.Error())
+			state.Put("error", err)
 			return multistep.ActionHalt
 		}
 		ui.Say("Temporary ISO uploaded")
@@ -46,6 +46,7 @@ func (s *stepBuildVM) Run(ctx context.Context, state multistep.StateBag) multist
 	vmRequest, err := d.CreateRequest(config.VmConfig)
 	if err != nil {
 		ui.Error("Error creating Request: " + err.Error())
+		state.Put("error", err)
 		return multistep.ActionHalt
 	}
 	vmInstance, err := d.Create(vmRequest)
