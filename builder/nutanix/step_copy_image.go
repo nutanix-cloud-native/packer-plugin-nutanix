@@ -16,20 +16,19 @@ type stepCopyImage struct {
 func (s *stepCopyImage) Run(ctx context.Context, state multistep.StateBag) multistep.StepAction {
 	ui := state.Get("ui").(packer.Ui)
 	vmUUID := state.Get("vmUUID").(string)
-	ui.Say("Retrieving Status for uuid: " + vmUUID)
 	d := state.Get("driver").(Driver)
 	vm, _ := d.GetVM(vmUUID)
 
-	ui.Say("Creating image for uuid: " + vmUUID)
+	ui.Say(fmt.Sprintf("Creating image from virtual machine %s...", s.Config.VMName))
 
-	ui.Message("Initiatiating save VM DISK task.")
 	// Choose disk to replicate - looking for first "DISK"
 	var diskToCopy string
 
 	for i := range vm.nutanix.Spec.Resources.DiskList {
 		if *vm.nutanix.Spec.Resources.DiskList[i].DeviceProperties.DeviceType == "DISK" {
 			diskToCopy = *vm.nutanix.Spec.Resources.DiskList[i].UUID
-			ui.Message("Found DISK to copy: " + diskToCopy)
+			diskID := fmt.Sprintf("%s:%d", *vm.nutanix.Spec.Resources.DiskList[i].DeviceProperties.DiskAddress.AdapterType, *vm.nutanix.Spec.Resources.DiskList[i].DeviceProperties.DiskAddress.DeviceIndex)
+			ui.Message("Found disk to copy: " + diskID)
 			break
 		}
 	}
@@ -41,9 +40,9 @@ func (s *stepCopyImage) Run(ctx context.Context, state multistep.StateBag) multi
 		return multistep.ActionHalt
 	}
 
-	imageResponse, err := d.SaveVMDisk(diskToCopy)
+	imageResponse, err := d.SaveVMDisk(diskToCopy, s.Config.ImageCategoryKey, s.Config.ImageCategoryValue)
 	if err != nil {
-		ui.Error("Unexpected Nutanix Task status: " + err.Error())
+		ui.Error("Image creation failed: " + err.Error())
 		state.Put("error", err)
 		return multistep.ActionHalt
 	}

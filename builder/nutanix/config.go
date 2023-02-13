@@ -36,6 +36,8 @@ type Config struct {
 	VmConfig                       `mapstructure:",squash"`
 	ForceDeregister                bool          `mapstructure:"force_deregister" json:"force_deregister" required:"false"`
 	ImageDescription               string        `mapstructure:"image_description" json:"image_description" required:"false"`
+	ImageCategoryKey               string        `mapstructure:"image_category_key" json:"image_category_key" required:"false"`
+	ImageCategoryValue             string        `mapstructure:"image_category_value" json:"image_category_value" required:"false"`
 	WaitTimeout                    time.Duration `mapstructure:"ip_wait_timeout" json:"ip_wait_timeout" required:"false"`
 
 	ctx interpolate.Context
@@ -148,6 +150,17 @@ func (c *Config) Prepare(raws ...interface{}) ([]string, error) {
 		log.Println("No image_name assigned, setting to vm_name")
 
 		c.VmConfig.ImageName = c.VmConfig.VMName
+	}
+
+	// Validate if both Image Category key and value are given in same time
+	if c.ImageCategoryKey != "" && c.ImageCategoryValue == "" {
+		log.Println("Nutanix Image Category value missing from configuration")
+		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("missing image_category_value"))
+	}
+
+	if c.ImageCategoryKey == "" && c.ImageCategoryValue != "" {
+		log.Println("Nutanix Image Category key missing from configuration")
+		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("missing image_category_key"))
 	}
 
 	if c.CommConfig.SSHPort == 0 {

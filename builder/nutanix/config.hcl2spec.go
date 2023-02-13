@@ -121,6 +121,8 @@ type FlatConfig struct {
 	UserData                  *string           `mapstructure:"user_data" json:"user_data" required:"false" cty:"user_data" hcl:"user_data"`
 	ForceDeregister           *bool             `mapstructure:"force_deregister" json:"force_deregister" required:"false" cty:"force_deregister" hcl:"force_deregister"`
 	ImageDescription          *string           `mapstructure:"image_description" json:"image_description" required:"false" cty:"image_description" hcl:"image_description"`
+	ImageCategoryKey          *string           `mapstructure:"image_category_key" json:"image_category_key" required:"false" cty:"image_category_key" hcl:"image_category_key"`
+	ImageCategoryValue        *string           `mapstructure:"image_category_value" json:"image_category_value" required:"false" cty:"image_category_value" hcl:"image_category_value"`
 	WaitTimeout               *string           `mapstructure:"ip_wait_timeout" json:"ip_wait_timeout" required:"false" cty:"ip_wait_timeout" hcl:"ip_wait_timeout"`
 }
 
@@ -216,6 +218,8 @@ func (*FlatConfig) HCL2Spec() map[string]hcldec.Spec {
 		"user_data":                    &hcldec.AttrSpec{Name: "user_data", Type: cty.String, Required: false},
 		"force_deregister":             &hcldec.AttrSpec{Name: "force_deregister", Type: cty.Bool, Required: false},
 		"image_description":            &hcldec.AttrSpec{Name: "image_description", Type: cty.String, Required: false},
+		"image_category_key":           &hcldec.AttrSpec{Name: "image_category_key", Type: cty.String, Required: false},
+		"image_category_value":         &hcldec.AttrSpec{Name: "image_category_value", Type: cty.String, Required: false},
 		"ip_wait_timeout":              &hcldec.AttrSpec{Name: "ip_wait_timeout", Type: cty.String, Required: false},
 	}
 	return s
