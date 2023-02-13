@@ -31,7 +31,7 @@ type Driver interface {
 	UploadImage(string, string, string, VmConfig) (*nutanixImage, error)
 	DeleteImage(string) error
 	GetImage(string) (*nutanixImage, error)
-	SaveVMDisk(string) (*nutanixImage, error)
+	SaveVMDisk(string, string, string) (*nutanixImage, error)
 	WaitForShutdown(string, <-chan struct{}) bool
 }
 
@@ -169,6 +169,29 @@ func findImageByName(conn *v3.Client, name string) (*v3.ImageIntentResponse, err
 	}
 
 	return findImageByUUID(conn, *found[0].Metadata.UUID)
+}
+
+func checkTask(conn *v3.Client, taskUUID string) error {
+
+	log.Printf("checking task %s...", taskUUID)
+	var task *v3.TasksResponse
+	var err error
+	for i := 0; i < 120; i++ {
+		task, err = conn.V3.GetTask(taskUUID)
+		if err == nil {
+			if *task.Status == "SUCCEEDED" {
+				return nil
+			} else if *task.Status == "FAILED" {
+				return fmt.Errorf(*task.ErrorDetail)
+			} else {
+				log.Printf("current task status is: " + *task.Status)
+				<-time.After(5 * time.Second)
+			}
+		} else {
+			return err
+		}
+	}
+	return fmt.Errorf("check task %s timeout", taskUUID)
 }
 
 func (d *nutanixInstance) Addresses() []string {
@@ -422,39 +445,19 @@ func (d *NutanixDriver) Create(req *v3.VMIntentInput) (*nutanixInstance, error) 
 
 	resp, err := conn.V3.CreateVM(req)
 	if err != nil {
-		log.Printf("Error creating vm: [%v]", err)
+		log.Printf("error creating vm: %s", err.Error())
 		return nil, err
 	}
 
 	uuid := *resp.Metadata.UUID
-	taskUUID := resp.Status.ExecutionContext.TaskUUID.(string)
 
-	log.Printf("waiting for vm (%s) to create: %s", uuid, taskUUID)
+	log.Printf("creating vm %s...", uuid)
 
-	var vm *v3.VMIntentResponse
-	for {
-		vm, err = conn.V3.GetVM(uuid)
-		if err == nil {
-			if *vm.Status.State == "COMPLETE" {
-				log.Printf("vm created successfully: " + *vm.Status.State)
-				break
-			} else if *vm.Status.State == "ERROR" {
-				var errTxt string
-				for i := 0; i < len(vm.Status.MessageList); i++ {
-					errTxt = *(vm.Status.MessageList)[i].Message
-					log.Printf("Nutanix Error Message: %s", *(vm.Status.MessageList)[i].Message)
-					log.Printf("Nutanix Error Reason: %s", *(vm.Status.MessageList)[i].Reason)
-					log.Printf("Nutanix Error Details: %s", (vm.Status.MessageList)[i].Details)
-				}
-				return nil, fmt.Errorf(errTxt)
-			} else {
-				log.Printf("Current status is: " + *vm.Status.State)
-				time.Sleep(5 * time.Second)
-			}
-		} else {
-			log.Printf("Error while getting VM Status, %s", err.Error())
-			return nil, err
-		}
+	err = checkTask(conn, resp.Status.ExecutionContext.TaskUUID.(string))
+
+	if err != nil {
+		log.Printf("error creating vm: %s", err.Error())
+		return nil, err
 	}
 
 	// Wait for the VM obtain an IP address
@@ -462,7 +465,7 @@ func (d *NutanixDriver) Create(req *v3.VMIntentInput) (*nutanixInstance, error) 
 	log.Printf("[INFO] Waiting for IP, up to timeout: %s", d.Config.WaitTimeout)
 
 	iteration := int(d.Config.WaitTimeout.Seconds()) / 5
-
+	var vm *v3.VMIntentResponse
 	for i := 0; i < iteration; i++ {
 		vm, err = conn.V3.GetVM(uuid)
 		if err != nil || len(vm.Status.Resources.NicList[0].IPEndpointList) == (0) {
@@ -570,7 +573,7 @@ func (d *NutanixDriver) UploadImage(imagePath string, sourceType string, imageTy
 		if *running.Status.State == "COMPLETE" {
 			break
 		}
-		time.Sleep(5 * time.Second)
+		<-time.After(5 * time.Second)
 	}
 
 	if sourceType == "PATH" {
@@ -586,7 +589,7 @@ func (d *NutanixDriver) UploadImage(imagePath string, sourceType string, imageTy
 			if *running.Status.State == "COMPLETE" {
 				break
 			}
-			time.Sleep(5 * time.Second)
+			<-time.After(5 * time.Second)
 		}
 	}
 	return &nutanixImage{image: *image}, nil
@@ -727,7 +730,7 @@ func (d *NutanixDriver) PowerOff(vmUUID string) error {
 	log.Printf("PowerOff task: %s", taskUUID)
 	return nil
 }
-func (d *NutanixDriver) SaveVMDisk(diskUUID string) (*nutanixImage, error) {
+func (d *NutanixDriver) SaveVMDisk(diskUUID string, imageCategoryKey string, imageCategoryValue string) (*nutanixImage, error) {
 
 	configCreds := client.Credentials{
 		URL:      fmt.Sprintf("%s:%d", d.ClusterConfig.Endpoint, d.ClusterConfig.Port),
@@ -751,29 +754,22 @@ func (d *NutanixDriver) SaveVMDisk(diskUUID string) (*nutanixImage, error) {
 			return nil, fmt.Errorf("error while ListAllImage, %s", err.Error())
 		}
 		if *ImageList.Metadata.TotalMatches == 0 {
-			log.Println("Image with given Name not found, no need to deregister")
+			log.Println("image with given Name not found, no need to deregister")
 		} else if *ImageList.Metadata.TotalMatches > 1 {
-			log.Println("More than one image with given Name found, will not deregister")
+			log.Println("more than one image with given Name found, will not deregister")
 		} else if *ImageList.Metadata.TotalMatches == 1 {
-			log.Println("Exactly one image with given Name found, will deregister")
+			log.Println("exactly one image with given Name found, will deregister")
 
 			resp, err := conn.V3.DeleteImage(*ImageList.Entities[0].Metadata.UUID)
 			if err != nil {
-				return nil, fmt.Errorf("error while DeleteImage, %s", err.Error())
+				return nil, fmt.Errorf("error while Delete Image, %s", err.Error())
 			}
-			taskUUID := resp.Status.ExecutionContext.TaskUUID.(string)
-			log.Printf("Wait until delete Image %s is finished, %s\n", *ImageList.Entities[0].Metadata.UUID, taskUUID)
-			// Wait for the Image to be deleted
-			for i := 0; i < 1200; i++ {
-				resp, err := conn.V3.GetTask(taskUUID)
-				if err != nil || *resp.Status != "SUCCEEDED" {
-					<-time.After(1 * time.Second)
-					continue
-				}
-				if *resp.Status == "SUCCEEDED" {
-					break
-				}
-				return nil, fmt.Errorf("error while Image Delete getting Task Status, %s", err.Error())
+
+			log.Printf("deleting image %s...\n", *ImageList.Entities[0].Metadata.UUID)
+			err = checkTask(conn, resp.Status.ExecutionContext.TaskUUID.(string))
+
+			if err != nil {
+				return nil, fmt.Errorf("error while Delete Image, %s", err.Error())
 			}
 		}
 	}
@@ -797,11 +793,24 @@ func (d *NutanixDriver) SaveVMDisk(diskUUID string) (*nutanixImage, error) {
 		},
 	}
 
+	if imageCategoryKey != "" && imageCategoryValue != "" {
+		c := make(map[string]string)
+		c[imageCategoryKey] = imageCategoryValue
+		req.Metadata.Categories = c
+	}
+
 	image, err := conn.V3.CreateImage(req)
 	if err != nil {
-		return nil, fmt.Errorf("error while CreateImage, %s", err.Error())
+		return nil, fmt.Errorf("error while Create Image, %s", err.Error())
 	}
-	return &nutanixImage{image: *image}, nil
+	log.Printf("creating image %s...\n", *image.Metadata.UUID)
+	err = checkTask(conn, image.Status.ExecutionContext.TaskUUID.(string))
+	if err != nil {
+		return nil, fmt.Errorf("error while Create Image, %s", err.Error())
+	} else {
+		return &nutanixImage{image: *image}, nil
+	}
+
 }
 
 func getEmptyClientSideFilter() []*client.AdditionalFilter {

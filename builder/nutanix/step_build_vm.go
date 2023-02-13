@@ -2,6 +2,7 @@ package nutanix
 
 import (
 	"context"
+	"fmt"
 	"log"
 
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
@@ -42,25 +43,27 @@ func (s *stepBuildVM) Run(ctx context.Context, state multistep.StateBag) multist
 		log.Println("no CD disk, not attaching.")
 	}
 
-	ui.Say("Creating Packer Builder VM on Nutanix Cluster...")
+	ui.Say("Creating Packer Builder virtual machine...")
 	//CreateRequest()
 	vmRequest, err := d.CreateRequest(config.VmConfig)
 	if err != nil {
-		ui.Error("Error creating Request: " + err.Error())
+		ui.Error("Error creating virtual machine request: " + err.Error())
 		state.Put("error", err)
 		return multistep.ActionHalt
 	}
 	vmInstance, err := d.Create(vmRequest)
 
 	if err != nil {
-		ui.Error("Unable to create Nutanix VM request: " + err.Error())
+		ui.Error("Unable to create virtual machine: " + err.Error())
 		state.Put("error", err)
 		return multistep.ActionHalt
 	}
+
+	ui.Message(fmt.Sprintf("virtual machine %s created", config.VMName))
 	log.Printf("Nutanix VM UUID: %s", *vmInstance.nutanix.Metadata.UUID)
 	state.Put("vmUUID", *vmInstance.nutanix.Metadata.UUID)
 	state.Put("ip", vmInstance.Addresses()[0])
-	ui.Say("IP for Nutanix device: " + vmInstance.Addresses()[0])
+	ui.Message("Found IP for virtual machine: " + vmInstance.Addresses()[0])
 
 	return multistep.ActionContinue
 }
