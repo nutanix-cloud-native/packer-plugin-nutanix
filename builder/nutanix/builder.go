@@ -84,11 +84,11 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 		return nil, rawErr.(error)
 	}
 
-	if vmUUID, ok := state.GetOk("vm_disk_uuid"); ok {
-		if vmUUID != nil {
+	if imageUUID, ok := state.GetOk("image_uuid"); ok {
+		if imageUUID != nil {
 			artifact := &Artifact{
-				Name: b.config.VmConfig.VMName,
-				UUID: vmUUID.(string),
+				Name: b.config.ImageName,
+				UUID: imageUUID.(string),
 			}
 			return artifact, nil
 		}

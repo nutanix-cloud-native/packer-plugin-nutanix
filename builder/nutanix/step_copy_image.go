@@ -47,7 +47,7 @@ func (s *stepCopyImage) Run(ctx context.Context, state multistep.StateBag) multi
 		return multistep.ActionHalt
 	}
 	ui.Message(fmt.Sprintf("Successfully created image: %s (%s)", *imageResponse.image.Spec.Name, *imageResponse.image.Metadata.UUID))
-	state.Put("vm_disk_uuid", (*imageResponse.image.Metadata.UUID))
+	state.Put("image_uuid", (*imageResponse.image.Metadata.UUID))
 	return multistep.ActionContinue
 }
 
