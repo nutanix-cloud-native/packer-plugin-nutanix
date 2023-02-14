@@ -289,6 +289,9 @@ func (d *NutanixDriver) CreateRequest(vm VmConfig) (*v3.VMIntentInput, error) {
 			AdapterType := "SCSI"
 			DeviceIndex := int64(SCSIindex)
 			DiskSizeMib := disk.DiskSizeGB * 1024
+			if disk.DiskSizeGB == 0 {
+				DiskSizeMib = *image.Status.Resources.SizeBytes / 1024 / 1024
+			}
 			newDisk := v3.VMDisk{
 				DeviceProperties: &v3.VMDiskDeviceProperties{
 					DeviceType: &DeviceType,
@@ -443,6 +446,8 @@ func (d *NutanixDriver) Create(req *v3.VMIntentInput) (*nutanixInstance, error) 
 		return nil, err
 	}
 
+	log.Printf("creating vm %s...", d.Config.VMName)
+
 	resp, err := conn.V3.CreateVM(req)
 	if err != nil {
 		log.Printf("error creating vm: %s", err.Error())
@@ -451,14 +456,14 @@ func (d *NutanixDriver) Create(req *v3.VMIntentInput) (*nutanixInstance, error) 
 
 	uuid := *resp.Metadata.UUID
 
-	log.Printf("creating vm %s...", uuid)
-
 	err = checkTask(conn, resp.Status.ExecutionContext.TaskUUID.(string))
 
 	if err != nil {
 		log.Printf("error creating vm: %s", err.Error())
 		return nil, err
 	}
+
+	log.Print("vm succesfully created")
 
 	// Wait for the VM obtain an IP address
 
