@@ -32,8 +32,8 @@ func (s *stepBuildVM) Run(ctx context.Context, state multistep.StateBag) multist
 			state.Put("error", err)
 			return multistep.ActionHalt
 		}
-		ui.Say("CD disk uploaded")
-		state.Put("imageUUID", *cdfilesImage.image.Metadata.UUID)
+		ui.Message("CD disk uploaded " + *cdfilesImage.image.Spec.Name)
+		state.Put("cd_uuid", *cdfilesImage.image.Metadata.UUID)
 		temp_cd := VmDisk{
 			ImageType:       "ISO_IMAGE",
 			SourceImageUUID: *cdfilesImage.image.Metadata.UUID,
@@ -59,10 +59,11 @@ func (s *stepBuildVM) Run(ctx context.Context, state multistep.StateBag) multist
 		return multistep.ActionHalt
 	}
 
-	ui.Message(fmt.Sprintf("virtual machine %s created", config.VMName))
+	ui.Message(fmt.Sprintf("Virtual machine %s created", config.VMName))
 	log.Printf("Nutanix VM UUID: %s", *vmInstance.nutanix.Metadata.UUID)
-	state.Put("vmUUID", *vmInstance.nutanix.Metadata.UUID)
+	state.Put("vm_uuid", *vmInstance.nutanix.Metadata.UUID)
 	state.Put("ip", vmInstance.Addresses()[0])
+	state.Put("destroy_vm", true)
 	ui.Message("Found IP for virtual machine: " + vmInstance.Addresses()[0])
 
 	return multistep.ActionContinue
@@ -70,18 +71,40 @@ func (s *stepBuildVM) Run(ctx context.Context, state multistep.StateBag) multist
 
 // Cleanup will tear down the VM once the build is complete
 func (s *stepBuildVM) Cleanup(state multistep.StateBag) {
-	_, cancelled := state.GetOk(multistep.StateCancelled)
-	_, halted := state.GetOk(multistep.StateHalted)
-	if !cancelled && !halted {
+	vmUUID := state.Get("vm_uuid")
+	if vmUUID == nil {
 		return
 	}
 
+	_, cancelled := state.GetOk(multistep.StateCancelled)
+	_, halted := state.GetOk(multistep.StateHalted)
+
+	d := state.Get("driver").(Driver)
 	ui := state.Get("ui").(packer.Ui)
 
-	if vmUUID, ok := state.GetOk("vmUUID"); ok {
-		if vmUUID != "" {
-			ui.Say("Cleaning up Nutanix VM.")
+	if cancelled || halted {
+		ui.Say("Task cancelled, virtual machine is not deleted")
+		return
+	}
 
+	ui.Say("Deleting virtual machine...")
+
+	if cdUUID, ok := state.GetOk("cd_uuid"); ok {
+		err := d.DeleteImage(cdUUID.(string))
+		if err != nil {
+			ui.Error("An error occurred while deleting CD disk")
+			return
+		} else {
+			ui.Message("CD disk successfully deleted")
 		}
 	}
+
+	err := d.Delete(vmUUID.(string))
+	if err != nil {
+		ui.Error("An error occurred while deleting the Virtual machine")
+		return
+	} else {
+		ui.Message("Virtual machine successfully deleted")
+	}
+
 }

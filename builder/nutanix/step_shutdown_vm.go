@@ -34,7 +34,7 @@ func (s *StepShutdown) Run(ctx context.Context, state multistep.StateBag) multis
 	driver := state.Get("driver").(Driver)
 	ui := state.Get("ui").(packersdk.Ui)
 	config := state.Get("config").(*Config)
-	vmUUID := state.Get("vmUUID").(string)
+	vmUUID := state.Get("vm_uuid").(string)
 
 	if config.CommConfig.Type == "none" {
 		ui.Say("No Communicator configured, halting the virtual machine...")
