@@ -1,0 +1,48 @@
+name: E2E tests
+
+on:
+  workflow_dispatch:
+    inputs:
+      logs:
+        description: 'Set 1 to activate full logs'
+        required: false
+        default: '0'
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    name: launch E2E tests
+    
+    strategy:
+      fail-fast: false
+      matrix:
+        test: [ simple ]
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Setup `packer`
+        uses: hashicorp/setup-packer@main
+        id: setup
+
+      - name: Run `packer init`
+        id: init
+        run: "packer init ."
+        with:
+          working_directory: test/e2e/${{ matrix.version}}
+
+      - name: Run `packer validate`
+        id: validate
+        run: "packer validate ."
+        env:
+          PACKER_LOG: ${{ github.event.inputs.logs }}
+        with:
+          working_directory: test/e2e/${{ matrix.version}}
+
+      - name: Run `packer validate`
+        id: build
+        run: "packer build ."
+        env:
+          PACKER_LOG: ${{ github.event.inputs.logs }}
+        with:
+          working_directory: test/e2e/${{ matrix.version}}
