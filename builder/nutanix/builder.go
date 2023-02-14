@@ -72,9 +72,6 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 		&stepCopyImage{
 			Config: &b.config,
 		},
-		&stepDestroyVM{
-			Config: &b.config,
-		},
 	}
 
 	b.runner = &multistep.BasicRunner{Steps: steps}
