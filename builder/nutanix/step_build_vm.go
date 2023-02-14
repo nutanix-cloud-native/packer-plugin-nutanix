@@ -25,7 +25,7 @@ func (s *stepBuildVM) Run(ctx context.Context, state multistep.StateBag) multist
 	if cdPathRaw, ok := state.GetOk("cd_path"); ok {
 		ui.Say("Uploading CD disk...")
 		cdFilesPath := cdPathRaw.(string)
-		log.Println("CD disk found, " + cdFilesPath)
+		log.Println("CD disk found " + cdFilesPath)
 		cdfilesImage, err := d.UploadImage(cdFilesPath, "PATH", "ISO_IMAGE", config.VmConfig)
 		if err != nil {
 			ui.Error("Error uploading CD disk:" + err.Error())

@@ -184,7 +184,7 @@ func checkTask(conn *v3.Client, taskUUID string) error {
 			} else if *task.Status == "FAILED" {
 				return fmt.Errorf(*task.ErrorDetail)
 			} else {
-				log.Printf("current task status is: " + *task.Status)
+				log.Printf("task status is " + *task.Status)
 				<-time.After(5 * time.Second)
 			}
 		} else {
@@ -552,44 +552,35 @@ func (d *NutanixDriver) UploadImage(imagePath string, sourceType string, imageTy
 	if sourceType == "URI" {
 		image, err := sourceImageExists(conn, file, imagePath)
 		if err != nil {
-			return nil, fmt.Errorf("error while check if Image exists, %s", err.Error())
+			return nil, fmt.Errorf("error while checking if image exists, %s", err.Error())
 		}
 		if image != nil {
 			return &nutanixImage{image: *image}, nil
 		}
 		req.Spec.Resources.SourceURI = &imagePath
 	}
+
+	log.Printf("creating image: %s", file)
 	image, err := conn.V3.CreateImage(req)
 	if err != nil {
-		return nil, fmt.Errorf("error while Image Create, %s", err.Error())
+		return nil, fmt.Errorf("error while create image: %s", err.Error())
 	}
 
-	for {
-		running, err := conn.V3.GetImage(*image.Metadata.UUID)
-		if err != nil {
-			return nil, fmt.Errorf("error while retrieve image create status, %s", err.Error())
-		}
-		log.Printf("Creating Image: %s", *running.Status.State)
-		if *running.Status.State == "COMPLETE" {
-			break
-		}
-		<-time.After(5 * time.Second)
+	err = checkTask(conn, image.Status.ExecutionContext.TaskUUID.(string))
+	if err != nil {
+		return nil, fmt.Errorf("error while create image: %s", err.Error())
 	}
 
 	if sourceType == "PATH" {
+		log.Printf("uploading image: %s", imagePath)
 		err = conn.V3.UploadImage(*image.Metadata.UUID, imagePath)
 		if err != nil {
-			return nil, fmt.Errorf("error while upload, %s", err.Error())
+			return nil, fmt.Errorf("error while upload image: %s", err.Error())
 		}
-		for {
-			running, err := conn.V3.GetImage(*image.Metadata.UUID)
-			if err != nil {
-				return nil, fmt.Errorf("error while upload status, %s", err.Error())
-			}
-			if *running.Status.State == "COMPLETE" {
-				break
-			}
-			<-time.After(5 * time.Second)
+
+		running, err := conn.V3.GetImage(*image.Metadata.UUID)
+		if err != nil || *running.Status.State != "COMPLETE" {
+			return nil, fmt.Errorf("error while upload image: %s", err.Error())
 		}
 	}
 	return &nutanixImage{image: *image}, nil
