@@ -123,6 +123,7 @@ type FlatConfig struct {
 	ImageDescription          *string           `mapstructure:"image_description" json:"image_description" required:"false" cty:"image_description" hcl:"image_description"`
 	ImageCategoryKey          *string           `mapstructure:"image_category_key" json:"image_category_key" required:"false" cty:"image_category_key" hcl:"image_category_key"`
 	ImageCategoryValue        *string           `mapstructure:"image_category_value" json:"image_category_value" required:"false" cty:"image_category_value" hcl:"image_category_value"`
+	ImageDelete               *bool             `mapstructure:"image_delete" json:"image_delete" required:"false" cty:"image_delete" hcl:"image_delete"`
 	WaitTimeout               *string           `mapstructure:"ip_wait_timeout" json:"ip_wait_timeout" required:"false" cty:"ip_wait_timeout" hcl:"ip_wait_timeout"`
 }
 
@@ -220,6 +221,7 @@ func (*FlatConfig) HCL2Spec() map[string]hcldec.Spec {
 		"image_description":            &hcldec.AttrSpec{Name: "image_description", Type: cty.String, Required: false},
 		"image_category_key":           &hcldec.AttrSpec{Name: "image_category_key", Type: cty.String, Required: false},
 		"image_category_value":         &hcldec.AttrSpec{Name: "image_category_value", Type: cty.String, Required: false},
+		"image_delete":                 &hcldec.AttrSpec{Name: "image_delete", Type: cty.Bool, Required: false},
 		"ip_wait_timeout":              &hcldec.AttrSpec{Name: "ip_wait_timeout", Type: cty.String, Required: false},
 	}
 	return s

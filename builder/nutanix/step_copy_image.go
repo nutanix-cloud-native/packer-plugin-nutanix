@@ -52,4 +52,22 @@ func (s *stepCopyImage) Run(ctx context.Context, state multistep.StateBag) multi
 }
 
 func (s *stepCopyImage) Cleanup(state multistep.StateBag) {
+	ui := state.Get("ui").(packer.Ui)
+	d := state.Get("driver").(Driver)
+
+	if !s.Config.ImageDelete {
+		return
+	}
+
+	if imgUUID, ok := state.GetOk("image_uuid"); ok {
+		ui.Say(fmt.Sprintf("Deleting image %s...", s.Config.ImageName))
+
+		err := d.DeleteImage(imgUUID.(string))
+		if err != nil {
+			ui.Error("An error occurred while deleting image")
+			return
+		} else {
+			ui.Message("Image successfully deleted")
+		}
+	}
 }
