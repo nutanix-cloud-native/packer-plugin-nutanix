@@ -1,6 +1,7 @@
 name: E2E tests
 
 on:
+  pull_request:
   workflow_dispatch:
     inputs:
       logs:
@@ -9,40 +10,102 @@ on:
         default: '0'
 
 jobs:
+  plugin-build:
+    runs-on: [self-hosted, nxlab, packer]
+    outputs:
+      test-list: ${{ steps.test-list.outputs.list}}
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Setup `golang`
+        uses: actions/setup-go@v3
+        with:
+          go-version: '>=1.19.0'
+
+      - name: Build packer plugin
+        run: |
+          cd $GITHUB_WORKSPACE
+          make dev
+      
+      - uses: actions/upload-artifact@v3
+        with:
+          name: packer-plugin-nutanix
+          path: ~/.packer.d/plugins/packer-plugin-nutanix
+          retention-days: 7
+
+      - name: build test list
+        id: test-list
+        run: echo "list=$(ls test/e2e | jq -R -s -c 'split("\n")[:-1]')" >> $GITHUB_OUTPUT
+
+
   e2e:
-    runs-on: ubuntu-latest
-    name: launch E2E tests
+    name: E2E test
+    needs: plugin-build
     
     strategy:
-      fail-fast: false
       matrix:
-        test: [ simple ]
+        test: ${{fromJSON(needs.plugin-build.outputs.test-list)}}
+
+    runs-on: [self-hosted, nxlab, packer]
+    defaults:
+      run:
+        working-directory: test/e2e/${{ matrix.test}}
+    
+
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v3
 
       - name: Setup `packer`
         uses: hashicorp/setup-packer@main
-        id: setup
+        id: setup-packer
+
+      - name: Setup `xorriso`
+        run: |
+          sudo apt update -y
+          sudo apt install -y xorriso
+
+      - uses: actions/download-artifact@v3
+        with:
+          name: packer-plugin-nutanix
+          path: /tmp
+
+      - name: Install plugin
+        run: |
+          mkdir -p ~/.packer.d/plugins/
+          cp /tmp/packer-plugin-nutanix ~/.packer.d/plugins/packer-plugin-nutanix
+          chmod 755 ~/.packer.d/plugins/packer-plugin-nutanix
 
       - name: Run `packer init`
         id: init
-        run: "packer init ."
-        with:
-          working_directory: test/e2e/${{ matrix.version}}
+        run: |
+          packer init .
 
       - name: Run `packer validate`
         id: validate
-        run: "packer validate ."
+        run: packer validate -var "test=${{ matrix.test}}" .
         env:
           PACKER_LOG: ${{ github.event.inputs.logs }}
-        with:
-          working_directory: test/e2e/${{ matrix.version}}
 
-      - name: Run `packer validate`
+      - name: Run `packer build`
         id: build
-        run: "packer build ."
+        run: packer build -var "test=${{ matrix.test}}" .
         env:
           PACKER_LOG: ${{ github.event.inputs.logs }}
-        with:
-          working_directory: test/e2e/${{ matrix.version}}
+
+  results:
+    if: ${{ always() }}
+    runs-on: [self-hosted, nxlab, packer]
+    name: Final E2E results
+    needs: [e2e]
+    steps:
+      - run: |
+          result="${{ needs.e2e.result }}"
+          if [[ $result == "success" || $result == "skipped" ]]; then
+            exit 0
+          else
+            exit 1
+          fi
+

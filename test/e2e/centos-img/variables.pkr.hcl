@@ -28,6 +28,6 @@ variable "nutanix_cluster" {
   type = string
 }
 
-variable "centos_disk_image_name" {
+variable "test" {
   type = string
 }
