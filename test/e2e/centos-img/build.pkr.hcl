@@ -4,7 +4,6 @@ build {
   }
 
   provisioner "shell" {
-    only = ["nutanix.centos"]
     environment_vars = [
       "FOO=hello world",
     ]

@@ -7,9 +7,13 @@ source "nutanix" "centos" {
   cluster_name     = var.nutanix_cluster
   os_type          = "Linux"
   
+ vm_disks {
+      image_type = "ISO_IMAGE"
+      source_image_uri = "http://fr2.rpmfind.net/linux/centos/7.9.2009/isos/x86_64/CentOS-7-x86_64-Minimal-2009.iso"
+  }
+
   vm_disks {
-      image_type = "DISK_IMAGE"
-      source_image_name = var.centos_disk_image_name
+      image_type = "DISK"
       disk_size_gb = 40
   }
 
@@ -17,15 +21,20 @@ source "nutanix" "centos" {
     subnet_name       = var.nutanix_subnet
   }
   
-  image_name        = "centos-packer-image"
-  image_category_key = "region"
-  image_category_value = "paris"
+  cd_files          = ["scripts/ks.cfg"]
+  cd_label          = "OEMDRV"
+
+  vm_name        = "e2e-packer-${var.test}-${formatdate("MDYYhms", timestamp())}"
+
+  image_name        = "e2e-packer-${var.test}-${formatdate("MDYYhms", timestamp())}"
+  image_delete      = true
+  image_category_key = "Environment"
+  image_category_value = "Testing"
 
   force_deregister  = true
-  user_data         = "I2Nsb3VkLWNvbmZpZwp1c2VyczoKICAtIG5hbWU6IGNlbnRvcwogICAgc3VkbzogWydBTEw9KEFMTCkgTk9QQVNTV0Q6QUxMJ10KY2hwYXNzd2Q6CiAgbGlzdDogfAogICAgY2VudG9zOnBhY2tlcgogIGV4cGlyZTogRmFsc2UKc3NoX3B3YXV0aDogVHJ1ZQ=="
 
   shutdown_command  = "echo 'packer' | sudo -S shutdown -P now"
   shutdown_timeout = "2m"
   ssh_password     = "packer"
-  ssh_username     = "centos"
+  ssh_username     = "root"
 }
