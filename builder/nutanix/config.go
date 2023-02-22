@@ -65,17 +65,19 @@ type VmNIC struct {
 	SubnetUUID string `mapstructure:"subnet_uuid" json:"subnet_uuid" required:"false"`
 }
 type VmConfig struct {
-	VMName      string   `mapstructure:"vm_name" json:"vm_name" required:"false"`
-	OSType      string   `mapstructure:"os_type" json:"os_type" required:"true"`
-	BootType    string   `mapstructure:"boot_type" json:"boot_type" required:"false"`
-	VmDisks     []VmDisk `mapstructure:"vm_disks"`
-	VmNICs      []VmNIC  `mapstructure:"vm_nics"`
-	ImageName   string   `mapstructure:"image_name" json:"image_name" required:"false"`
-	ClusterUUID string   `mapstructure:"cluster_uuid" json:"cluster_uuid" required:"false"`
-	ClusterName string   `mapstructure:"cluster_name" json:"cluster_name" required:"false"`
-	CPU         int64    `mapstructure:"cpu" json:"cpu" required:"false"`
-	MemoryMB    int64    `mapstructure:"memory_mb" json:"memory_mb" required:"false"`
-	UserData    string   `mapstructure:"user_data" json:"user_data" required:"false"`
+	VMName          string   `mapstructure:"vm_name" json:"vm_name" required:"false"`
+	OSType          string   `mapstructure:"os_type" json:"os_type" required:"true"`
+	BootType        string   `mapstructure:"boot_type" json:"boot_type" required:"false"`
+	VmDisks         []VmDisk `mapstructure:"vm_disks"`
+	VmNICs          []VmNIC  `mapstructure:"vm_nics"`
+	ImageName       string   `mapstructure:"image_name" json:"image_name" required:"false"`
+	ClusterUUID     string   `mapstructure:"cluster_uuid" json:"cluster_uuid" required:"false"`
+	ClusterName     string   `mapstructure:"cluster_name" json:"cluster_name" required:"false"`
+	CPU             int64    `mapstructure:"cpu" json:"cpu" required:"false"`
+	MemoryMB        int64    `mapstructure:"memory_mb" json:"memory_mb" required:"false"`
+	UserData        string   `mapstructure:"user_data" json:"user_data" required:"false"`
+	VmCategoryKey   string   `mapstructure:"vm_category_key" json:"vm_category_key" required:"false"`
+	VmCategoryValue string   `mapstructure:"vm_category_value" json:"vm_category_value" required:"false"`
 }
 
 func (c *Config) Prepare(raws ...interface{}) ([]string, error) {
@@ -162,6 +164,17 @@ func (c *Config) Prepare(raws ...interface{}) ([]string, error) {
 	if c.ImageCategoryKey == "" && c.ImageCategoryValue != "" {
 		log.Println("Nutanix Image Category key missing from configuration")
 		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("missing image_category_key"))
+	}
+
+	// Validate if both VM Category key and value are given in same time
+	if c.VmCategoryKey != "" && c.VmCategoryValue == "" {
+		log.Println("Nutanix VM Category value missing from configuration")
+		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("missing vm_category_value"))
+	}
+
+	if c.VmCategoryKey == "" && c.VmCategoryValue != "" {
+		log.Println("Nutanix VM Category key missing from configuration")
+		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("missing vm_category_key"))
 	}
 
 	if c.CommConfig.SSHPort == 0 {
