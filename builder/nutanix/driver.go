@@ -426,6 +426,12 @@ func (d *NutanixDriver) CreateRequest(vm VmConfig) (*v3.VMIntentInput, error) {
 		}
 	}
 
+	if vm.VmCategoryKey != "" && vm.VmCategoryValue != "" {
+		c := make(map[string]string)
+		c[vm.VmCategoryKey] = vm.VmCategoryValue
+		req.Metadata.Categories = c
+	}
+
 	return req, nil
 
 }

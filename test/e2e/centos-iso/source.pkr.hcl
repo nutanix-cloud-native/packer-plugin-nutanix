@@ -25,6 +25,8 @@ source "nutanix" "centos" {
   cd_label          = "OEMDRV"
 
   vm_name        = "e2e-packer-${var.test}-${formatdate("MDYYhms", timestamp())}"
+  vm_category_key = "Environment"
+  vm_category_value = "Testing"
 
   image_name        = "e2e-packer-${var.test}-${formatdate("MDYYhms", timestamp())}"
   image_delete      = true
