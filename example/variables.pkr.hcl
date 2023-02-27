@@ -36,6 +36,10 @@ variable "centos_disk_image_name" {
   type = string
 }
 
+variable "ubuntu_disk_image_name" {
+  type = string
+}
+
 variable "windows_2016_iso_image_name" {
   type = string
 }

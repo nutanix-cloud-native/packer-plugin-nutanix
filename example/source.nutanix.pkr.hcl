@@ -27,6 +27,35 @@ source "nutanix" "centos" {
   ssh_username     = "centos"
 }
 
+source "nutanix" "ubuntu" {
+  nutanix_username = var.nutanix_username
+  nutanix_password = var.nutanix_password
+  nutanix_endpoint = var.nutanix_endpoint
+  nutanix_port     = var.nutanix_port
+  nutanix_insecure = var.nutanix_insecure
+  cluster_name     = var.nutanix_cluster
+  os_type          = "Linux"
+
+  vm_disks {
+    image_type = "DISK_IMAGE"
+    source_image_uri = var.ubuntu_disk_image_name
+    disk_size_gb = 40
+  }
+
+  vm_nics {
+    subnet_name       = var.nutanix_subnet
+  }
+
+  image_name        = "ubuntu-packer-image"
+  force_deregister  = true
+  user_data         = "I2Nsb3VkLWNvbmZpZwp1c2VyczoKICAtIG5hbWU6IGJ1aWxkZXIKICAgIHN1ZG86IFsnQUxMPShBTEwpIE5PUEFTU1dEOkFMTCddCmNocGFzc3dkOgogIGxpc3Q6IHwKICAgIGJ1aWxkZXI6cGFja2VyCiAgZXhwaXJlOiBGYWxzZQpzc2hfcHdhdXRoOiBUcnVl"
+
+  shutdown_command  = "echo 'packer' | sudo -S shutdown -P now"
+  shutdown_timeout = "2m"
+  ssh_password     = "packer"
+  ssh_username     = "builder"
+}
+
 source "nutanix" "centos-kickstart" {
   nutanix_username = var.nutanix_username
   nutanix_password = var.nutanix_password
