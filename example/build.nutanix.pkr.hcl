@@ -3,15 +3,20 @@ build {
     "source.nutanix.centos"
   ]
   
+  source "nutanix.ubuntu" {
+    name = "ubuntu"
+  }
+
   source "nutanix.centos-kickstart" {
     name = "centos-kickstart"
   }
+
   source "nutanix.windows" {
     name = "windows"
   }
 
   provisioner "shell" {
-    only = ["nutanix.centos"]
+    only = ["nutanix.centos", "nutanix.centos-kickstart" ,"nutanix.ubuntu"]
     environment_vars = [
       "FOO=hello world",
     ]
@@ -19,15 +24,7 @@ build {
       "echo \"FOO is $FOO\" > example.txt",
     ]
   }
-  provisioner "shell" {
-    only = ["nutanix.centos-kickstart"]
-    environment_vars = [
-      "FOO=hello world",
-    ]
-    inline = [
-      "echo \"FOO is $FOO\" > example2.txt",
-    ]
-  }
+
   provisioner "powershell" {
     only = ["nutanix.windows"]
     scripts = ["scripts/win-update.ps1"]
