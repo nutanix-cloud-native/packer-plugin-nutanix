@@ -17,14 +17,20 @@ source "nutanix" "centos" {
     subnet_name       = var.nutanix_subnet
   }
   
+  image_categories {
+    key = "TemplateType"
+    value = "Vm"
+  }
+
+  vm_categories {
+    key = "Environment"
+    value = "Testing"
+  }
+
   vm_name        = "e2e-packer-${var.test}-${formatdate("MDYYhms", timestamp())}"
-  vm_category_key = "Environment"
-  vm_category_value = "Testing"
 
   image_name        = "e2e-packer-${var.test}-${formatdate("MDYYhms", timestamp())}"
   image_delete      = true
-  image_category_key = "Environment"
-  image_category_value = "Testing"
 
   force_deregister  = true
   user_data         = "I2Nsb3VkLWNvbmZpZwp1c2VyczoKICAtIG5hbWU6IGNlbnRvcwogICAgc3VkbzogWydBTEw9KEFMTCkgTk9QQVNTV0Q6QUxMJ10KY2hwYXNzd2Q6CiAgbGlzdDogfAogICAgY2VudG9zOnBhY2tlcgogIGV4cGlyZTogRmFsc2UKc3NoX3B3YXV0aDogVHJ1ZQ=="

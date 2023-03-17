@@ -20,18 +20,24 @@ source "nutanix" "centos" {
   vm_nics {
     subnet_name       = var.nutanix_subnet
   }
-  
+
+  image_categories {
+    key = "TemplateType"
+    value = "Vm"
+  }
+
+  vm_categories {
+    key = "Environment"
+    value = "Testing"
+  }
+
   cd_files          = ["scripts/ks.cfg"]
   cd_label          = "OEMDRV"
 
   vm_name        = "e2e-packer-${var.test}-${formatdate("MDYYhms", timestamp())}"
-  vm_category_key = "Environment"
-  vm_category_value = "Testing"
-
   image_name        = "e2e-packer-${var.test}-${formatdate("MDYYhms", timestamp())}"
   image_delete      = true
-  image_category_key = "Environment"
-  image_category_value = "Testing"
+
 
   force_deregister  = true
 
