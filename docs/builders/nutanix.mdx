@@ -31,6 +31,7 @@ These parameters allow to define information about platform and temporary VM use
   - `cd_label` (string) - Label of this CD Drive.
   - `boot_type` (string) - Type of boot used on the temporary VM ("legacy" or "UEFI").
   - `ip_wait_timeout` (duration string | ex: "0h42m0s") - Amount of time to wait for VM's IP, similar to 'ssh_timeout'. Defaults to 15m (15 minutes). See the Golang [ParseDuration](https://golang.org/pkg/time/#ParseDuration) documentation for full details.
+  - `vm_categories` ([]Category) - Assign Categories to the vm.
 
 
 ## Output configuration
@@ -39,15 +40,12 @@ These parameters allow to configure everything around image creation, from the t
 ### All OS
 - `image_name` (string) - Name of the output image.
 - `image_description` (string) - Description for output image.
-- `image_category_key` (string) - Name of the category to assign to the image.
-- `image_category_value` (string) - Value of the category to assign to the image.
+- `image_categories` ([]Category) - Assign Categories to the image.
 - `force_deregister` (bool) - Allow output image override if already exists.
 - `image_delete` (bool) - Delete image once build process is completed.
 - `shutdown_command` (string) - Command line to shutdown your temporary VM.
 - `shutdown_timeout` (string) - Timeout for VM shutdown (format : 2m).
 - `communicator` (string) - Protocol used for Packer connection (ex "winrm" or "ssh"). Default is : "ssh".
-- `vm_category_key` (string) - Name of the category to assign to the vm.
-- `vm_category_value` (string) - Value of the category to assign to the vm.
 
 ### Dedicated to Linux
 - `user_data` (string) - cloud-init content base64 coded.
@@ -127,5 +125,25 @@ Sample
   }
 ```
 
+## Categories Configuration
+
+Use `image_categories{}` and `vm_categories{}` to assign category to your image or vm.  If you want to assign multiple categories , use the entry multiple times.
+
+In this section, you have to define category you will to assign with the following parameters:
+
+- `key` (string) - Name of the category to assign.
+- `value` (string) - Value of the category to assign.
+
+Sample
+```hcl
+  image_categories {
+    key = "OSType"
+    value = "ubuntu-22.04"
+  }
+```
+
+Note: Categories must already be present in Prism Central.
+
 ## Samples
+
 You can find samples [here](https://github.com/nutanix-cloud-native/packer-plugin-nutanix/tree/main/example) for these instructions usage.

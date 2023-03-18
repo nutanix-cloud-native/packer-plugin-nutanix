@@ -1,4 +1,4 @@
-//go:generate packer-sdc mapstructure-to-hcl2 -type Config,ClusterConfig,VmConfig,VmDisk,VmNIC
+//go:generate packer-sdc mapstructure-to-hcl2 -type Config,Category,ClusterConfig,VmConfig,VmDisk,VmNIC
 
 package nutanix
 
@@ -36,12 +36,16 @@ type Config struct {
 	VmConfig                       `mapstructure:",squash"`
 	ForceDeregister                bool          `mapstructure:"force_deregister" json:"force_deregister" required:"false"`
 	ImageDescription               string        `mapstructure:"image_description" json:"image_description" required:"false"`
-	ImageCategoryKey               string        `mapstructure:"image_category_key" json:"image_category_key" required:"false"`
-	ImageCategoryValue             string        `mapstructure:"image_category_value" json:"image_category_value" required:"false"`
+	ImageCategories                []Category    `mapstructure:"image_categories" required:"false"`
 	ImageDelete                    bool          `mapstructure:"image_delete" json:"image_delete" required:"false"`
 	WaitTimeout                    time.Duration `mapstructure:"ip_wait_timeout" json:"ip_wait_timeout" required:"false"`
 
 	ctx interpolate.Context
+}
+
+type Category struct {
+	Key   string `mapstructure:"key" json:"key" required:"false"`
+	Value string `mapstructure:"value" json:"value" required:"false"`
 }
 
 type ClusterConfig struct {
@@ -65,19 +69,18 @@ type VmNIC struct {
 	SubnetUUID string `mapstructure:"subnet_uuid" json:"subnet_uuid" required:"false"`
 }
 type VmConfig struct {
-	VMName          string   `mapstructure:"vm_name" json:"vm_name" required:"false"`
-	OSType          string   `mapstructure:"os_type" json:"os_type" required:"true"`
-	BootType        string   `mapstructure:"boot_type" json:"boot_type" required:"false"`
-	VmDisks         []VmDisk `mapstructure:"vm_disks"`
-	VmNICs          []VmNIC  `mapstructure:"vm_nics"`
-	ImageName       string   `mapstructure:"image_name" json:"image_name" required:"false"`
-	ClusterUUID     string   `mapstructure:"cluster_uuid" json:"cluster_uuid" required:"false"`
-	ClusterName     string   `mapstructure:"cluster_name" json:"cluster_name" required:"false"`
-	CPU             int64    `mapstructure:"cpu" json:"cpu" required:"false"`
-	MemoryMB        int64    `mapstructure:"memory_mb" json:"memory_mb" required:"false"`
-	UserData        string   `mapstructure:"user_data" json:"user_data" required:"false"`
-	VmCategoryKey   string   `mapstructure:"vm_category_key" json:"vm_category_key" required:"false"`
-	VmCategoryValue string   `mapstructure:"vm_category_value" json:"vm_category_value" required:"false"`
+	VMName       string     `mapstructure:"vm_name" json:"vm_name" required:"false"`
+	OSType       string     `mapstructure:"os_type" json:"os_type" required:"true"`
+	BootType     string     `mapstructure:"boot_type" json:"boot_type" required:"false"`
+	VmDisks      []VmDisk   `mapstructure:"vm_disks"`
+	VmNICs       []VmNIC    `mapstructure:"vm_nics"`
+	ImageName    string     `mapstructure:"image_name" json:"image_name" required:"false"`
+	ClusterUUID  string     `mapstructure:"cluster_uuid" json:"cluster_uuid" required:"false"`
+	ClusterName  string     `mapstructure:"cluster_name" json:"cluster_name" required:"false"`
+	CPU          int64      `mapstructure:"cpu" json:"cpu" required:"false"`
+	MemoryMB     int64      `mapstructure:"memory_mb" json:"memory_mb" required:"false"`
+	UserData     string     `mapstructure:"user_data" json:"user_data" required:"false"`
+	VMCategories []Category `mapstructure:"vm_categories" required:"false"`
 }
 
 func (c *Config) Prepare(raws ...interface{}) ([]string, error) {
@@ -138,10 +141,6 @@ func (c *Config) Prepare(raws ...interface{}) ([]string, error) {
 		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("missing nutanix_username"))
 	}
 
-	// if c.VmConfig.SourceImageName == "" {
-	// 	errs = packersdk.MultiErrorAppend(errs, errors.New("Missing source_image_name"))
-	// }
-
 	if c.VmConfig.VMName == "" {
 		p := fmt.Sprintf("Packer-%s", random.String(random.PossibleAlphaNumUpper, 8))
 		log.Println("No vmname assigned, setting to " + p)
@@ -156,25 +155,29 @@ func (c *Config) Prepare(raws ...interface{}) ([]string, error) {
 	}
 
 	// Validate if both Image Category key and value are given in same time
-	if c.ImageCategoryKey != "" && c.ImageCategoryValue == "" {
-		log.Println("Nutanix Image Category value missing from configuration")
-		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("missing image_category_value"))
-	}
+	for _, imageCategory := range c.ImageCategories {
+		if imageCategory.Key != "" && imageCategory.Value == "" {
+			log.Println("Nutanix Image Category value missing from configuration")
+			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("missing value for image category %s", imageCategory.Key))
+		}
 
-	if c.ImageCategoryKey == "" && c.ImageCategoryValue != "" {
-		log.Println("Nutanix Image Category key missing from configuration")
-		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("missing image_category_key"))
+		if imageCategory.Key == "" && imageCategory.Value != "" {
+			log.Println("Nutanix Image Category name missing from configuration")
+			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("missing name for an image categories with value %s", imageCategory.Value))
+		}
 	}
 
 	// Validate if both VM Category key and value are given in same time
-	if c.VmCategoryKey != "" && c.VmCategoryValue == "" {
-		log.Println("Nutanix VM Category value missing from configuration")
-		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("missing vm_category_value"))
-	}
+	for _, vmCategory := range c.VMCategories {
+		if vmCategory.Key != "" && vmCategory.Value == "" {
+			log.Println("Nutanix VM Category value missing from configuration")
+			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("missing value for vm category %s", vmCategory.Key))
+		}
 
-	if c.VmCategoryKey == "" && c.VmCategoryValue != "" {
-		log.Println("Nutanix VM Category key missing from configuration")
-		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("missing vm_category_key"))
+		if vmCategory.Key == "" && vmCategory.Value != "" {
+			log.Println("Nutanix VM Category name missing from configuration")
+			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("missing name for a vm categories with value %s", vmCategory.Value))
+		}
 	}
 
 	if c.CommConfig.SSHPort == 0 {

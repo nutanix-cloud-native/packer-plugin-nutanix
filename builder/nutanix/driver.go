@@ -31,7 +31,7 @@ type Driver interface {
 	UploadImage(string, string, string, VmConfig) (*nutanixImage, error)
 	DeleteImage(string) error
 	GetImage(string) (*nutanixImage, error)
-	SaveVMDisk(string, string, string) (*nutanixImage, error)
+	SaveVMDisk(string, []Category) (*nutanixImage, error)
 	WaitForShutdown(string, <-chan struct{}) bool
 }
 
@@ -426,9 +426,11 @@ func (d *NutanixDriver) CreateRequest(vm VmConfig) (*v3.VMIntentInput, error) {
 		}
 	}
 
-	if vm.VmCategoryKey != "" && vm.VmCategoryValue != "" {
+	if len(vm.VMCategories) != 0 {
 		c := make(map[string]string)
-		c[vm.VmCategoryKey] = vm.VmCategoryValue
+		for _, category := range vm.VMCategories {
+			c[category.Key] = category.Value
+		}
 		req.Metadata.Categories = c
 	}
 
@@ -732,7 +734,7 @@ func (d *NutanixDriver) PowerOff(vmUUID string) error {
 	log.Printf("PowerOff task: %s", taskUUID)
 	return nil
 }
-func (d *NutanixDriver) SaveVMDisk(diskUUID string, imageCategoryKey string, imageCategoryValue string) (*nutanixImage, error) {
+func (d *NutanixDriver) SaveVMDisk(diskUUID string, imageCategories []Category) (*nutanixImage, error) {
 
 	configCreds := client.Credentials{
 		URL:      fmt.Sprintf("%s:%d", d.ClusterConfig.Endpoint, d.ClusterConfig.Port),
@@ -795,9 +797,11 @@ func (d *NutanixDriver) SaveVMDisk(diskUUID string, imageCategoryKey string, ima
 		},
 	}
 
-	if imageCategoryKey != "" && imageCategoryValue != "" {
+	if len(imageCategories) != 0 {
 		c := make(map[string]string)
-		c[imageCategoryKey] = imageCategoryValue
+		for _, category := range imageCategories {
+			c[category.Key] = category.Value
+		}
 		req.Metadata.Categories = c
 	}
 

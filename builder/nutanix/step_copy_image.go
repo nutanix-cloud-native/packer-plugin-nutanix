@@ -40,7 +40,7 @@ func (s *stepCopyImage) Run(ctx context.Context, state multistep.StateBag) multi
 		return multistep.ActionHalt
 	}
 
-	imageResponse, err := d.SaveVMDisk(diskToCopy, s.Config.ImageCategoryKey, s.Config.ImageCategoryValue)
+	imageResponse, err := d.SaveVMDisk(diskToCopy, s.Config.ImageCategories)
 	if err != nil {
 		ui.Error("Image creation failed: " + err.Error())
 		state.Put("error", err)
