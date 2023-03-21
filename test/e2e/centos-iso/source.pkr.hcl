@@ -17,6 +17,11 @@ source "nutanix" "centos" {
       disk_size_gb = 40
   }
 
+  vm_disks {
+      image_type = "DISK"
+      disk_size_gb = 20
+  }
+
   vm_nics {
     subnet_name       = var.nutanix_subnet
   }

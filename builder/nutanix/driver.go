@@ -31,7 +31,7 @@ type Driver interface {
 	UploadImage(string, string, string, VmConfig) (*nutanixImage, error)
 	DeleteImage(string) error
 	GetImage(string) (*nutanixImage, error)
-	SaveVMDisk(string, []Category) (*nutanixImage, error)
+	SaveVMDisk(string, int, []Category) (*nutanixImage, error)
 	WaitForShutdown(string, <-chan struct{}) bool
 }
 
@@ -734,7 +734,7 @@ func (d *NutanixDriver) PowerOff(vmUUID string) error {
 	log.Printf("PowerOff task: %s", taskUUID)
 	return nil
 }
-func (d *NutanixDriver) SaveVMDisk(diskUUID string, imageCategories []Category) (*nutanixImage, error) {
+func (d *NutanixDriver) SaveVMDisk(diskUUID string, index int, imageCategories []Category) (*nutanixImage, error) {
 
 	configCreds := client.Credentials{
 		URL:      fmt.Sprintf("%s:%d", d.ClusterConfig.Endpoint, d.ClusterConfig.Port),
@@ -750,10 +750,15 @@ func (d *NutanixDriver) SaveVMDisk(diskUUID string, imageCategories []Category) 
 		return nil, fmt.Errorf("error while NewV3Client, %s", err.Error())
 	}
 
+	name := d.Config.VmConfig.ImageName
+	if index > 0 {
+		name = fmt.Sprintf("%s-disk%d", name, index+1)
+	}
+
 	// When force_deregister, check if image already exists
 	if d.Config.ForceDeregister {
 		log.Println("force_deregister is set, check if image already exists")
-		ImageList, err := conn.V3.ListAllImage(fmt.Sprintf("name==%s", d.Config.VmConfig.ImageName))
+		ImageList, err := conn.V3.ListAllImage(fmt.Sprintf("name==%s", name))
 		if err != nil {
 			return nil, fmt.Errorf("error while ListAllImage, %s", err.Error())
 		}
@@ -785,7 +790,7 @@ func (d *NutanixDriver) SaveVMDisk(diskUUID string, imageCategories []Category) 
 
 	req := &v3.ImageIntentInput{
 		Spec: &v3.Image{
-			Name: &d.Config.VmConfig.ImageName,
+			Name: &name,
 			Resources: &v3.ImageResources{
 				ImageType:           StringPtr("DISK_IMAGE"),
 				DataSourceReference: BuildReference(diskUUID, "vm_disk"),

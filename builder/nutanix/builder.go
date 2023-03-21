@@ -85,7 +85,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 		if imageUUID != nil {
 			artifact := &Artifact{
 				Name: b.config.ImageName,
-				UUID: imageUUID.(string),
+				UUID: imageUUID.([]string)[0],
 			}
 			return artifact, nil
 		}
