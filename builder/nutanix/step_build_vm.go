@@ -44,7 +44,7 @@ func (s *stepBuildVM) Run(ctx context.Context, state multistep.StateBag) multist
 	}
 
 	ui.Say("Creating Packer Builder virtual machine...")
-	//CreateRequest()
+
 	vmRequest, err := d.CreateRequest(config.VmConfig)
 	if err != nil {
 		ui.Error("Error creating virtual machine request: " + err.Error())

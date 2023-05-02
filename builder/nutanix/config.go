@@ -38,6 +38,7 @@ type Config struct {
 	ImageDescription               string        `mapstructure:"image_description" json:"image_description" required:"false"`
 	ImageCategories                []Category    `mapstructure:"image_categories" required:"false"`
 	ImageDelete                    bool          `mapstructure:"image_delete" json:"image_delete" required:"false"`
+	ImageExport                    bool          `mapstructure:"image_export" json:"image_export" required:"false"`
 	WaitTimeout                    time.Duration `mapstructure:"ip_wait_timeout" json:"ip_wait_timeout" required:"false"`
 
 	ctx interpolate.Context

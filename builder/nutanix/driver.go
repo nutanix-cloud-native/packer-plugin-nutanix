@@ -1,6 +1,9 @@
 package nutanix
 
 import (
+	"crypto/tls"
+	"io"
+	"net/http"
 	"strings"
 	"time"
 
@@ -25,12 +28,12 @@ type Driver interface {
 	Create(*v3.VMIntentInput) (*nutanixInstance, error)
 	Delete(string) error
 	GetVM(string) (*nutanixInstance, error)
-	//GetImage(string) (*nutanixImage, error)
 	GetHost(string) (*nutanixHost, error)
 	PowerOff(string) error
 	UploadImage(string, string, string, VmConfig) (*nutanixImage, error)
 	DeleteImage(string) error
 	GetImage(string) (*nutanixImage, error)
+	ExportImage(string) (io.ReadCloser, error)
 	SaveVMDisk(string, int, []Category) (*nutanixImage, error)
 	WaitForShutdown(string, <-chan struct{}) bool
 }
@@ -664,6 +667,32 @@ func (d *NutanixDriver) GetVM(vmUUID string) (*nutanixInstance, error) {
 		return nil, fmt.Errorf("error while GetVM, %s", err.Error())
 	}
 	return &nutanixInstance{nutanix: *vm}, nil
+}
+
+func (d *NutanixDriver) ExportImage(imageUUID string) (io.ReadCloser, error) {
+	customTransport := http.DefaultTransport.(*http.Transport).Clone()
+	customTransport.TLSClientConfig = &tls.Config{InsecureSkipVerify: d.ClusterConfig.Insecure}
+
+	client := &http.Client{Transport: customTransport}
+
+	url := fmt.Sprintf("https://%s:%d/api/nutanix/v3/images/%s/file", d.ClusterConfig.Endpoint, d.ClusterConfig.Port, imageUUID)
+
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.SetBasicAuth(d.ClusterConfig.Username, d.ClusterConfig.Password)
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	if resp.StatusCode != 200 {
+		return nil, fmt.Errorf(resp.Status)
+	}
+
+	return resp.Body, nil
 }
 
 func (d *NutanixDriver) GetHost(hostUUID string) (*nutanixHost, error) {
