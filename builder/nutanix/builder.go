@@ -74,6 +74,13 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 		},
 	}
 
+	if b.config.ImageExport {
+		steps = append(steps, &stepExportImage{
+			VMName:    b.config.VMName,
+			ImageName: b.config.VmConfig.ImageName,
+		})
+	}
+
 	b.runner = &multistep.BasicRunner{Steps: steps}
 	b.runner.Run(ctx, state)
 
@@ -85,7 +92,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 		if imageUUID != nil {
 			artifact := &Artifact{
 				Name: b.config.ImageName,
-				UUID: imageUUID.([]string)[0],
+				UUID: imageUUID.([]imageArtefact)[0].uuid,
 			}
 			return artifact, nil
 		}

@@ -9,6 +9,16 @@ import (
 	"github.com/hashicorp/packer-plugin-sdk/packer"
 )
 
+type imageArtefact struct {
+	uuid string
+	size int64
+}
+
+type diskArtefact struct {
+	uuid string
+	size int64
+}
+
 type stepCopyImage struct {
 	Config *Config
 }
@@ -22,11 +32,14 @@ func (s *stepCopyImage) Run(ctx context.Context, state multistep.StateBag) multi
 	ui.Say(fmt.Sprintf("Creating image(s) from virtual machine %s...", s.Config.VMName))
 
 	// Choose disk to replicate - looking for first "DISK"
-	var disksToCopy []string
+	var disksToCopy []diskArtefact
 
 	for i := range vm.nutanix.Spec.Resources.DiskList {
 		if *vm.nutanix.Spec.Resources.DiskList[i].DeviceProperties.DeviceType == "DISK" {
-			disksToCopy = append(disksToCopy, *vm.nutanix.Spec.Resources.DiskList[i].UUID)
+			disksToCopy = append(disksToCopy, diskArtefact{
+				uuid: *vm.nutanix.Spec.Resources.DiskList[i].UUID,
+				size: *vm.nutanix.Spec.Resources.DiskList[i].DiskSizeBytes,
+			})
 			diskID := fmt.Sprintf("%s:%d", *vm.nutanix.Spec.Resources.DiskList[i].DeviceProperties.DiskAddress.AdapterType, *vm.nutanix.Spec.Resources.DiskList[i].DeviceProperties.DiskAddress.DeviceIndex)
 			ui.Message("Found disk to copy: " + diskID)
 		}
@@ -39,17 +52,22 @@ func (s *stepCopyImage) Run(ctx context.Context, state multistep.StateBag) multi
 		return multistep.ActionHalt
 	}
 
-	var imageList []string
+	var imageList []imageArtefact
 
 	for i, diskToCopy := range disksToCopy {
 
-		imageResponse, err := d.SaveVMDisk(diskToCopy, i, s.Config.ImageCategories)
+		imageResponse, err := d.SaveVMDisk(diskToCopy.uuid, i, s.Config.ImageCategories)
 		if err != nil {
 			ui.Error("Image creation failed: " + err.Error())
 			state.Put("error", err)
 			return multistep.ActionHalt
 		}
-		imageList = append(imageList, *imageResponse.image.Metadata.UUID)
+
+		imageList = append(imageList, imageArtefact{
+			uuid: *imageResponse.image.Metadata.UUID,
+			size: diskToCopy.size,
+		})
+
 		ui.Message(fmt.Sprintf("Image successfully created: %s (%s)", *imageResponse.image.Spec.Name, *imageResponse.image.Metadata.UUID))
 	}
 
@@ -68,14 +86,14 @@ func (s *stepCopyImage) Cleanup(state multistep.StateBag) {
 	if imgUUID, ok := state.GetOk("image_uuid"); ok {
 		ui.Say(fmt.Sprintf("Deleting image(s) %s...", s.Config.ImageName))
 
-		for _, image := range imgUUID.([]string) {
+		for _, image := range imgUUID.([]imageArtefact) {
 
-			err := d.DeleteImage(image)
+			err := d.DeleteImage(image.uuid)
 			if err != nil {
 				ui.Error("An error occurred while deleting image")
 				return
 			} else {
-				ui.Message(fmt.Sprintf("Image successfully deleted (%s)", image))
+				ui.Message(fmt.Sprintf("Image successfully deleted (%s)", image.uuid))
 			}
 		}
 	}
