@@ -6,7 +6,7 @@ source "nutanix" "centos" {
   nutanix_insecure = var.nutanix_insecure
   cluster_name     = var.nutanix_cluster
   os_type          = "Linux"
-  
+
   vm_disks {
       image_type = "DISK_IMAGE"
       source_image_name = var.centos_disk_image_name
@@ -16,7 +16,6 @@ source "nutanix" "centos" {
   vm_nics {
     subnet_name       = var.nutanix_subnet
   }
-  
 
   image_categories {
     key = "TemplateType"
@@ -29,8 +28,9 @@ source "nutanix" "centos" {
   }
 
   image_name        = "centos-packer-image"
+  image_export      = false
   force_deregister  = true
-  user_data         = "I2Nsb3VkLWNvbmZpZwp1c2VyczoKICAtIG5hbWU6IGNlbnRvcwogICAgc3VkbzogWydBTEw9KEFMTCkgTk9QQVNTV0Q6QUxMJ10KY2hwYXNzd2Q6CiAgbGlzdDogfAogICAgY2VudG9zOnBhY2tlcgogIGV4cGlyZTogRmFsc2UKc3NoX3B3YXV0aDogVHJ1ZQ=="
+  user_data         = base64encode("scripts/cloud-init/cloud-config-centos.yaml")
 
   shutdown_command  = "echo 'packer' | sudo -S shutdown -P now"
   shutdown_timeout = "2m"
@@ -59,7 +59,7 @@ source "nutanix" "ubuntu" {
 
   image_name        = "ubuntu-packer-image"
   force_deregister  = true
-  user_data         = "I2Nsb3VkLWNvbmZpZwp1c2VyczoKICAtIG5hbWU6IGJ1aWxkZXIKICAgIHN1ZG86IFsnQUxMPShBTEwpIE5PUEFTU1dEOkFMTCddCmNocGFzc3dkOgogIGxpc3Q6IHwKICAgIGJ1aWxkZXI6cGFja2VyCiAgZXhwaXJlOiBGYWxzZQpzc2hfcHdhdXRoOiBUcnVl"
+  user_data         = base64encode("scripts/cloud-init/cloud-config-ubuntu.yaml")
 
   shutdown_command  = "echo 'packer' | sudo -S shutdown -P now"
   shutdown_timeout = "2m"
@@ -75,7 +75,7 @@ source "nutanix" "centos-kickstart" {
   nutanix_insecure = var.nutanix_insecure
   cluster_name     = var.nutanix_cluster
   os_type          = "Linux"
-  
+
 
   vm_disks {
       image_type = "ISO_IMAGE"
@@ -90,7 +90,7 @@ source "nutanix" "centos-kickstart" {
   vm_nics {
     subnet_name       = var.nutanix_subnet
   }
-  
+
   cd_files          = ["scripts/ks.cfg"]
   cd_label          = "OEMDRV"
 
@@ -107,7 +107,7 @@ source "nutanix" "windows" {
   nutanix_endpoint = var.nutanix_endpoint
   nutanix_insecure = var.nutanix_insecure
   cluster_name     = var.nutanix_cluster
-  
+
   vm_disks {
       image_type = "ISO_IMAGE"
       source_image_name = var.windows_2016_iso_image_name
@@ -126,9 +126,9 @@ source "nutanix" "windows" {
   vm_nics {
     subnet_name       = var.nutanix_subnet
   }
-  
+
   cd_files         = ["scripts/gui/autounattend.xml","scripts/win-update.ps1"]
-  
+
   image_name        ="win-{{isotime `Jan-_2-15:04:05`}}"
   shutdown_command  = "shutdown /s /t 10 /f /d p:4:1 /c \"Packer Shutdown\""
   shutdown_timeout  = "3m"
