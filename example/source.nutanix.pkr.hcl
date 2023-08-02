@@ -30,7 +30,7 @@ source "nutanix" "centos" {
   image_name        = "centos-packer-image"
   image_export      = false
   force_deregister  = true
-  user_data         = base64encode("scripts/cloud-init/cloud-config-centos.yaml")
+  user_data         = base64encode(file("scripts/cloud-init/cloud-config-centos.yaml"))
 
   shutdown_command  = "echo 'packer' | sudo -S shutdown -P now"
   shutdown_timeout = "2m"
@@ -59,7 +59,7 @@ source "nutanix" "ubuntu" {
 
   image_name        = "ubuntu-packer-image"
   force_deregister  = true
-  user_data         = base64encode("scripts/cloud-init/cloud-config-ubuntu.yaml")
+  user_data         = base64encode(file("scripts/cloud-init/cloud-config-ubuntu.yaml"))
 
   shutdown_command  = "echo 'packer' | sudo -S shutdown -P now"
   shutdown_timeout = "2m"
