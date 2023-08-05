@@ -27,6 +27,8 @@ source "nutanix" "centos" {
     value = "Dev"
   }
 
+// project       = "myproject"
+
   image_name        = "centos-packer-image"
   image_export      = false
   force_deregister  = true

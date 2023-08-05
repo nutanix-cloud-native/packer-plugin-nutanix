@@ -11,8 +11,8 @@ build:
 	@go build -o ${BINARY}
 
 dev: build
-	@mkdir -p ~/.packer.d/plugins/
-	@mv ${BINARY} ~/.packer.d/plugins/${BINARY}
+	@mkdir -p ~/.config/packer/plugins
+	@mv ${BINARY} ~/.config/packer/plugins/${BINARY}
 
 test:
 	@go test -race -count $(COUNT) $(TEST) -timeout=3m

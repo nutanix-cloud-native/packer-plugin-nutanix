@@ -145,6 +145,7 @@ type FlatConfig struct {
 	MemoryMB                  *int64            `mapstructure:"memory_mb" json:"memory_mb" required:"false" cty:"memory_mb" hcl:"memory_mb"`
 	UserData                  *string           `mapstructure:"user_data" json:"user_data" required:"false" cty:"user_data" hcl:"user_data"`
 	VMCategories              []FlatCategory    `mapstructure:"vm_categories" required:"false" cty:"vm_categories" hcl:"vm_categories"`
+	Project                   *string           `mapstructure:"project" required:"false" cty:"project" hcl:"project"`
 	ForceDeregister           *bool             `mapstructure:"force_deregister" json:"force_deregister" required:"false" cty:"force_deregister" hcl:"force_deregister"`
 	ImageDescription          *string           `mapstructure:"image_description" json:"image_description" required:"false" cty:"image_description" hcl:"image_description"`
 	ImageCategories           []FlatCategory    `mapstructure:"image_categories" required:"false" cty:"image_categories" hcl:"image_categories"`
@@ -244,6 +245,7 @@ func (*FlatConfig) HCL2Spec() map[string]hcldec.Spec {
 		"memory_mb":                    &hcldec.AttrSpec{Name: "memory_mb", Type: cty.Number, Required: false},
 		"user_data":                    &hcldec.AttrSpec{Name: "user_data", Type: cty.String, Required: false},
 		"vm_categories":                &hcldec.BlockListSpec{TypeName: "vm_categories", Nested: hcldec.ObjectSpec((*FlatCategory)(nil).HCL2Spec())},
+		"project":                      &hcldec.AttrSpec{Name: "project", Type: cty.String, Required: false},
 		"force_deregister":             &hcldec.AttrSpec{Name: "force_deregister", Type: cty.Bool, Required: false},
 		"image_description":            &hcldec.AttrSpec{Name: "image_description", Type: cty.String, Required: false},
 		"image_categories":             &hcldec.BlockListSpec{TypeName: "image_categories", Nested: hcldec.ObjectSpec((*FlatCategory)(nil).HCL2Spec())},
@@ -269,6 +271,7 @@ type FlatVmConfig struct {
 	MemoryMB     *int64         `mapstructure:"memory_mb" json:"memory_mb" required:"false" cty:"memory_mb" hcl:"memory_mb"`
 	UserData     *string        `mapstructure:"user_data" json:"user_data" required:"false" cty:"user_data" hcl:"user_data"`
 	VMCategories []FlatCategory `mapstructure:"vm_categories" required:"false" cty:"vm_categories" hcl:"vm_categories"`
+	Project      *string        `mapstructure:"project" required:"false" cty:"project" hcl:"project"`
 }
 
 // FlatMapstructure returns a new FlatVmConfig.
@@ -295,6 +298,7 @@ func (*FlatVmConfig) HCL2Spec() map[string]hcldec.Spec {
 		"memory_mb":     &hcldec.AttrSpec{Name: "memory_mb", Type: cty.Number, Required: false},
 		"user_data":     &hcldec.AttrSpec{Name: "user_data", Type: cty.String, Required: false},
 		"vm_categories": &hcldec.BlockListSpec{TypeName: "vm_categories", Nested: hcldec.ObjectSpec((*FlatCategory)(nil).HCL2Spec())},
+		"project":       &hcldec.AttrSpec{Name: "project", Type: cty.String, Required: false},
 	}
 	return s
 }

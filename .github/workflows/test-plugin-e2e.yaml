@@ -5,9 +5,9 @@ on:
   workflow_dispatch:
     inputs:
       logs:
-        description: 'Set 1 to activate full logs'
+        description: "Set 1 to activate full logs"
         required: false
-        default: '0'
+        default: "0"
 
 jobs:
   plugin-build:
@@ -22,28 +22,27 @@ jobs:
       - name: Setup `golang`
         uses: actions/setup-go@v4
         with:
-          go-version: '>=1.19.0'
+          go-version: ">=1.19.0"
 
       - name: Build packer plugin
         run: |
           cd $GITHUB_WORKSPACE
           make dev
-      
+
       - uses: actions/upload-artifact@v3
         with:
           name: packer-plugin-nutanix
-          path: ~/.packer.d/plugins/packer-plugin-nutanix
+          path: ~/.config/packer/plugins/packer-plugin-nutanix
           retention-days: 7
 
       - name: build test list
         id: test-list
         run: echo "list=$(ls test/e2e | jq -R -s -c 'split("\n")[:-1]')" >> $GITHUB_OUTPUT
 
-
   e2e:
     name: E2E test
     needs: plugin-build
-    
+
     strategy:
       matrix:
         test: ${{fromJSON(needs.plugin-build.outputs.test-list)}}
@@ -52,7 +51,6 @@ jobs:
     defaults:
       run:
         working-directory: test/e2e/${{ matrix.test}}
-    
 
     steps:
       - name: Checkout Repository
@@ -74,9 +72,9 @@ jobs:
 
       - name: Install plugin
         run: |
-          mkdir -p ~/.packer.d/plugins/
-          cp /tmp/packer-plugin-nutanix ~/.packer.d/plugins/packer-plugin-nutanix
-          chmod 755 ~/.packer.d/plugins/packer-plugin-nutanix
+          mkdir -p ~/.config/packer/plugins/
+          cp /tmp/packer-plugin-nutanix ~/.config/packer/plugins/packer-plugin-nutanix
+          chmod 755 ~/.config/packer/plugins/packer-plugin-nutanix
 
       - name: Run `packer init`
         id: init
@@ -108,4 +106,3 @@ jobs:
           else
             exit 1
           fi
-

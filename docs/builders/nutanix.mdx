@@ -32,6 +32,7 @@ These parameters allow to define information about platform and temporary VM use
   - `boot_type` (string) - Type of boot used on the temporary VM ("legacy" or "uefi").
   - `ip_wait_timeout` (duration string | ex: "0h42m0s") - Amount of time to wait for VM's IP, similar to 'ssh_timeout'. Defaults to 15m (15 minutes). See the Golang [ParseDuration](https://golang.org/pkg/time/#ParseDuration) documentation for full details.
   - `vm_categories` ([]Category) - Assign Categories to the vm.
+  - `project` (string) - Assign Project to the vm.
 
 
 ## Output configuration
