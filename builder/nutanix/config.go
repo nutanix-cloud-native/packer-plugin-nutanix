@@ -82,6 +82,7 @@ type VmConfig struct {
 	MemoryMB     int64      `mapstructure:"memory_mb" json:"memory_mb" required:"false"`
 	UserData     string     `mapstructure:"user_data" json:"user_data" required:"false"`
 	VMCategories []Category `mapstructure:"vm_categories" required:"false"`
+	Project      string     `mapstructure:"project" required:"false"`
 }
 
 func (c *Config) Prepare(raws ...interface{}) ([]string, error) {

@@ -56,6 +56,37 @@ type nutanixImage struct {
 	image v3.ImageIntentResponse
 }
 
+func findProjectByName(conn *v3.Client, name string) (*v3.Project, error) {
+	filter := fmt.Sprintf("name==%s", name)
+	resp, err := conn.V3.ListAllProject(filter)
+	if err != nil {
+		return nil, err
+	}
+	entities := resp.Entities
+
+	found := make([]*v3.Project, 0)
+	for _, v := range entities {
+		if v.Status.Name == name {
+			found = append(found, &v3.Project{
+				Status:     v.Status,
+				Spec:       v.Spec,
+				Metadata:   v.Metadata,
+				APIVersion: v.APIVersion,
+			})
+		}
+	}
+
+	if len(found) > 1 {
+		return nil, fmt.Errorf("your query returned more than one result")
+	}
+
+	if len(found) == 0 {
+		return nil, fmt.Errorf("did not find project with name %s", name)
+	}
+
+	return found[0], nil
+}
+
 func findClusterByName(conn *v3.Client, name string) (*v3.ClusterIntentResponse, error) {
 	filter := fmt.Sprintf("name==%s", name)
 	resp, err := conn.V3.ListAllCluster(filter)
@@ -117,6 +148,7 @@ func findSubnetByName(conn *v3.Client, name string) (*v3.SubnetIntentResponse, e
 
 	return found[0], nil
 }
+
 func sourceImageExists(conn *v3.Client, name string, uri string) (*v3.ImageIntentResponse, error) {
 	filter := fmt.Sprintf("name==%s", name)
 	resp, err := conn.V3.ListAllImage(filter)
@@ -435,6 +467,18 @@ func (d *NutanixDriver) CreateRequest(vm VmConfig) (*v3.VMIntentInput, error) {
 			c[category.Key] = category.Value
 		}
 		req.Metadata.Categories = c
+	}
+
+	if vm.Project != "" {
+		project, err := findProjectByName(conn, vm.Project)
+		if err != nil {
+			return nil, fmt.Errorf("error while findProjectByName, %s", err.Error())
+		}
+
+		req.Metadata.ProjectReference = &v3.Reference{
+			Kind: StringPtr("project"),
+			UUID: project.Metadata.UUID,
+		}
 	}
 
 	return req, nil
