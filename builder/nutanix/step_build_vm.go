@@ -79,18 +79,21 @@ func (s *stepBuildVM) Cleanup(state multistep.StateBag) {
 		return
 	}
 
+	ui := state.Get("ui").(packer.Ui)
+	d := state.Get("driver").(Driver)
+	config := state.Get("config").(*Config)
+
 	_, cancelled := state.GetOk(multistep.StateCancelled)
 	_, halted := state.GetOk(multistep.StateHalted)
 
-	d := state.Get("driver").(Driver)
-	ui := state.Get("ui").(packer.Ui)
-
-	if cancelled || halted {
+	if cancelled || halted && !config.ForceDelete {
 		ui.Say("Task cancelled, virtual machine is not deleted")
 		return
+	} else if config.ForceDelete && cancelled || halted {
+		ui.Say("Force Deleting virtual machine...")
+	} else {
+		ui.Say("Deleting virtual machine...")
 	}
-
-	ui.Say("Deleting virtual machine...")
 
 	if cdUUID, ok := state.GetOk("cd_uuid"); ok {
 		err := d.DeleteImage(cdUUID.(string))
