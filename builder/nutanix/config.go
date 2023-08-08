@@ -59,11 +59,13 @@ type ClusterConfig struct {
 }
 
 type VmDisk struct {
-	ImageType       string `mapstructure:"image_type" json:"image_type" required:"false"`
-	SourceImageName string `mapstructure:"source_image_name" json:"source_image_name" required:"false"`
-	SourceImageUUID string `mapstructure:"source_image_uuid" json:"source_image_uuid" required:"false"`
-	SourceImageURI  string `mapstructure:"source_image_uri" json:"source_image_uri" required:"false"`
-	DiskSizeGB      int64  `mapstructure:"disk_size_gb" json:"disk_size_gb" required:"false"`
+	ImageType         string `mapstructure:"image_type" json:"image_type" required:"false"`
+	SourceImageName   string `mapstructure:"source_image_name" json:"source_image_name" required:"false"`
+	SourceImageUUID   string `mapstructure:"source_image_uuid" json:"source_image_uuid" required:"false"`
+	SourceImageURI    string `mapstructure:"source_image_uri" json:"source_image_uri" required:"false"`
+	SourceImageDelete bool   `mapstructure:"source_image_delete" json:"source_image_delete" required:"false"`
+	SourceImageForce  bool   `mapstructure:"source_image_force" json:"source_image_force" required:"false"`
+	DiskSizeGB        int64  `mapstructure:"disk_size_gb" json:"disk_size_gb" required:"false"`
 }
 
 type VmNIC struct {
