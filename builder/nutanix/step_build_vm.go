@@ -26,7 +26,7 @@ func (s *stepBuildVM) Run(ctx context.Context, state multistep.StateBag) multist
 		ui.Say("Uploading CD disk...")
 		cdFilesPath := cdPathRaw.(string)
 		log.Println("CD disk found " + cdFilesPath)
-		cdfilesImage, err := d.UploadImage(cdFilesPath, "PATH", "ISO_IMAGE", config.VmConfig)
+		cdfilesImage, err := d.CreateImageFile(cdFilesPath, config.VmConfig)
 		if err != nil {
 			ui.Error("Error uploading CD disk:" + err.Error())
 			state.Put("error", err)
@@ -46,7 +46,7 @@ func (s *stepBuildVM) Run(ctx context.Context, state multistep.StateBag) multist
 	ui.Say("Creating Packer Builder virtual machine...")
 
 	// Create VM Spec
-	vmRequest, err := d.CreateRequest(config.VmConfig)
+	vmRequest, err := d.CreateRequest(config.VmConfig, state)
 	if err != nil {
 		ui.Error("Error creating virtual machine request: " + err.Error())
 		state.Put("error", err)
@@ -111,6 +111,13 @@ func (s *stepBuildVM) Cleanup(state multistep.StateBag) {
 		return
 	} else {
 		ui.Message("Virtual machine successfully deleted")
+	}
+
+	imageToDelete := state.Get("image_to_delete")
+
+	for _, image := range imageToDelete.([]string) {
+		log.Printf("delete marked image: %s", image)
+		d.DeleteImage(image)
 	}
 
 }
