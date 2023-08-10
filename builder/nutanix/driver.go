@@ -316,7 +316,7 @@ func (d *NutanixDriver) CreateRequest(vm VmConfig, state multistep.StateBag) (*v
 				}
 
 				if disk.SourceImageDelete {
-					log.Printf("mark this image to delete: %s", *image.image.Spec.Name)
+					log.Printf("mark this image to delete: %s (%s)", *image.image.Spec.Name, *image.image.Metadata.UUID)
 					imageToDelete = append(imageToDelete, *image.image.Metadata.UUID)
 				}
 
@@ -632,29 +632,32 @@ func (d *NutanixDriver) CreateImageURL(disk VmDisk, vm VmConfig) (*nutanixImage,
 		},
 	}
 
-	image, err := sourceImageExists(conn, file, disk.SourceImageURI)
+	existingImage, err := sourceImageExists(conn, file, disk.SourceImageURI)
 	if err != nil {
 		return nil, fmt.Errorf("error while checking if image exists, %s", err.Error())
 	}
-	if image != nil && !disk.SourceImageForce {
-		log.Printf("reuse existing image: %s", *image.Status.Name)
-		return &nutanixImage{image: *image}, nil
-	} else if image != nil && disk.SourceImageForce {
-		log.Printf("delete existing image: %s", *image.Status.Name)
-		d.DeleteImage(*image.Metadata.UUID)
+	if existingImage != nil && !disk.SourceImageForce {
+		log.Printf("reuse existing image: %s", *existingImage.Status.Name)
+		return &nutanixImage{image: *existingImage}, nil
+	} else if existingImage != nil && disk.SourceImageForce {
+		log.Printf("delete existing image: %s", *existingImage.Status.Name)
+		d.DeleteImage(*existingImage.Metadata.UUID)
+		log.Printf("recreating image: %s", file)
+	} else if existingImage == nil {
+		log.Printf("creating image: %s", file)
 	}
 	req.Spec.Resources.SourceURI = &disk.SourceImageURI
 
-	log.Printf("creating image: %s", file)
-	image, err = conn.V3.CreateImage(req)
+	image, err := conn.V3.CreateImage(req)
 	if err != nil {
-		return nil, fmt.Errorf("error while create image: %s", err.Error())
+		return nil, fmt.Errorf("error while creating image: %s", err.Error())
 	}
 
 	err = checkTask(conn, image.Status.ExecutionContext.TaskUUID.(string))
 	if err != nil {
-		return nil, fmt.Errorf("error while create image: %s", err.Error())
+		return nil, fmt.Errorf("error while creating image: %s", err.Error())
 	}
+	log.Printf("image succesfully created")
 
 	return &nutanixImage{image: *image}, nil
 }
@@ -709,18 +712,18 @@ func (d *NutanixDriver) CreateImageFile(filePath string, vm VmConfig) (*nutanixI
 	log.Printf("creating image: %s", file)
 	image, err := conn.V3.CreateImage(req)
 	if err != nil {
-		return nil, fmt.Errorf("error while create image: %s", err.Error())
+		return nil, fmt.Errorf("error while creating image: %s", err.Error())
 	}
 
 	err = checkTask(conn, image.Status.ExecutionContext.TaskUUID.(string))
 	if err != nil {
-		return nil, fmt.Errorf("error while create image: %s", err.Error())
+		return nil, fmt.Errorf("error while creating image: %s", err.Error())
 	}
 
 	log.Printf("uploading image: %s", filePath)
 	err = conn.V3.UploadImage(*image.Metadata.UUID, filePath)
 	if err != nil {
-		return nil, fmt.Errorf("error while upload image: %s", err.Error())
+		return nil, fmt.Errorf("error while uploading image: %s", err.Error())
 	}
 
 	running, err := conn.V3.GetImage(*image.Metadata.UUID)
@@ -929,14 +932,14 @@ func (d *NutanixDriver) SaveVMDisk(diskUUID string, index int, imageCategories [
 
 			resp, err := conn.V3.DeleteImage(*ImageList.Entities[0].Metadata.UUID)
 			if err != nil {
-				return nil, fmt.Errorf("error while Delete Image, %s", err.Error())
+				return nil, fmt.Errorf("error while Deleting Image, %s", err.Error())
 			}
 
 			log.Printf("deleting image %s...\n", *ImageList.Entities[0].Metadata.UUID)
 			err = checkTask(conn, resp.Status.ExecutionContext.TaskUUID.(string))
 
 			if err != nil {
-				return nil, fmt.Errorf("error while Delete Image, %s", err.Error())
+				return nil, fmt.Errorf("error while Deleting Image, %s", err.Error())
 			}
 		}
 	}
@@ -970,12 +973,12 @@ func (d *NutanixDriver) SaveVMDisk(diskUUID string, index int, imageCategories [
 
 	image, err := conn.V3.CreateImage(req)
 	if err != nil {
-		return nil, fmt.Errorf("error while Create Image, %s", err.Error())
+		return nil, fmt.Errorf("error while Creating Image, %s", err.Error())
 	}
 	log.Printf("creating image %s...\n", *image.Metadata.UUID)
 	err = checkTask(conn, image.Status.ExecutionContext.TaskUUID.(string))
 	if err != nil {
-		return nil, fmt.Errorf("error while Create Image, %s", err.Error())
+		return nil, fmt.Errorf("error while Creating Image, %s", err.Error())
 	} else {
 		return &nutanixImage{image: *image}, nil
 	}
