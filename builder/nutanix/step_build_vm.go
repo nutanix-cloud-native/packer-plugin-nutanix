@@ -116,7 +116,7 @@ func (s *stepBuildVM) Cleanup(state multistep.StateBag) {
 	imageToDelete := state.Get("image_to_delete")
 
 	for _, image := range imageToDelete.([]string) {
-		log.Printf("delete marked image: %s", image)
+		log.Printf("delete marked source_image: %s", image)
 		d.DeleteImage(image)
 	}
 
