@@ -40,7 +40,7 @@ type Config struct {
 	ImageDelete                    bool          `mapstructure:"image_delete" json:"image_delete" required:"false"`
 	ImageExport                    bool          `mapstructure:"image_export" json:"image_export" required:"false"`
 	WaitTimeout                    time.Duration `mapstructure:"ip_wait_timeout" json:"ip_wait_timeout" required:"false"`
-	ForceDelete                    bool          `mapstructure:"force_delete" json:"force_delete" required:"false"`
+	VmForceDelete                  bool          `mapstructure:"vm_force_delete" json:"vm_force_delete" required:"false"`
 
 	ctx interpolate.Context
 }
