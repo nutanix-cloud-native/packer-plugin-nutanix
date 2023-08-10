@@ -107,18 +107,9 @@ func (c *Config) Prepare(raws ...interface{}) ([]string, error) {
 	var errs *packersdk.MultiError
 	warnings := make([]string, 0)
 
-	// if c.VmConfig.DiskSizeGB == 0 {
-	// 	c.VmConfig.DiskSizeGB = 40
-	// }
-
 	if c.CommConfig.Type == "" {
-		if c.CommConfig.SSHUsername != "" {
-			log.Println("No Communicator Type assigned but SSH Creds available, setting to 'SSH'")
-			c.CommConfig.Type = "ssh"
-		} else {
-			log.Println("No Communicator Type set, setting to 'none'")
-			c.CommConfig.Type = "none"
-		}
+		log.Println("No Communicator Type set, setting to 'ssh'")
+		c.CommConfig.Type = "ssh"
 	}
 
 	if c.CPU == 0 {
@@ -140,10 +131,50 @@ func (c *Config) Prepare(raws ...interface{}) ([]string, error) {
 		c.BootType = string(NutanixIdentifierBootTypeLegacy)
 	}
 
+	// Validate Cluster Endpoint
+	if c.ClusterConfig.Endpoint == "" {
+		log.Println("Nutanix Endpoint missing from configuration")
+		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("missing nutanix_endpoint"))
+	}
+
+	// Validate Cluster Name
+	if c.VmConfig.ClusterName == "" {
+		log.Println("Nutanix Cluster Name missing from configuration")
+		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("missing cluster_name"))
+	}
+
+	// Validate VM disks
+	if len(c.VmConfig.VmDisks) == 0 {
+		log.Println("Nutanix VM Disks missing from configuration")
+		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("missing vm_disks"))
+	}
+
+	if c.CommConfig.Type != "none" {
+
+		// Validate VM nics
+		if len(c.VmConfig.VmNICs) == 0 {
+			log.Println("Nutanix VM Nics missing from configuration")
+			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("missing vm_nics"))
+		}
+
+		// Validate VM Subnet
+		for i, nic := range c.VmConfig.VmNICs {
+			if nic.SubnetName == "" && nic.SubnetUUID == "" {
+				log.Printf("Nutanix Subnet is missing in nic %d configuration", i+1)
+				errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("missing subnet in vm_nics %d", i+1))
+			}
+		}
+	}
 	// Validate Cluster Username
 	if c.ClusterConfig.Username == "" {
 		log.Println("Nutanix Username missing from configuration")
 		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("missing nutanix_username"))
+	}
+
+	// Validate Cluster Password
+	if c.ClusterConfig.Password == "" {
+		log.Println("Nutanix Password missing from configuration")
+		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("missing nutanix_password"))
 	}
 
 	if c.VmConfig.VMName == "" {
