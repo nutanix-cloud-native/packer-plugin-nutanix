@@ -316,7 +316,7 @@ func (d *NutanixDriver) CreateRequest(vm VmConfig, state multistep.StateBag) (*v
 				}
 
 				if disk.SourceImageDelete {
-					log.Printf("mark this image to delete: %s", *image.image.Status.Name)
+					log.Printf("mark this image to delete: %s", *image.image.Spec.Name)
 					imageToDelete = append(imageToDelete, *image.image.Metadata.UUID)
 				}
 
