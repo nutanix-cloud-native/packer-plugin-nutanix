@@ -152,7 +152,7 @@ type FlatConfig struct {
 	ImageDelete               *bool             `mapstructure:"image_delete" json:"image_delete" required:"false" cty:"image_delete" hcl:"image_delete"`
 	ImageExport               *bool             `mapstructure:"image_export" json:"image_export" required:"false" cty:"image_export" hcl:"image_export"`
 	WaitTimeout               *string           `mapstructure:"ip_wait_timeout" json:"ip_wait_timeout" required:"false" cty:"ip_wait_timeout" hcl:"ip_wait_timeout"`
-	ForceDelete               *bool             `mapstructure:"force_delete" json:"force_delete" required:"false" cty:"force_delete" hcl:"force_delete"`
+	VmForceDelete             *bool             `mapstructure:"vm_force_delete" json:"vm_force_delete" required:"false" cty:"vm_force_delete" hcl:"vm_force_delete"`
 }
 
 // FlatMapstructure returns a new FlatConfig.
@@ -253,7 +253,7 @@ func (*FlatConfig) HCL2Spec() map[string]hcldec.Spec {
 		"image_delete":                 &hcldec.AttrSpec{Name: "image_delete", Type: cty.Bool, Required: false},
 		"image_export":                 &hcldec.AttrSpec{Name: "image_export", Type: cty.Bool, Required: false},
 		"ip_wait_timeout":              &hcldec.AttrSpec{Name: "ip_wait_timeout", Type: cty.String, Required: false},
-		"force_delete":                 &hcldec.AttrSpec{Name: "force_delete", Type: cty.Bool, Required: false},
+		"vm_force_delete":              &hcldec.AttrSpec{Name: "vm_force_delete", Type: cty.Bool, Required: false},
 	}
 	return s
 }

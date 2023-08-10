@@ -86,11 +86,11 @@ func (s *stepBuildVM) Cleanup(state multistep.StateBag) {
 	_, cancelled := state.GetOk(multistep.StateCancelled)
 	_, halted := state.GetOk(multistep.StateHalted)
 
-	if cancelled || halted && !config.ForceDelete {
+	if cancelled || halted && !config.VmForceDelete {
 		ui.Say("Task cancelled, virtual machine is not deleted")
 		return
-	} else if config.ForceDelete && cancelled || halted {
-		ui.Say("Force Deleting virtual machine...")
+	} else if config.VmForceDelete && cancelled || halted {
+		ui.Say("Force deleting virtual machine...")
 	} else {
 		ui.Say("Deleting virtual machine...")
 	}
