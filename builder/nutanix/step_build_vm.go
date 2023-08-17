@@ -83,6 +83,28 @@ func (s *stepBuildVM) Cleanup(state multistep.StateBag) {
 	d := state.Get("driver").(Driver)
 	config := state.Get("config").(*Config)
 
+	if cdUUID, ok := state.GetOk("cd_uuid"); ok {
+		ui.Say("Deleting temporary CD disk...")
+		err := d.DeleteImage(cdUUID.(string))
+		if err != nil {
+			ui.Error("An error occurred while deleting CD disk")
+			log.Println(err)
+		}
+		ui.Message("Temporary CD disk successfully deleted")
+	}
+
+	imageToDelete := state.Get("image_to_delete")
+
+	for _, image := range imageToDelete.([]string) {
+		ui.Say(fmt.Sprintf("Deleting marked source_image: %s...", image))
+		err := d.DeleteImage(image)
+		if err != nil {
+			ui.Error(fmt.Sprintf("An error occurred while deleting image %s", image))
+			log.Println(err)
+		}
+		ui.Message("Image successfully deleted")
+	}
+
 	_, cancelled := state.GetOk(multistep.StateCancelled)
 	_, halted := state.GetOk(multistep.StateHalted)
 
@@ -95,29 +117,12 @@ func (s *stepBuildVM) Cleanup(state multistep.StateBag) {
 		ui.Say("Deleting virtual machine...")
 	}
 
-	if cdUUID, ok := state.GetOk("cd_uuid"); ok {
-		err := d.DeleteImage(cdUUID.(string))
-		if err != nil {
-			ui.Error("An error occurred while deleting CD disk")
-			return
-		} else {
-			ui.Message("CD disk successfully deleted")
-		}
-	}
-
 	err := d.Delete(vmUUID.(string))
 	if err != nil {
 		ui.Error("An error occurred while deleting the Virtual machine")
-		return
+		log.Println(err)
 	} else {
 		ui.Message("Virtual machine successfully deleted")
-	}
-
-	imageToDelete := state.Get("image_to_delete")
-
-	for _, image := range imageToDelete.([]string) {
-		log.Printf("delete marked source_image: %s", image)
-		d.DeleteImage(image)
 	}
 
 }
