@@ -25,6 +25,7 @@ These parameters allow to define information about platform and temporary VM use
 ### Optional
   - `nutanix_port` (number) - Port used for connection to Prism Central.
   - `nutanix_insecure` (bool) - Authorize connection to Prism Central without valid certificate.
+  - `vm_name` (string) - Name of the temporary VM to create. If not specified a random `packer-*` name will be used.
   - `cpu` (number) - Number of vCPU for temporary VM.
   - `memory_mb` (number) - Size of vRAM for temporary VM (in megabytes).
   - `cd_files` (array of strings) - A list of files to place onto a CD that is attached when the VM is booted. This can include either files or directories; any directories will be copied onto the CD recursively, preserving directory structure hierarchy.
