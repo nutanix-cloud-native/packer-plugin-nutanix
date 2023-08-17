@@ -138,9 +138,9 @@ func (c *Config) Prepare(raws ...interface{}) ([]string, error) {
 	}
 
 	// Validate Cluster Name
-	if c.VmConfig.ClusterName == "" {
-		log.Println("Nutanix Cluster Name missing from configuration")
-		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("missing cluster_name"))
+	if c.VmConfig.ClusterName == "" && c.VmConfig.ClusterUUID == "" {
+		log.Println("Nutanix Cluster Name or UUID missing from configuration")
+		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("missing cluster_name or cluster_uuid"))
 	}
 
 	// Validate VM disks

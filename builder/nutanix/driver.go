@@ -449,7 +449,7 @@ func (d *NutanixDriver) CreateRequest(vm VmConfig, state multistep.StateBag) (*v
 		if err != nil {
 			return nil, fmt.Errorf("error while GetCluster, %s", err.Error())
 		}
-	} else if vm.ClusterName != "" {
+	} else {
 		cluster, err = findClusterByName(conn, vm.ClusterName)
 		if err != nil {
 			return nil, fmt.Errorf("error while findClusterByName, %s", err.Error())
