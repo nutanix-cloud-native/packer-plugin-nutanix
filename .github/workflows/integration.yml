@@ -15,7 +15,7 @@ jobs:
           go-version: "^1.19"
 
       - name: Checkout Code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Lint Go Code
         run: |
@@ -32,7 +32,7 @@ jobs:
           go-version: "^1.19"
 
       - name: Checkout Code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Vet Go code
         run: go vet ./...
@@ -47,7 +47,7 @@ jobs:
           go-version: "^1.19"
 
       - name: Check out code into the Go module directory
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Compile
         run: make build
