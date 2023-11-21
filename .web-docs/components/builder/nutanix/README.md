@@ -16,6 +16,7 @@ These parameters allow to define information about platform and temporary VM use
 ### Optional
   - `nutanix_port` (number) - Port used for connection to Prism Central.
   - `nutanix_insecure` (bool) - Authorize connection to Prism Central without valid certificate.
+  - `vm_name` (string) - Name of the temporary VM to create. If not specified a random `packer-*` name will be used.
   - `cpu` (number) - Number of vCPU for temporary VM.
   - `memory_mb` (number) - Size of vRAM for temporary VM (in megabytes).
   - `cd_files` (array of strings) - A list of files to place onto a CD that is attached when the VM is booted. This can include either files or directories; any directories will be copied onto the CD recursively, preserving directory structure hierarchy.
@@ -23,6 +24,8 @@ These parameters allow to define information about platform and temporary VM use
   - `boot_type` (string) - Type of boot used on the temporary VM ("legacy" or "uefi").
   - `ip_wait_timeout` (duration string | ex: "0h42m0s") - Amount of time to wait for VM's IP, similar to 'ssh_timeout'. Defaults to 15m (15 minutes). See the Golang [ParseDuration](https://golang.org/pkg/time/#ParseDuration) documentation for full details.
   - `vm_categories` ([]Category) - Assign Categories to the vm.
+  - `project` (string) - Assign Project to the vm.
+  
 
 
 ## Output configuration
@@ -37,10 +40,11 @@ These parameters allow to configure everything around image creation, from the t
 - `image_export` (bool) - Export raw image in the current folder (default is false).
 - `shutdown_command` (string) - Command line to shutdown your temporary VM.
 - `shutdown_timeout` (string) - Timeout for VM shutdown (format : 2m).
+- `vm_force_delete` (bool) - Delete vm even if build is not succesful (default is false).
 - `communicator` (string) - Protocol used for Packer connection (ex "winrm" or "ssh"). Default is : "ssh".
 
 ### Dedicated to Linux
-- `user_data` (string) - cloud-init content base64 coded.
+- `user_data` (string) - cloud-init content base64 encoded.
 - `ssh_username` (string) - user for ssh connection initiated by Packer.
 - `ssh_password` (string) - password for the ssh user.
 
@@ -79,6 +83,8 @@ Sample:
 - `source_image_name` (string) - Name of the image used as disk source.
 - `source_image_uuid` (string) - UUID of the image used as disk source.
 - `source_image_uri` (string) - URI of the image used as disk source (if image is not already on the cluster, it will download and store it before launching output image creation process).
+- `source_image_delete` (bool) - Delete source image once build process is completed (default is false).
+- `source_image_force` (bool) - Always download and replace source image even if already exist (default is false).
 - `disk_size_gb` (number) - size of the disk (in gigabytes).
 
 Sample:
@@ -93,6 +99,8 @@ Sample:
 - `image_type` (string) - "ISO_IMAGE".
 - `source_image_name` (string) - Name of the ISO image to mount.
 - `source_image_uuid` (string) - UUID of the ISO image to mount.
+- `source_image_delete` (bool) - Delete source image once build process is completed (default is false).
+- `source_image_force` (bool) - Always download and replace source image even if already exist (default is false).
 
 Sample:
 ```hcl
