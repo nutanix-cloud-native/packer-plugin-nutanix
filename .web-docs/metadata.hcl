@@ -3,7 +3,7 @@
 integration {
   name = "Nutanix"
   description = "TODO"
-  identifier = "packer/BrandonRomano/nutanix"
+  identifier = "packer/nutanix-cloud-native/nutanix"
   component {
     type = "builder"
     name = "Nutanix plugin"
