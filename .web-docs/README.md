@@ -27,7 +27,7 @@ $ packer plugins install github.com/nutanix-cloud-native/nutanix
 
 #### Builders
 
-- [gridscale](/packer/integrations/gridscale/latest/components/builder/gridscale) - The builder takes a template (in gridscale) or an iso-image, runs any provisioning necessary on the template/iso-image after launching it, then snapshots it into a reusable template. This reusable template can then be used as the foundation of new servers that are provisioned within gridscale user space.
+- [nutanix](/packer/integrations/nutanix-cloud-native/nutanix/latest/components/builder/nutanix) - The Nutanix builder will create a temporary VM as foundation of your Packer image, apply all providers you define to customize your image, then clone the VM disk image as your final Packer image.
 
 ### Limitations
 #### Building temporary ISOs on MacOS
