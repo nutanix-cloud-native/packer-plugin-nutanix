@@ -2,7 +2,7 @@
 # https://github.com/hashicorp/integration-template#metadata-configuration
 integration {
   name = "Nutanix"
-  description = "TODO"
+  description = "A multi-component plugin can be used with Packer to create custom images."
   identifier = "packer/nutanix-cloud-native/nutanix"
   component {
     type = "builder"
