@@ -29,7 +29,7 @@ jobs:
           cd $GITHUB_WORKSPACE
           make dev
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: packer-plugin-nutanix
           path: ~/.config/packer/plugins/packer-plugin-nutanix
