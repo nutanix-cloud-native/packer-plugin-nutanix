@@ -1,0 +1,149 @@
+This document is going to detail all Nutanix plugin parameters.
+
+## Principle
+The Nutanix plugin will create a temporary VM as foundation of your Packer image, apply all providers you define to customize your image, then clone the VM disk image as your final Packer image.
+
+## Environment configuration
+These parameters allow to define information about platform and temporary VM used to create the image.
+
+### Required
+  - `nutanix_username` (string) - User used for Prism Central login.
+  - `nutanix_password` (string) - Password of this user for Prism Central login.
+  - `nutanix_endpoint` (string) - Prism Central FQDN or IP.
+  - `cluster_name` or `cluster_uuid` (string) - Nutanix cluster name or uuid used to create and store image.
+  - `os_type` (string) - OS Type ("Linux" or "Windows").
+
+### Optional
+  - `nutanix_port` (number) - Port used for connection to Prism Central.
+  - `nutanix_insecure` (bool) - Authorize connection to Prism Central without valid certificate.
+  - `vm_name` (string) - Name of the temporary VM to create. If not specified a random `packer-*` name will be used.
+  - `cpu` (number) - Number of vCPU for temporary VM.
+  - `memory_mb` (number) - Size of vRAM for temporary VM (in megabytes).
+  - `cd_files` (array of strings) - A list of files to place onto a CD that is attached when the VM is booted. This can include either files or directories; any directories will be copied onto the CD recursively, preserving directory structure hierarchy.
+  - `cd_label` (string) - Label of this CD Drive.
+  - `boot_type` (string) - Type of boot used on the temporary VM ("legacy" or "uefi").
+  - `ip_wait_timeout` (duration string | ex: "0h42m0s") - Amount of time to wait for VM's IP, similar to 'ssh_timeout'. Defaults to 15m (15 minutes). See the Golang [ParseDuration](https://golang.org/pkg/time/#ParseDuration) documentation for full details.
+  - `vm_categories` ([]Category) - Assign Categories to the vm.
+  - `project` (string) - Assign Project to the vm.
+  
+
+
+## Output configuration
+These parameters allow to configure everything around image creation, from the temporary VM connection to the final image definition.
+
+### All OS
+- `image_name` (string) - Name of the output image.
+- `image_description` (string) - Description for output image.
+- `image_categories` ([]Category) - Assign Categories to the image.
+- `force_deregister` (bool) - Allow output image override if already exists.
+- `image_delete` (bool) - Delete image once build process is completed (default is false).
+- `image_export` (bool) - Export raw image in the current folder (default is false).
+- `shutdown_command` (string) - Command line to shutdown your temporary VM.
+- `shutdown_timeout` (string) - Timeout for VM shutdown (format : 2m).
+- `vm_force_delete` (bool) - Delete vm even if build is not succesful (default is false).
+- `communicator` (string) - Protocol used for Packer connection (ex "winrm" or "ssh"). Default is : "ssh".
+
+### Dedicated to Linux
+- `user_data` (string) - cloud-init content base64 encoded.
+- `ssh_username` (string) - user for ssh connection initiated by Packer.
+- `ssh_password` (string) - password for the ssh user.
+
+### Dedicated to Windows
+- `winrm_port` (number) - Port for WinRM communication (default is 5986).
+- `winrm_insecure` (bool) - Allow insecure connection to WinRM.
+- `winrm_use_ssl` (bool) - Request SSL connection with WinRM.
+- `winrm_timeout` (string) - Timeout for WinRM (format 45m).
+- `winrm_username` (string) - User login for WinRM connection.
+- `winrm_password` (string) - Password this User.
+
+## Disk configuration
+Use `vm_disks{}` entry to configure disk to your VM image. If you want to configure several disks, use this entry multiple times.
+
+All parameters of this `vm_disks` section are described below.
+
+3 types of disk configurations can be used:
+- disk (create an empty disk)
+- disk image (create disk from Nutanix image library)
+- ISO image (create disk from ISO image)
+
+### Disk 
+- `image_type` (string) - "DISK".
+- `disk_size_gb` (number) - size of th disk (in gigabytes).
+
+Sample:
+```hcl
+  vm_disks {
+      image_type = "DISK"
+      disk_size_gb = 30
+  }
+```
+
+### Disk image
+- `image_type` (string) - "DISK_IMAGE" (you must use one of the three following parameters to source the image).
+- `source_image_name` (string) - Name of the image used as disk source.
+- `source_image_uuid` (string) - UUID of the image used as disk source.
+- `source_image_uri` (string) - URI of the image used as disk source (if image is not already on the cluster, it will download and store it before launching output image creation process).
+- `source_image_delete` (bool) - Delete source image once build process is completed (default is false).
+- `source_image_force` (bool) - Always download and replace source image even if already exist (default is false).
+- `disk_size_gb` (number) - size of the disk (in gigabytes).
+
+Sample:
+```hcl
+  vm_disks {
+      image_type = "DISK_IMAGE"
+      source_image_name = "<myDiskImage>"
+      disk_size_gb = 40
+  }
+```
+### ISO Image
+- `image_type` (string) - "ISO_IMAGE".
+- `source_image_name` (string) - Name of the ISO image to mount.
+- `source_image_uuid` (string) - UUID of the ISO image to mount.
+- `source_image_delete` (bool) - Delete source image once build process is completed (default is false).
+- `source_image_force` (bool) - Always download and replace source image even if already exist (default is false).
+
+Sample:
+```hcl
+  vm_disks {
+      image_type = "ISO_IMAGE"
+      source_image_name = "<myISOimage>"
+  }
+```
+
+## Network Configuration
+Use `vm_nics{}` entry to configure NICs in your image
+
+In this section, you have to define network you will to connect with one of this keyword :
+
+- `subnet_name` (string) - Name of the cluster subnet to use.
+- `subnet_uuid` (string) - UUID of the cluster subnet to use.
+
+Sample
+```hcl
+  vm_nics {
+    subnet_name = "<mySubnet>"
+  }
+```
+
+## Categories Configuration
+
+Use `image_categories{}` and `vm_categories{}` to assign category to your image or vm.  If you want to assign multiple categories , use the entry multiple times.
+
+In this section, you have to define category you will to assign with the following parameters:
+
+- `key` (string) - Name of the category to assign.
+- `value` (string) - Value of the category to assign.
+
+Sample
+```hcl
+  image_categories {
+    key = "OSType"
+    value = "ubuntu-22.04"
+  }
+```
+
+Note: Categories must already be present in Prism Central.
+
+## Samples
+
+You can find samples [here](https://github.com/nutanix-cloud-native/packer-plugin-nutanix/tree/main/example) for these instructions usage.
