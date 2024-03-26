@@ -27,12 +27,12 @@ jobs:
       - name: Build packer plugin
         run: |
           cd $GITHUB_WORKSPACE
-          make dev
+          make build
 
       - uses: actions/upload-artifact@v4
         with:
           name: packer-plugin-nutanix
-          path: ~/.config/packer/plugins/packer-plugin-nutanix
+          path: packer-plugin-nutanix
           retention-days: 7
 
       - name: build test list
@@ -70,11 +70,13 @@ jobs:
           name: packer-plugin-nutanix
           path: /tmp
 
+      - name: Fix plugin permissions
+        run: |
+          chmod +x /tmp/packer-plugin-nutanix
+
       - name: Install plugin
         run: |
-          mkdir -p ~/.config/packer/plugins/
-          cp /tmp/packer-plugin-nutanix ~/.config/packer/plugins/packer-plugin-nutanix
-          chmod 755 ~/.config/packer/plugins/packer-plugin-nutanix
+          packer plugins install --path /tmp/packer-plugin-nutanix "github.com/nutanix-cloud-native/nutanix"
 
       - name: Run `packer init`
         id: init
