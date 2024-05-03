@@ -34,7 +34,7 @@ These parameters allow to define information about platform and temporary VM use
   - `ip_wait_timeout` (duration string | ex: "0h42m0s") - Amount of time to wait for VM's IP, similar to 'ssh_timeout'. Defaults to 15m (15 minutes). See the Golang [ParseDuration](https://golang.org/pkg/time/#ParseDuration) documentation for full details.
   - `vm_categories` ([]Category) - Assign Categories to the vm.
   - `project` (string) - Assign Project to the vm.
-  
+  - `gpu` ([] GPU) - GPU in cluster name to be attached on temporary VM.
 
 
 ## Output configuration
@@ -152,6 +152,18 @@ Sample
 ```
 
 Note: Categories must already be present in Prism Central.
+
+## GPU Configuration
+
+Use `GPU` to assign a GPU that is present on `cluster-name` on the temporary vm. Add the name of the GPU you wish to attach.
+
+Sample
+
+```hcl
+  gpu {
+    name = "Ampere 40"
+  }
+```
 
 ## Samples
 

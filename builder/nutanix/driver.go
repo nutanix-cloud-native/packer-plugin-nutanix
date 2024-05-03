@@ -151,6 +151,37 @@ func findSubnetByName(conn *v3.Client, name string) (*v3.SubnetIntentResponse, e
 	return found[0], nil
 }
 
+func findGPUByName(conn *v3.Client, name string) (*v3.VMGpu, error) {
+	hosts, err := conn.V3.ListAllHost()
+	if err != nil {
+		return nil, err
+	}
+
+	for _, host := range hosts.Entities {
+		if host == nil ||
+			host.Status == nil ||
+			host.Status.ClusterReference == nil ||
+			host.Status.Resources == nil ||
+			len(host.Status.Resources.GPUList) == 0 {
+			continue
+		}
+
+		for _, peGpu := range host.Status.Resources.GPUList {
+			if peGpu == nil {
+				continue
+			}
+			if peGpu.Name == name {
+				return &v3.VMGpu{
+					DeviceID: peGpu.DeviceID,
+					Vendor:   &peGpu.Vendor,
+					Mode:     &peGpu.Mode,
+				}, nil
+			}
+		}
+	}
+	return nil, fmt.Errorf("failed to find GPU %s", name)
+}
+
 func sourceImageExists(conn *v3.Client, name string, uri string) (*v3.ImageIntentResponse, error) {
 	filter := fmt.Sprintf("name==%s", name)
 	resp, err := conn.V3.ListAllImage(filter)
@@ -441,6 +472,15 @@ func (d *NutanixDriver) CreateRequest(vm VmConfig, state multistep.StateBag) (*v
 		}
 		NICList = append(NICList, &newNIC)
 	}
+	GPUList := make([]*v3.VMGpu, 0, len(vm.GPU))
+	for _, gpu := range vm.GPU {
+		vmGPU, err := findGPUByName(conn, gpu.Name)
+		if err != nil {
+			return nil, fmt.Errorf("error while findGPUByName %s", err.Error())
+		}
+		GPUList = append(GPUList, vmGPU)
+	}
+
 	PowerStateOn := "ON"
 
 	cluster := &v3.ClusterIntentResponse{}
@@ -466,6 +506,7 @@ func (d *NutanixDriver) CreateRequest(vm VmConfig, state multistep.StateBag) (*v
 				PowerState:         &PowerStateOn,
 				DiskList:           DiskList,
 				NicList:            NICList,
+				GpuList:            GPUList,
 			},
 			ClusterReference: BuildReference(*cluster.Metadata.UUID, "cluster"),
 			Description:      StringPtr(fmt.Sprintf(vmDescription, d.Config.VmConfig.ImageName)),

@@ -1,4 +1,4 @@
-//go:generate packer-sdc mapstructure-to-hcl2 -type Config,Category,ClusterConfig,VmConfig,VmDisk,VmNIC
+//go:generate packer-sdc mapstructure-to-hcl2 -type Config,Category,ClusterConfig,VmConfig,VmDisk,VmNIC,GPU
 
 package nutanix
 
@@ -45,6 +45,10 @@ type Config struct {
 	ctx interpolate.Context
 }
 
+type GPU struct {
+	Name string `mapstructure:"name" json:"name" required:"false"`
+}
+
 type Category struct {
 	Key   string `mapstructure:"key" json:"key" required:"false"`
 	Value string `mapstructure:"value" json:"value" required:"false"`
@@ -86,6 +90,7 @@ type VmConfig struct {
 	UserData     string     `mapstructure:"user_data" json:"user_data" required:"false"`
 	VMCategories []Category `mapstructure:"vm_categories" required:"false"`
 	Project      string     `mapstructure:"project" required:"false"`
+	GPU          []GPU      `mapstructure:"gpu" required:"false"`
 }
 
 func (c *Config) Prepare(raws ...interface{}) ([]string, error) {
