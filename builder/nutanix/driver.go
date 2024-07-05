@@ -930,7 +930,9 @@ func (d *NutanixDriver) PowerOff(vmUUID string) error {
 			<-time.After(1 * time.Second)
 			continue
 		}
-		return fmt.Errorf("error while GetTask, %s", err.Error())
+		if err != nil {
+			return fmt.Errorf("error while GetTask, %s", err.Error())
+		}
 	}
 
 	log.Printf("PowerOff task: %s", taskUUID)
