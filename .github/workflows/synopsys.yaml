@@ -1,9 +1,11 @@
 name: Black Duck Policy Check
 on:
-  pull_request:
+  pull_request_target:
     branches:
       - main
   push:
+    branches:
+      - main
 
 jobs:
   security:
