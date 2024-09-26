@@ -128,7 +128,7 @@ func findSubnetByUUID(ctx context.Context, conn *v3.Client, uuid string) (*v3.Su
 	return conn.V3.GetSubnet(ctx, uuid)
 }
 
-func findSubnetByName(ctx context.Context, conn *v3.Client, name string) (*v3.SubnetIntentResponse, error) {
+func findSubnetByName(ctx context.Context, conn *v3.Client, name string) ([]*v3.SubnetIntentResponse, error) {
 	filter := fmt.Sprintf("name==%s", name)
 	resp, err := conn.V3.ListAllSubnet(ctx, filter, getEmptyClientSideFilter())
 	if err != nil {
@@ -137,22 +137,18 @@ func findSubnetByName(ctx context.Context, conn *v3.Client, name string) (*v3.Su
 
 	entities := resp.Entities
 
-	found := make([]*v3.SubnetIntentResponse, 0)
+	subnets := make([]*v3.SubnetIntentResponse, 0)
 	for _, v := range entities {
 		if *v.Spec.Name == name {
-			found = append(found, v)
+			subnets = append(subnets, v)
 		}
 	}
 
-	if len(found) > 1 {
-		return nil, fmt.Errorf("your query returned more than one result. Please use subnet_uuid argument or use additional filters instead")
-	}
-
-	if len(found) == 0 {
+	if len(subnets) == 0 {
 		return nil, fmt.Errorf("subnet with the given name, not found")
 	}
 
-	return found[0], nil
+	return subnets, nil
 }
 
 func findGPUByName(ctx context.Context, conn *v3.Client, name string) (*v3.VMGpu, error) {
@@ -452,39 +448,6 @@ func (d *NutanixDriver) CreateRequest(ctx context.Context, vm VmConfig, state mu
 
 	state.Put("image_to_delete", imageToDelete)
 
-	NICList := []*v3.VMNic{}
-	for _, nic := range vm.VmNICs {
-		subnet := &v3.SubnetIntentResponse{}
-		if nic.SubnetUUID != "" {
-			subnet, err = findSubnetByUUID(ctx, conn, nic.SubnetUUID)
-			if err != nil {
-				return nil, fmt.Errorf("error while findSubnetByUUID, %s", err.Error())
-			}
-		} else if nic.SubnetName != "" {
-			subnet, err = findSubnetByName(ctx, conn, nic.SubnetName)
-			if err != nil {
-				return nil, fmt.Errorf("error while findSubnetByName, %s", err.Error())
-			}
-		}
-
-		isConnected := true
-		newNIC := v3.VMNic{
-			IsConnected:     &isConnected,
-			SubnetReference: BuildReference(*subnet.Metadata.UUID, "subnet"),
-		}
-		NICList = append(NICList, &newNIC)
-	}
-	GPUList := make([]*v3.VMGpu, 0, len(vm.GPU))
-	for _, gpu := range vm.GPU {
-		vmGPU, err := findGPUByName(ctx, conn, gpu.Name)
-		if err != nil {
-			return nil, fmt.Errorf("error while findGPUByName %s", err.Error())
-		}
-		GPUList = append(GPUList, vmGPU)
-	}
-
-	PowerStateOn := "ON"
-
 	cluster := &v3.ClusterIntentResponse{}
 	if vm.ClusterUUID != "" {
 		cluster, err = conn.V3.GetCluster(ctx, vm.ClusterUUID)
@@ -498,6 +461,50 @@ func (d *NutanixDriver) CreateRequest(ctx context.Context, vm VmConfig, state mu
 		}
 	}
 
+	NICList := []*v3.VMNic{}
+	for _, nic := range vm.VmNICs {
+		subnet := &v3.SubnetIntentResponse{}
+		if nic.SubnetUUID != "" {
+			subnet, err = findSubnetByUUID(ctx, conn, nic.SubnetUUID)
+			if err != nil {
+				return nil, fmt.Errorf("error while findSubnetByUUID, %s", err.Error())
+			}
+		} else if nic.SubnetName != "" {
+			subnets, err := findSubnetByName(ctx, conn, nic.SubnetName)
+			if err != nil {
+				return nil, fmt.Errorf("error while findSubnetByName, %s", err.Error())
+			}
+
+			for _, s := range subnets {
+				if s.Spec.ClusterReference != nil && *s.Spec.ClusterReference.UUID == *cluster.Metadata.UUID {
+					subnet = s
+					break
+				}
+			}
+		}
+
+		if subnet == nil {
+			return nil, fmt.Errorf("subnet not found")
+		}
+
+		isConnected := true
+		newNIC := v3.VMNic{
+			IsConnected:     &isConnected,
+			SubnetReference: BuildReference(*subnet.Metadata.UUID, "subnet"),
+		}
+		NICList = append(NICList, &newNIC)
+	}
+
+	GPUList := make([]*v3.VMGpu, 0, len(vm.GPU))
+	for _, gpu := range vm.GPU {
+		vmGPU, err := findGPUByName(ctx, conn, gpu.Name)
+		if err != nil {
+			return nil, fmt.Errorf("error while findGPUByName %s", err.Error())
+		}
+		GPUList = append(GPUList, vmGPU)
+	}
+
+	powerStateOn := "ON"
 	req := &v3.VMIntentInput{
 		Spec: &v3.VM{
 			Name: &vm.VMName,
@@ -505,7 +512,7 @@ func (d *NutanixDriver) CreateRequest(ctx context.Context, vm VmConfig, state mu
 				GuestCustomization: guestCustomization,
 				NumSockets:         &vm.CPU,
 				MemorySizeMib:      &vm.MemoryMB,
-				PowerState:         &PowerStateOn,
+				PowerState:         &powerStateOn,
 				DiskList:           DiskList,
 				NicList:            NICList,
 				GpuList:            GPUList,
