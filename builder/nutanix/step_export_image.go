@@ -36,7 +36,7 @@ func (s *stepExportImage) Run(ctx context.Context, state multistep.StateBag) mul
 			name = fmt.Sprintf("%s-disk%d", name, index+1)
 		}
 
-		file, err := d.ExportImage(imageToExport.uuid)
+		file, err := d.ExportImage(ctx, imageToExport.uuid)
 		if err != nil {
 			ui.Error("Image export failed: " + err.Error())
 			state.Put("error", err)

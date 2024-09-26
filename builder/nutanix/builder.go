@@ -51,6 +51,9 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 	state.Put("driver", driver)
 	state.Put("hook", hook)
 	state.Put("ui", ui)
+	// multistep's step.Cleanup doesn't admit context but context is actually needed for cleanup,
+	// so we put it in the state bag to be used by the cleanup step
+	state.Put("ctx", ctx)
 
 	steps := []multistep.Step{
 		&commonsteps.StepCreateCD{

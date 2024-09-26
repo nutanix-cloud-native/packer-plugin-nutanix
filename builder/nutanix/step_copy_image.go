@@ -27,7 +27,7 @@ func (s *stepCopyImage) Run(ctx context.Context, state multistep.StateBag) multi
 	ui := state.Get("ui").(packer.Ui)
 	vmUUID := state.Get("vm_uuid").(string)
 	d := state.Get("driver").(Driver)
-	vm, _ := d.GetVM(vmUUID)
+	vm, _ := d.GetVM(ctx, vmUUID)
 
 	ui.Say(fmt.Sprintf("Creating image(s) from virtual machine %s...", s.Config.VMName))
 
@@ -56,7 +56,7 @@ func (s *stepCopyImage) Run(ctx context.Context, state multistep.StateBag) multi
 
 	for i, diskToCopy := range disksToCopy {
 
-		imageResponse, err := d.SaveVMDisk(diskToCopy.uuid, i, s.Config.ImageCategories)
+		imageResponse, err := d.SaveVMDisk(ctx, diskToCopy.uuid, i, s.Config.ImageCategories)
 		if err != nil {
 			ui.Error("Image creation failed: " + err.Error())
 			state.Put("error", err)
@@ -78,6 +78,10 @@ func (s *stepCopyImage) Run(ctx context.Context, state multistep.StateBag) multi
 func (s *stepCopyImage) Cleanup(state multistep.StateBag) {
 	ui := state.Get("ui").(packer.Ui)
 	d := state.Get("driver").(Driver)
+	ctx, ok := state.Get("ctx").(context.Context)
+	if !ok {
+		ctx = context.Background()
+	}
 
 	if !s.Config.ImageDelete {
 		return
@@ -88,7 +92,7 @@ func (s *stepCopyImage) Cleanup(state multistep.StateBag) {
 
 		for _, image := range imgUUID.([]imageArtefact) {
 
-			err := d.DeleteImage(image.uuid)
+			err := d.DeleteImage(ctx, image.uuid)
 			if err != nil {
 				ui.Error("An error occurred while deleting image")
 				return
