@@ -448,7 +448,7 @@ func (d *NutanixDriver) CreateRequest(ctx context.Context, vm VmConfig, state mu
 
 	state.Put("image_to_delete", imageToDelete)
 
-	cluster := &v3.ClusterIntentResponse{}
+	var cluster *v3.ClusterIntentResponse
 	if vm.ClusterUUID != "" {
 		cluster, err = conn.V3.GetCluster(ctx, vm.ClusterUUID)
 		if err != nil {
@@ -463,11 +463,15 @@ func (d *NutanixDriver) CreateRequest(ctx context.Context, vm VmConfig, state mu
 
 	NICList := []*v3.VMNic{}
 	for _, nic := range vm.VmNICs {
-		subnet := &v3.SubnetIntentResponse{}
+		var subnet *v3.SubnetIntentResponse
 		if nic.SubnetUUID != "" {
 			subnet, err = findSubnetByUUID(ctx, conn, nic.SubnetUUID)
 			if err != nil {
 				return nil, fmt.Errorf("error while findSubnetByUUID, %s", err.Error())
+			}
+
+			if subnet == nil {
+				return nil, fmt.Errorf("subnet with UUID %s not found", nic.SubnetUUID)
 			}
 		} else if nic.SubnetName != "" {
 			subnets, err := findSubnetByName(ctx, conn, nic.SubnetName)
@@ -476,15 +480,26 @@ func (d *NutanixDriver) CreateRequest(ctx context.Context, vm VmConfig, state mu
 			}
 
 			for _, s := range subnets {
-				if s.Spec.ClusterReference != nil && *s.Spec.ClusterReference.UUID == *cluster.Metadata.UUID {
+				// overlay subnets don't have a cluster reference
+				if s.Spec.ClusterReference == nil {
+					subnet = s
+					break
+				}
+
+				if s.Spec.ClusterReference != nil &&
+					s.Spec.ClusterReference.UUID != nil &&
+					cluster != nil &&
+					cluster.Metadata != nil &&
+					cluster.Metadata.UUID != nil &&
+					*s.Spec.ClusterReference.UUID == *cluster.Metadata.UUID {
 					subnet = s
 					break
 				}
 			}
-		}
 
-		if subnet == nil {
-			return nil, fmt.Errorf("subnet not found")
+			if subnet == nil {
+				return nil, fmt.Errorf("subnet named %s not found", nic.SubnetName)
+			}
 		}
 
 		isConnected := true
