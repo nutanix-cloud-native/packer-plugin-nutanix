@@ -26,7 +26,7 @@ func (s *stepBuildVM) Run(ctx context.Context, state multistep.StateBag) multist
 		ui.Say("Uploading CD disk...")
 		cdFilesPath := cdPathRaw.(string)
 		log.Println("CD disk found " + cdFilesPath)
-		cdfilesImage, err := d.CreateImageFile(cdFilesPath, config.VmConfig)
+		cdfilesImage, err := d.CreateImageFile(ctx, cdFilesPath, config.VmConfig)
 		if err != nil {
 			ui.Error("Error uploading CD disk:" + err.Error())
 			state.Put("error", err)
@@ -46,7 +46,7 @@ func (s *stepBuildVM) Run(ctx context.Context, state multistep.StateBag) multist
 	ui.Say("Creating Packer Builder virtual machine...")
 
 	// Create VM Spec
-	vmRequest, err := d.CreateRequest(config.VmConfig, state)
+	vmRequest, err := d.CreateRequest(ctx, config.VmConfig, state)
 	if err != nil {
 		ui.Error("Error creating virtual machine request: " + err.Error())
 		state.Put("error", err)
@@ -54,7 +54,7 @@ func (s *stepBuildVM) Run(ctx context.Context, state multistep.StateBag) multist
 	}
 
 	// Create VM
-	vmInstance, err := d.Create(vmRequest)
+	vmInstance, err := d.Create(ctx, vmRequest)
 
 	if err != nil {
 		ui.Error("Unable to create virtual machine: " + err.Error())
@@ -82,10 +82,14 @@ func (s *stepBuildVM) Cleanup(state multistep.StateBag) {
 	ui := state.Get("ui").(packer.Ui)
 	d := state.Get("driver").(Driver)
 	config := state.Get("config").(*Config)
+	ctx, ok := state.Get("ctx").(context.Context)
+	if !ok {
+		ctx = context.Background()
+	}
 
 	if cdUUID, ok := state.GetOk("cd_uuid"); ok {
 		ui.Say("Deleting temporary CD disk...")
-		err := d.DeleteImage(cdUUID.(string))
+		err := d.DeleteImage(ctx, cdUUID.(string))
 		if err != nil {
 			ui.Error("An error occurred while deleting CD disk")
 			log.Println(err)
@@ -97,7 +101,7 @@ func (s *stepBuildVM) Cleanup(state multistep.StateBag) {
 
 	for _, image := range imageToDelete.([]string) {
 		ui.Say(fmt.Sprintf("Deleting marked source_image: %s...", image))
-		err := d.DeleteImage(image)
+		err := d.DeleteImage(ctx, image)
 		if err != nil {
 			ui.Error(fmt.Sprintf("An error occurred while deleting image %s", image))
 			log.Println(err)
@@ -117,7 +121,7 @@ func (s *stepBuildVM) Cleanup(state multistep.StateBag) {
 		ui.Say("Deleting virtual machine...")
 	}
 
-	err := d.Delete(vmUUID.(string))
+	err := d.Delete(ctx, vmUUID.(string))
 	if err != nil {
 		ui.Error("An error occurred while deleting the Virtual machine")
 		log.Println(err)

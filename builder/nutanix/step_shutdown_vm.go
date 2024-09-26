@@ -38,7 +38,7 @@ func (s *StepShutdown) Run(ctx context.Context, state multistep.StateBag) multis
 
 	if config.CommConfig.Type == "none" {
 		ui.Say("No Communicator configured, halting the virtual machine...")
-		if err := driver.PowerOff(vmUUID); err != nil {
+		if err := driver.PowerOff(ctx, vmUUID); err != nil {
 			err := fmt.Errorf("error stopping VM: %s", err)
 			state.Put("error", err)
 			ui.Error(err.Error())
@@ -58,7 +58,7 @@ func (s *StepShutdown) Run(ctx context.Context, state multistep.StateBag) multis
 
 	} else {
 		ui.Say("Halting the virtual machine...")
-		if err := driver.PowerOff(vmUUID); err != nil {
+		if err := driver.PowerOff(ctx, vmUUID); err != nil {
 			err := fmt.Errorf("error stopping VM: %s", err)
 			state.Put("error", err)
 			ui.Error(err.Error())
@@ -70,7 +70,7 @@ func (s *StepShutdown) Run(ctx context.Context, state multistep.StateBag) multis
 	log.Printf("waiting max %s for shutdown to complete", s.Timeout)
 	shutdownTimer := time.After(s.Timeout)
 	for {
-		running, _ := driver.GetVM(vmUUID)
+		running, _ := driver.GetVM(ctx, vmUUID)
 		if running.PowerState() == "OFF" {
 			log.Printf("VM powered off")
 			break

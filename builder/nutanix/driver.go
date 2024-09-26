@@ -1,19 +1,19 @@
 package nutanix
 
 import (
+	"context"
 	"crypto/tls"
+	"fmt"
 	"io"
+	"log"
 	"net/http"
+	"path"
 	"strings"
 	"time"
 
-	"fmt"
-	"log"
-	"path"
-
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
-	client "github.com/nutanix-cloud-native/prism-go-client/pkg/nutanix"
-	v3 "github.com/nutanix-cloud-native/prism-go-client/pkg/nutanix/v3"
+	client "github.com/nutanix-cloud-native/prism-go-client"
+	v3 "github.com/nutanix-cloud-native/prism-go-client/v3"
 )
 
 const (
@@ -22,24 +22,28 @@ const (
 	vmDescription                = "Packer vm building image %s"
 )
 
-// A driver is able to talk to Nutanix PrismCentral and perform certain
+// Driver is able to talk to Nutanix PrismCentral and perform certain
 // operations with it.
 type Driver interface {
-	CreateRequest(VmConfig, multistep.StateBag) (*v3.VMIntentInput, error)
-	Create(*v3.VMIntentInput) (*nutanixInstance, error)
-	Delete(string) error
-	GetVM(string) (*nutanixInstance, error)
-	GetHost(string) (*nutanixHost, error)
-	PowerOff(string) error
-	CreateImageURL(VmDisk, VmConfig) (*nutanixImage, error)
-	CreateImageFile(string, VmConfig) (*nutanixImage, error)
-	DeleteImage(string) error
-	GetImage(string) (*nutanixImage, error)
-	ExportImage(string) (io.ReadCloser, error)
-	SaveVMDisk(string, int, []Category) (*nutanixImage, error)
+	CreateRequest(context.Context, VmConfig, multistep.StateBag) (*v3.VMIntentInput, error)
+	Create(context.Context, *v3.VMIntentInput) (*nutanixInstance, error)
+	Delete(context.Context, string) error
+	GetVM(context.Context, string) (*nutanixInstance, error)
+	GetHost(context.Context, string) (*nutanixHost, error)
+	PowerOff(context.Context, string) error
+	CreateImageURL(context.Context, VmDisk, VmConfig) (*nutanixImage, error)
+	CreateImageFile(context.Context, string, VmConfig) (*nutanixImage, error)
+	DeleteImage(context.Context, string) error
+	GetImage(context.Context, string) (*nutanixImage, error)
+	ExportImage(context.Context, string) (io.ReadCloser, error)
+	SaveVMDisk(context.Context, string, int, []Category) (*nutanixImage, error)
 	WaitForShutdown(string, <-chan struct{}) bool
 }
 
+// Verify that NutanixDriver implements the Driver interface
+var _ Driver = &NutanixDriver{}
+
+// NutanixDriver is a driver for Nutanix PrismCentral calls
 type NutanixDriver struct {
 	Config        Config
 	ClusterConfig ClusterConfig
@@ -58,9 +62,9 @@ type nutanixImage struct {
 	image v3.ImageIntentResponse
 }
 
-func findProjectByName(conn *v3.Client, name string) (*v3.Project, error) {
+func findProjectByName(ctx context.Context, conn *v3.Client, name string) (*v3.Project, error) {
 	filter := fmt.Sprintf("name==%s", name)
-	resp, err := conn.V3.ListAllProject(filter)
+	resp, err := conn.V3.ListAllProject(ctx, filter)
 	if err != nil {
 		return nil, err
 	}
@@ -89,9 +93,9 @@ func findProjectByName(conn *v3.Client, name string) (*v3.Project, error) {
 	return found[0], nil
 }
 
-func findClusterByName(conn *v3.Client, name string) (*v3.ClusterIntentResponse, error) {
+func findClusterByName(ctx context.Context, conn *v3.Client, name string) (*v3.ClusterIntentResponse, error) {
 	filter := fmt.Sprintf("name==%s", name)
-	resp, err := conn.V3.ListAllCluster(filter)
+	resp, err := conn.V3.ListAllCluster(ctx, filter)
 	if err != nil {
 		return nil, err
 	}
@@ -120,13 +124,13 @@ func findClusterByName(conn *v3.Client, name string) (*v3.ClusterIntentResponse,
 	return found[0], nil
 }
 
-func findSubnetByUUID(conn *v3.Client, uuid string) (*v3.SubnetIntentResponse, error) {
-	return conn.V3.GetSubnet(uuid)
+func findSubnetByUUID(ctx context.Context, conn *v3.Client, uuid string) (*v3.SubnetIntentResponse, error) {
+	return conn.V3.GetSubnet(ctx, uuid)
 }
 
-func findSubnetByName(conn *v3.Client, name string) (*v3.SubnetIntentResponse, error) {
+func findSubnetByName(ctx context.Context, conn *v3.Client, name string) (*v3.SubnetIntentResponse, error) {
 	filter := fmt.Sprintf("name==%s", name)
-	resp, err := conn.V3.ListAllSubnet(filter, getEmptyClientSideFilter())
+	resp, err := conn.V3.ListAllSubnet(ctx, filter, getEmptyClientSideFilter())
 	if err != nil {
 		return nil, err
 	}
@@ -151,8 +155,8 @@ func findSubnetByName(conn *v3.Client, name string) (*v3.SubnetIntentResponse, e
 	return found[0], nil
 }
 
-func findGPUByName(conn *v3.Client, name string) (*v3.VMGpu, error) {
-	hosts, err := conn.V3.ListAllHost()
+func findGPUByName(ctx context.Context, conn *v3.Client, name string) (*v3.VMGpu, error) {
+	hosts, err := conn.V3.ListAllHost(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -182,9 +186,9 @@ func findGPUByName(conn *v3.Client, name string) (*v3.VMGpu, error) {
 	return nil, fmt.Errorf("failed to find GPU %s", name)
 }
 
-func sourceImageExists(conn *v3.Client, name string, uri string) (*v3.ImageIntentResponse, error) {
+func sourceImageExists(ctx context.Context, conn *v3.Client, name string, uri string) (*v3.ImageIntentResponse, error) {
 	filter := fmt.Sprintf("name==%s", name)
-	resp, err := conn.V3.ListAllImage(filter)
+	resp, err := conn.V3.ListAllImage(ctx, filter)
 	if err != nil {
 		return nil, err
 	}
@@ -208,13 +212,13 @@ func sourceImageExists(conn *v3.Client, name string, uri string) (*v3.ImageInten
 	return found[0], nil
 }
 
-func findImageByUUID(conn *v3.Client, uuid string) (*v3.ImageIntentResponse, error) {
-	return conn.V3.GetImage(uuid)
+func findImageByUUID(ctx context.Context, conn *v3.Client, uuid string) (*v3.ImageIntentResponse, error) {
+	return conn.V3.GetImage(ctx, uuid)
 }
 
-func findImageByName(conn *v3.Client, name string) (*v3.ImageIntentResponse, error) {
+func findImageByName(ctx context.Context, conn *v3.Client, name string) (*v3.ImageIntentResponse, error) {
 	filter := fmt.Sprintf("name==%s", name)
-	resp, err := conn.V3.ListAllImage(filter)
+	resp, err := conn.V3.ListAllImage(ctx, filter)
 	if err != nil {
 		return nil, err
 	}
@@ -236,16 +240,15 @@ func findImageByName(conn *v3.Client, name string) (*v3.ImageIntentResponse, err
 		return nil, fmt.Errorf("image %s not found", name)
 	}
 
-	return findImageByUUID(conn, *found[0].Metadata.UUID)
+	return findImageByUUID(ctx, conn, *found[0].Metadata.UUID)
 }
 
-func checkTask(conn *v3.Client, taskUUID string) error {
-
+func checkTask(ctx context.Context, conn *v3.Client, taskUUID string) error {
 	log.Printf("checking task %s...", taskUUID)
 	var task *v3.TasksResponse
 	var err error
 	for i := 0; i < 120; i++ {
-		task, err = conn.V3.GetTask(taskUUID)
+		task, err = conn.V3.GetTask(ctx, taskUUID)
 		if err == nil {
 			if *task.Status == "SUCCEEDED" {
 				return nil
@@ -291,8 +294,7 @@ func (d *NutanixDriver) WaitForShutdown(vmUUID string, cancelCh <-chan struct{})
 	}
 }
 
-func (d *NutanixDriver) CreateRequest(vm VmConfig, state multistep.StateBag) (*v3.VMIntentInput, error) {
-
+func (d *NutanixDriver) CreateRequest(ctx context.Context, vm VmConfig, state multistep.StateBag) (*v3.VMIntentInput, error) {
 	configCreds := client.Credentials{
 		URL:      fmt.Sprintf("%s:%d", d.ClusterConfig.Endpoint, d.ClusterConfig.Port),
 		Endpoint: d.ClusterConfig.Endpoint,
@@ -341,7 +343,7 @@ func (d *NutanixDriver) CreateRequest(vm VmConfig, state multistep.StateBag) (*v
 		if disk.ImageType == "DISK_IMAGE" {
 			image := &v3.ImageIntentResponse{}
 			if disk.SourceImageURI != "" {
-				image, err := d.CreateImageURL(disk, vm)
+				image, err := d.CreateImageURL(ctx, disk, vm)
 				if err != nil {
 					return nil, fmt.Errorf("error while findImageByUUID, Error %s", err.Error())
 				}
@@ -354,12 +356,12 @@ func (d *NutanixDriver) CreateRequest(vm VmConfig, state multistep.StateBag) (*v
 				disk.SourceImageUUID = *image.image.Metadata.UUID
 			}
 			if disk.SourceImageUUID != "" {
-				image, err = findImageByUUID(conn, disk.SourceImageUUID)
+				image, err = findImageByUUID(ctx, conn, disk.SourceImageUUID)
 				if err != nil {
 					return nil, fmt.Errorf("error while findImageByUUID, Error %s", err.Error())
 				}
 			} else if disk.SourceImageName != "" {
-				image, err = findImageByName(conn, disk.SourceImageName)
+				image, err = findImageByName(ctx, conn, disk.SourceImageName)
 				if err != nil {
 					return nil, fmt.Errorf("error while findImageByName, %s", err.Error())
 				}
@@ -407,7 +409,7 @@ func (d *NutanixDriver) CreateRequest(vm VmConfig, state multistep.StateBag) (*v
 		if disk.ImageType == "ISO_IMAGE" {
 			image := &v3.ImageIntentResponse{}
 			if disk.SourceImageURI != "" {
-				image, err := d.CreateImageURL(disk, vm)
+				image, err := d.CreateImageURL(ctx, disk, vm)
 				if err != nil {
 					return nil, fmt.Errorf("error while findImageByUUID, Error %s", err.Error())
 				}
@@ -420,12 +422,12 @@ func (d *NutanixDriver) CreateRequest(vm VmConfig, state multistep.StateBag) (*v
 				disk.SourceImageUUID = *image.image.Metadata.UUID
 			}
 			if disk.SourceImageUUID != "" {
-				image, err = findImageByUUID(conn, disk.SourceImageUUID)
+				image, err = findImageByUUID(ctx, conn, disk.SourceImageUUID)
 				if err != nil {
 					return nil, fmt.Errorf("error while findImageByUUID, %s", err.Error())
 				}
 			} else if disk.SourceImageName != "" {
-				image, err = findImageByName(conn, disk.SourceImageName)
+				image, err = findImageByName(ctx, conn, disk.SourceImageName)
 				if err != nil {
 					return nil, fmt.Errorf("error while findImageByName, %s", err.Error())
 				}
@@ -454,12 +456,12 @@ func (d *NutanixDriver) CreateRequest(vm VmConfig, state multistep.StateBag) (*v
 	for _, nic := range vm.VmNICs {
 		subnet := &v3.SubnetIntentResponse{}
 		if nic.SubnetUUID != "" {
-			subnet, err = findSubnetByUUID(conn, nic.SubnetUUID)
+			subnet, err = findSubnetByUUID(ctx, conn, nic.SubnetUUID)
 			if err != nil {
 				return nil, fmt.Errorf("error while findSubnetByUUID, %s", err.Error())
 			}
 		} else if nic.SubnetName != "" {
-			subnet, err = findSubnetByName(conn, nic.SubnetName)
+			subnet, err = findSubnetByName(ctx, conn, nic.SubnetName)
 			if err != nil {
 				return nil, fmt.Errorf("error while findSubnetByName, %s", err.Error())
 			}
@@ -474,7 +476,7 @@ func (d *NutanixDriver) CreateRequest(vm VmConfig, state multistep.StateBag) (*v
 	}
 	GPUList := make([]*v3.VMGpu, 0, len(vm.GPU))
 	for _, gpu := range vm.GPU {
-		vmGPU, err := findGPUByName(conn, gpu.Name)
+		vmGPU, err := findGPUByName(ctx, conn, gpu.Name)
 		if err != nil {
 			return nil, fmt.Errorf("error while findGPUByName %s", err.Error())
 		}
@@ -485,12 +487,12 @@ func (d *NutanixDriver) CreateRequest(vm VmConfig, state multistep.StateBag) (*v
 
 	cluster := &v3.ClusterIntentResponse{}
 	if vm.ClusterUUID != "" {
-		cluster, err = conn.V3.GetCluster(vm.ClusterUUID)
+		cluster, err = conn.V3.GetCluster(ctx, vm.ClusterUUID)
 		if err != nil {
 			return nil, fmt.Errorf("error while GetCluster, %s", err.Error())
 		}
 	} else {
-		cluster, err = findClusterByName(conn, vm.ClusterName)
+		cluster, err = findClusterByName(ctx, conn, vm.ClusterName)
 		if err != nil {
 			return nil, fmt.Errorf("error while findClusterByName, %s", err.Error())
 		}
@@ -533,7 +535,7 @@ func (d *NutanixDriver) CreateRequest(vm VmConfig, state multistep.StateBag) (*v
 	}
 
 	if vm.Project != "" {
-		project, err := findProjectByName(conn, vm.Project)
+		project, err := findProjectByName(ctx, conn, vm.Project)
 		if err != nil {
 			return nil, fmt.Errorf("error while findProjectByName, %s", err.Error())
 		}
@@ -548,7 +550,7 @@ func (d *NutanixDriver) CreateRequest(vm VmConfig, state multistep.StateBag) (*v
 
 }
 
-func (d *NutanixDriver) Create(req *v3.VMIntentInput) (*nutanixInstance, error) {
+func (d *NutanixDriver) Create(ctx context.Context, req *v3.VMIntentInput) (*nutanixInstance, error) {
 
 	configCreds := client.Credentials{
 		URL:      fmt.Sprintf("%s:%d", d.ClusterConfig.Endpoint, d.ClusterConfig.Port),
@@ -566,7 +568,7 @@ func (d *NutanixDriver) Create(req *v3.VMIntentInput) (*nutanixInstance, error) 
 
 	log.Printf("creating vm %s...", d.Config.VMName)
 
-	resp, err := conn.V3.CreateVM(req)
+	resp, err := conn.V3.CreateVM(ctx, req)
 	if err != nil {
 		log.Printf("error creating vm: %s", err.Error())
 		return nil, err
@@ -574,7 +576,7 @@ func (d *NutanixDriver) Create(req *v3.VMIntentInput) (*nutanixInstance, error) 
 
 	uuid := *resp.Metadata.UUID
 
-	err = checkTask(conn, resp.Status.ExecutionContext.TaskUUID.(string))
+	err = checkTask(ctx, conn, resp.Status.ExecutionContext.TaskUUID.(string))
 
 	if err != nil {
 		log.Printf("error creating vm: %s", err.Error())
@@ -590,7 +592,7 @@ func (d *NutanixDriver) Create(req *v3.VMIntentInput) (*nutanixInstance, error) 
 	iteration := int(d.Config.WaitTimeout.Seconds()) / 5
 	var vm *v3.VMIntentResponse
 	for i := 0; i < iteration; i++ {
-		vm, err = conn.V3.GetVM(uuid)
+		vm, err = conn.V3.GetVM(ctx, uuid)
 		if err != nil || len(vm.Status.Resources.NicList[0].IPEndpointList) == (0) {
 			log.Printf("Waiting VM (%s) ip configuration", uuid)
 			<-time.After(5 * time.Second)
@@ -603,7 +605,7 @@ func (d *NutanixDriver) Create(req *v3.VMIntentInput) (*nutanixInstance, error) 
 	return nil, fmt.Errorf("not able to get ip address for vm (%s)", uuid)
 }
 
-func (d *NutanixDriver) Delete(vmUUID string) error {
+func (d *NutanixDriver) Delete(ctx context.Context, vmUUID string) error {
 
 	configCreds := client.Credentials{
 		URL:      fmt.Sprintf("%s:%d", d.ClusterConfig.Endpoint, d.ClusterConfig.Port),
@@ -619,7 +621,7 @@ func (d *NutanixDriver) Delete(vmUUID string) error {
 		return err
 	}
 
-	_, err = conn.V3.DeleteVM(vmUUID)
+	_, err = conn.V3.DeleteVM(ctx, vmUUID)
 	if err != nil {
 		return err
 	}
@@ -627,7 +629,7 @@ func (d *NutanixDriver) Delete(vmUUID string) error {
 }
 
 // CreateImageURL (VmDisk, VmConfig) (*nutanixImage, error)
-func (d *NutanixDriver) CreateImageURL(disk VmDisk, vm VmConfig) (*nutanixImage, error) {
+func (d *NutanixDriver) CreateImageURL(ctx context.Context, disk VmDisk, vm VmConfig) (*nutanixImage, error) {
 	configCreds := client.Credentials{
 		URL:      fmt.Sprintf("%s:%d", d.ClusterConfig.Endpoint, d.ClusterConfig.Port),
 		Endpoint: d.ClusterConfig.Endpoint,
@@ -646,12 +648,12 @@ func (d *NutanixDriver) CreateImageURL(disk VmDisk, vm VmConfig) (*nutanixImage,
 
 	cluster := &v3.ClusterIntentResponse{}
 	if vm.ClusterUUID != "" {
-		cluster, err = conn.V3.GetCluster(vm.ClusterUUID)
+		cluster, err = conn.V3.GetCluster(ctx, vm.ClusterUUID)
 		if err != nil {
 			return nil, fmt.Errorf("error while GetCluster, %s", err.Error())
 		}
 	} else if vm.ClusterName != "" {
-		cluster, err = findClusterByName(conn, vm.ClusterName)
+		cluster, err = findClusterByName(ctx, conn, vm.ClusterName)
 		if err != nil {
 			return nil, fmt.Errorf("error while findClusterByName, %s", err.Error())
 		}
@@ -673,7 +675,7 @@ func (d *NutanixDriver) CreateImageURL(disk VmDisk, vm VmConfig) (*nutanixImage,
 		},
 	}
 
-	existingImage, err := sourceImageExists(conn, file, disk.SourceImageURI)
+	existingImage, err := sourceImageExists(ctx, conn, file, disk.SourceImageURI)
 	if err != nil {
 		return nil, fmt.Errorf("error while checking if image exists, %s", err.Error())
 	}
@@ -682,19 +684,19 @@ func (d *NutanixDriver) CreateImageURL(disk VmDisk, vm VmConfig) (*nutanixImage,
 		return &nutanixImage{image: *existingImage}, nil
 	} else if existingImage != nil && disk.SourceImageForce {
 		log.Printf("delete existing image: %s", *existingImage.Status.Name)
-		d.DeleteImage(*existingImage.Metadata.UUID)
+		d.DeleteImage(ctx, *existingImage.Metadata.UUID)
 		log.Printf("recreating image: %s", file)
 	} else if existingImage == nil {
 		log.Printf("creating image: %s", file)
 	}
 	req.Spec.Resources.SourceURI = &disk.SourceImageURI
 
-	image, err := conn.V3.CreateImage(req)
+	image, err := conn.V3.CreateImage(ctx, req)
 	if err != nil {
 		return nil, fmt.Errorf("error while creating image: %s", err.Error())
 	}
 
-	err = checkTask(conn, image.Status.ExecutionContext.TaskUUID.(string))
+	err = checkTask(ctx, conn, image.Status.ExecutionContext.TaskUUID.(string))
 	if err != nil {
 		return nil, fmt.Errorf("error while creating image: %s", err.Error())
 	}
@@ -704,7 +706,7 @@ func (d *NutanixDriver) CreateImageURL(disk VmDisk, vm VmConfig) (*nutanixImage,
 }
 
 // CreateImageFile (VmDisk, VmConfig) (*nutanixImage, error)
-func (d *NutanixDriver) CreateImageFile(filePath string, vm VmConfig) (*nutanixImage, error) {
+func (d *NutanixDriver) CreateImageFile(ctx context.Context, filePath string, vm VmConfig) (*nutanixImage, error) {
 	configCreds := client.Credentials{
 		URL:      fmt.Sprintf("%s:%d", d.ClusterConfig.Endpoint, d.ClusterConfig.Port),
 		Endpoint: d.ClusterConfig.Endpoint,
@@ -723,12 +725,12 @@ func (d *NutanixDriver) CreateImageFile(filePath string, vm VmConfig) (*nutanixI
 
 	cluster := &v3.ClusterIntentResponse{}
 	if vm.ClusterUUID != "" {
-		cluster, err = conn.V3.GetCluster(vm.ClusterUUID)
+		cluster, err = conn.V3.GetCluster(ctx, vm.ClusterUUID)
 		if err != nil {
 			return nil, fmt.Errorf("error while GetCluster, %s", err.Error())
 		}
 	} else if vm.ClusterName != "" {
-		cluster, err = findClusterByName(conn, vm.ClusterName)
+		cluster, err = findClusterByName(ctx, conn, vm.ClusterName)
 		if err != nil {
 			return nil, fmt.Errorf("error while findClusterByName, %s", err.Error())
 		}
@@ -751,23 +753,23 @@ func (d *NutanixDriver) CreateImageFile(filePath string, vm VmConfig) (*nutanixI
 	}
 
 	log.Printf("creating image: %s", file)
-	image, err := conn.V3.CreateImage(req)
+	image, err := conn.V3.CreateImage(ctx, req)
 	if err != nil {
 		return nil, fmt.Errorf("error while creating image: %s", err.Error())
 	}
 
-	err = checkTask(conn, image.Status.ExecutionContext.TaskUUID.(string))
+	err = checkTask(ctx, conn, image.Status.ExecutionContext.TaskUUID.(string))
 	if err != nil {
 		return nil, fmt.Errorf("error while creating image: %s", err.Error())
 	}
 
 	log.Printf("uploading image: %s", filePath)
-	err = conn.V3.UploadImage(*image.Metadata.UUID, filePath)
+	err = conn.V3.UploadImage(ctx, *image.Metadata.UUID, filePath)
 	if err != nil {
 		return nil, fmt.Errorf("error while uploading image: %s", err.Error())
 	}
 
-	running, err := conn.V3.GetImage(*image.Metadata.UUID)
+	running, err := conn.V3.GetImage(ctx, *image.Metadata.UUID)
 	if err != nil || *running.Status.State != "COMPLETE" {
 		return nil, fmt.Errorf("error while upload image: %s", err.Error())
 	}
@@ -776,7 +778,7 @@ func (d *NutanixDriver) CreateImageFile(filePath string, vm VmConfig) (*nutanixI
 
 }
 
-func (d *NutanixDriver) DeleteImage(imageUUID string) error {
+func (d *NutanixDriver) DeleteImage(ctx context.Context, imageUUID string) error {
 	configCreds := client.Credentials{
 		URL:      fmt.Sprintf("%s:%d", d.ClusterConfig.Endpoint, d.ClusterConfig.Port),
 		Endpoint: d.ClusterConfig.Endpoint,
@@ -790,14 +792,14 @@ func (d *NutanixDriver) DeleteImage(imageUUID string) error {
 	if err != nil {
 		return fmt.Errorf("error while creating new client connection, %s", err.Error())
 	}
-	_, err = conn.V3.DeleteImage(imageUUID)
+	_, err = conn.V3.DeleteImage(ctx, imageUUID)
 	if err != nil {
 		return fmt.Errorf("error while deleting image, %s", err.Error())
 	}
 	return nil
 }
 
-func (d *NutanixDriver) GetImage(imagename string) (*nutanixImage, error) {
+func (d *NutanixDriver) GetImage(ctx context.Context, imagename string) (*nutanixImage, error) {
 	configCreds := client.Credentials{
 		URL:      fmt.Sprintf("%s:%d", d.ClusterConfig.Endpoint, d.ClusterConfig.Port),
 		Endpoint: d.ClusterConfig.Endpoint,
@@ -812,15 +814,14 @@ func (d *NutanixDriver) GetImage(imagename string) (*nutanixImage, error) {
 		return nil, fmt.Errorf("error while NewV3Client, %s", err.Error())
 	}
 
-	image, err := findImageByName(conn, imagename)
+	image, err := findImageByName(ctx, conn, imagename)
 	if err != nil {
 		return nil, fmt.Errorf("error while GetImage, %s", err.Error())
 	}
 	return &nutanixImage{image: *image}, nil
 }
 
-func (d *NutanixDriver) GetVM(vmUUID string) (*nutanixInstance, error) {
-
+func (d *NutanixDriver) GetVM(ctx context.Context, vmUUID string) (*nutanixInstance, error) {
 	configCreds := client.Credentials{
 		URL:      fmt.Sprintf("%s:%d", d.ClusterConfig.Endpoint, d.ClusterConfig.Port),
 		Endpoint: d.ClusterConfig.Endpoint,
@@ -835,28 +836,27 @@ func (d *NutanixDriver) GetVM(vmUUID string) (*nutanixInstance, error) {
 		return nil, fmt.Errorf("error while NewV3Client, %s", err.Error())
 	}
 
-	vm, err := conn.V3.GetVM(vmUUID)
+	vm, err := conn.V3.GetVM(ctx, vmUUID)
 	if err != nil {
 		return nil, fmt.Errorf("error while GetVM, %s", err.Error())
 	}
 	return &nutanixInstance{nutanix: *vm}, nil
 }
 
-func (d *NutanixDriver) ExportImage(imageUUID string) (io.ReadCloser, error) {
+func (d *NutanixDriver) ExportImage(ctx context.Context, imageUUID string) (io.ReadCloser, error) {
 	customTransport := http.DefaultTransport.(*http.Transport).Clone()
 	customTransport.TLSClientConfig = &tls.Config{InsecureSkipVerify: d.ClusterConfig.Insecure}
-
-	client := &http.Client{Transport: customTransport}
+	httpClient := &http.Client{Transport: customTransport}
 
 	url := fmt.Sprintf("https://%s:%d/api/nutanix/v3/images/%s/file", d.ClusterConfig.Endpoint, d.ClusterConfig.Port, imageUUID)
-
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return nil, err
 	}
-	req.SetBasicAuth(d.ClusterConfig.Username, d.ClusterConfig.Password)
 
-	resp, err := client.Do(req)
+	req = req.WithContext(ctx)
+	req.SetBasicAuth(d.ClusterConfig.Username, d.ClusterConfig.Password)
+	resp, err := httpClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -868,7 +868,7 @@ func (d *NutanixDriver) ExportImage(imageUUID string) (io.ReadCloser, error) {
 	return resp.Body, nil
 }
 
-func (d *NutanixDriver) GetHost(hostUUID string) (*nutanixHost, error) {
+func (d *NutanixDriver) GetHost(ctx context.Context, hostUUID string) (*nutanixHost, error) {
 
 	configCreds := client.Credentials{
 		URL:      fmt.Sprintf("%s:%d", d.ClusterConfig.Endpoint, d.ClusterConfig.Port),
@@ -884,14 +884,14 @@ func (d *NutanixDriver) GetHost(hostUUID string) (*nutanixHost, error) {
 		return nil, fmt.Errorf("error while NewV3Client, %s", err.Error())
 	}
 
-	host, err := conn.V3.GetHost(hostUUID)
+	host, err := conn.V3.GetHost(ctx, hostUUID)
 	if err != nil {
 		return nil, fmt.Errorf("error while GetHost, %s", err.Error())
 	}
 	return &nutanixHost{host: *host}, nil
 }
 
-func (d *NutanixDriver) PowerOff(vmUUID string) error {
+func (d *NutanixDriver) PowerOff(ctx context.Context, vmUUID string) error {
 	configCreds := client.Credentials{
 		URL:      fmt.Sprintf("%s:%d", d.ClusterConfig.Endpoint, d.ClusterConfig.Port),
 		Endpoint: d.ClusterConfig.Endpoint,
@@ -905,7 +905,7 @@ func (d *NutanixDriver) PowerOff(vmUUID string) error {
 	if err != nil {
 		return fmt.Errorf("error while NewV3Client, %s", err.Error())
 	}
-	vmResp, err := conn.V3.GetVM(vmUUID)
+	vmResp, err := conn.V3.GetVM(ctx, vmUUID)
 	if err != nil {
 		return fmt.Errorf("error while GetVM, %s", err.Error())
 	}
@@ -916,7 +916,7 @@ func (d *NutanixDriver) PowerOff(vmUUID string) error {
 	request.Metadata = vmResp.Metadata
 	request.Spec.Resources.PowerState = StringPtr("OFF")
 
-	resp, err := conn.V3.UpdateVM(vmUUID, request)
+	resp, err := conn.V3.UpdateVM(ctx, vmUUID, request)
 	if err != nil {
 		return fmt.Errorf("error while UpdateVM, %s", err.Error())
 	}
@@ -925,7 +925,7 @@ func (d *NutanixDriver) PowerOff(vmUUID string) error {
 
 	// Wait for the VM to be deleted
 	for i := 0; i < 1200; i++ {
-		resp, err := conn.V3.GetTask(taskUUID)
+		resp, err := conn.V3.GetTask(ctx, taskUUID)
 		if err != nil || *resp.Status != "SUCCEEDED" {
 			<-time.After(1 * time.Second)
 			continue
@@ -936,7 +936,7 @@ func (d *NutanixDriver) PowerOff(vmUUID string) error {
 	log.Printf("PowerOff task: %s", taskUUID)
 	return nil
 }
-func (d *NutanixDriver) SaveVMDisk(diskUUID string, index int, imageCategories []Category) (*nutanixImage, error) {
+func (d *NutanixDriver) SaveVMDisk(ctx context.Context, diskUUID string, index int, imageCategories []Category) (*nutanixImage, error) {
 
 	configCreds := client.Credentials{
 		URL:      fmt.Sprintf("%s:%d", d.ClusterConfig.Endpoint, d.ClusterConfig.Port),
@@ -960,7 +960,7 @@ func (d *NutanixDriver) SaveVMDisk(diskUUID string, index int, imageCategories [
 	// When force_deregister, check if image already exists
 	if d.Config.ForceDeregister {
 		log.Println("force_deregister is set, check if image already exists")
-		ImageList, err := conn.V3.ListAllImage(fmt.Sprintf("name==%s", name))
+		ImageList, err := conn.V3.ListAllImage(ctx, fmt.Sprintf("name==%s", name))
 		if err != nil {
 			return nil, fmt.Errorf("error while ListAllImage, %s", err.Error())
 		}
@@ -971,13 +971,13 @@ func (d *NutanixDriver) SaveVMDisk(diskUUID string, index int, imageCategories [
 		} else if *ImageList.Metadata.TotalMatches == 1 {
 			log.Println("exactly one image with given Name found, will deregister")
 
-			resp, err := conn.V3.DeleteImage(*ImageList.Entities[0].Metadata.UUID)
+			resp, err := conn.V3.DeleteImage(ctx, *ImageList.Entities[0].Metadata.UUID)
 			if err != nil {
 				return nil, fmt.Errorf("error while Deleting Image, %s", err.Error())
 			}
 
 			log.Printf("deleting image %s...\n", *ImageList.Entities[0].Metadata.UUID)
-			err = checkTask(conn, resp.Status.ExecutionContext.TaskUUID.(string))
+			err = checkTask(ctx, conn, resp.Status.ExecutionContext.TaskUUID.(string))
 
 			if err != nil {
 				return nil, fmt.Errorf("error while Deleting Image, %s", err.Error())
@@ -1012,12 +1012,12 @@ func (d *NutanixDriver) SaveVMDisk(diskUUID string, index int, imageCategories [
 		req.Metadata.Categories = c
 	}
 
-	image, err := conn.V3.CreateImage(req)
+	image, err := conn.V3.CreateImage(ctx, req)
 	if err != nil {
 		return nil, fmt.Errorf("error while Creating Image, %s", err.Error())
 	}
 	log.Printf("creating image %s...\n", *image.Metadata.UUID)
-	err = checkTask(conn, image.Status.ExecutionContext.TaskUUID.(string))
+	err = checkTask(ctx, conn, image.Status.ExecutionContext.TaskUUID.(string))
 	if err != nil {
 		return nil, fmt.Errorf("error while Creating Image, %s", err.Error())
 	} else {
