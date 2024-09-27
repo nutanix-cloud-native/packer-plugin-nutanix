@@ -39,6 +39,10 @@ packer {
 }
 ```
 
+#### Using the `packer plugin` command
+
+Just launch `packer plugins install github.com/nutanix-cloud-native/nutanix`
+
 #### Manual installation
 
 You can find pre-built binary releases of the plugin [here](https://github.com/nutanix-cloud-native/packer-plugin-nutanix/releases).
