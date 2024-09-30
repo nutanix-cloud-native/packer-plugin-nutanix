@@ -7,6 +7,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"net/url"
 	"path"
 	"strings"
 	"time"
@@ -63,7 +64,8 @@ type nutanixImage struct {
 }
 
 func findProjectByName(ctx context.Context, conn *v3.Client, name string) (*v3.Project, error) {
-	filter := fmt.Sprintf("name==%s", name)
+	encodedName := url.QueryEscape(name)
+	filter := fmt.Sprintf("name==%s", encodedName)
 	resp, err := conn.V3.ListAllProject(ctx, filter)
 	if err != nil {
 		return nil, err
@@ -94,7 +96,8 @@ func findProjectByName(ctx context.Context, conn *v3.Client, name string) (*v3.P
 }
 
 func findClusterByName(ctx context.Context, conn *v3.Client, name string) (*v3.ClusterIntentResponse, error) {
-	filter := fmt.Sprintf("name==%s", name)
+	encodedName := url.QueryEscape(name)
+	filter := fmt.Sprintf("name==%s", encodedName)
 	resp, err := conn.V3.ListAllCluster(ctx, filter)
 	if err != nil {
 		return nil, err
@@ -129,7 +132,8 @@ func findSubnetByUUID(ctx context.Context, conn *v3.Client, uuid string) (*v3.Su
 }
 
 func findSubnetByName(ctx context.Context, conn *v3.Client, name string) ([]*v3.SubnetIntentResponse, error) {
-	filter := fmt.Sprintf("name==%s", name)
+	encodedName := url.QueryEscape(name)
+	filter := fmt.Sprintf("name==%s", encodedName)
 	resp, err := conn.V3.ListAllSubnet(ctx, filter, getEmptyClientSideFilter())
 	if err != nil {
 		return nil, err
@@ -183,7 +187,8 @@ func findGPUByName(ctx context.Context, conn *v3.Client, name string) (*v3.VMGpu
 }
 
 func sourceImageExists(ctx context.Context, conn *v3.Client, name string, uri string) (*v3.ImageIntentResponse, error) {
-	filter := fmt.Sprintf("name==%s", name)
+	encodedName := url.QueryEscape(name)
+	filter := fmt.Sprintf("name==%s", encodedName)
 	resp, err := conn.V3.ListAllImage(ctx, filter)
 	if err != nil {
 		return nil, err
@@ -213,7 +218,8 @@ func findImageByUUID(ctx context.Context, conn *v3.Client, uuid string) (*v3.Ima
 }
 
 func findImageByName(ctx context.Context, conn *v3.Client, name string) (*v3.ImageIntentResponse, error) {
-	filter := fmt.Sprintf("name==%s", name)
+	encodedName := url.QueryEscape(name)
+	filter := fmt.Sprintf("name==%s", encodedName)
 	resp, err := conn.V3.ListAllImage(ctx, filter)
 	if err != nil {
 		return nil, err
