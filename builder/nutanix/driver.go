@@ -945,17 +945,13 @@ func (d *NutanixDriver) PowerOff(ctx context.Context, vmUUID string) error {
 
 	taskUUID := resp.Status.ExecutionContext.TaskUUID.(string)
 
-	// Wait for the VM to be deleted
-	for i := 0; i < 1200; i++ {
-		resp, err := conn.V3.GetTask(ctx, taskUUID)
-		if err != nil || *resp.Status != "SUCCEEDED" {
-			<-time.After(1 * time.Second)
-			continue
-		}
-		return fmt.Errorf("error while GetTask, %s", err.Error())
+	// Wait for the VM to be stopped
+	log.Printf("stopping VM: %s", d.Config.VMName)
+	err = checkTask(ctx, conn, taskUUID)
+	if err != nil {
+		return fmt.Errorf("error while stopping VM: %s", err.Error())
 	}
 
-	log.Printf("PowerOff task: %s", taskUUID)
 	return nil
 }
 func (d *NutanixDriver) SaveVMDisk(ctx context.Context, diskUUID string, index int, imageCategories []Category) (*nutanixImage, error) {
