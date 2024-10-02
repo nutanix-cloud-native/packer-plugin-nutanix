@@ -7,7 +7,6 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"net/url"
 	"path"
 	"strings"
 	"time"
@@ -64,9 +63,7 @@ type nutanixImage struct {
 }
 
 func findProjectByName(ctx context.Context, conn *v3.Client, name string) (*v3.Project, error) {
-	encodedName := url.QueryEscape(name)
-	filter := fmt.Sprintf("name==%s", encodedName)
-	resp, err := conn.V3.ListAllProject(ctx, filter)
+	resp, err := conn.V3.ListAllProject(ctx, "")
 	if err != nil {
 		return nil, err
 	}
@@ -74,7 +71,7 @@ func findProjectByName(ctx context.Context, conn *v3.Client, name string) (*v3.P
 
 	found := make([]*v3.Project, 0)
 	for _, v := range entities {
-		if v.Status.Name == name {
+		if strings.EqualFold(v.Status.Name, name) {
 			found = append(found, &v3.Project{
 				Status:     v.Status,
 				Spec:       v.Spec,
@@ -96,9 +93,7 @@ func findProjectByName(ctx context.Context, conn *v3.Client, name string) (*v3.P
 }
 
 func findClusterByName(ctx context.Context, conn *v3.Client, name string) (*v3.ClusterIntentResponse, error) {
-	encodedName := url.QueryEscape(name)
-	filter := fmt.Sprintf("name==%s", encodedName)
-	resp, err := conn.V3.ListAllCluster(ctx, filter)
+	resp, err := conn.V3.ListAllCluster(ctx, "")
 	if err != nil {
 		return nil, err
 	}
@@ -106,7 +101,7 @@ func findClusterByName(ctx context.Context, conn *v3.Client, name string) (*v3.C
 
 	found := make([]*v3.ClusterIntentResponse, 0)
 	for _, v := range entities {
-		if *v.Status.Name == name {
+		if strings.EqualFold(*v.Status.Name, name) {
 			found = append(found, &v3.ClusterIntentResponse{
 				Status:     v.Status,
 				Spec:       v.Spec,
@@ -132,9 +127,7 @@ func findSubnetByUUID(ctx context.Context, conn *v3.Client, uuid string) (*v3.Su
 }
 
 func findSubnetByName(ctx context.Context, conn *v3.Client, name string) ([]*v3.SubnetIntentResponse, error) {
-	encodedName := url.QueryEscape(name)
-	filter := fmt.Sprintf("name==%s", encodedName)
-	resp, err := conn.V3.ListAllSubnet(ctx, filter, getEmptyClientSideFilter())
+	resp, err := conn.V3.ListAllSubnet(ctx, "", nil)
 	if err != nil {
 		return nil, err
 	}
@@ -143,7 +136,7 @@ func findSubnetByName(ctx context.Context, conn *v3.Client, name string) ([]*v3.
 
 	subnets := make([]*v3.SubnetIntentResponse, 0)
 	for _, v := range entities {
-		if *v.Spec.Name == name {
+		if strings.EqualFold(*v.Spec.Name, name) {
 			subnets = append(subnets, v)
 		}
 	}
@@ -174,7 +167,7 @@ func findGPUByName(ctx context.Context, conn *v3.Client, name string) (*v3.VMGpu
 			if peGpu == nil {
 				continue
 			}
-			if peGpu.Name == name {
+			if strings.EqualFold(peGpu.Name, name) {
 				return &v3.VMGpu{
 					DeviceID: peGpu.DeviceID,
 					Vendor:   &peGpu.Vendor,
@@ -187,9 +180,7 @@ func findGPUByName(ctx context.Context, conn *v3.Client, name string) (*v3.VMGpu
 }
 
 func sourceImageExists(ctx context.Context, conn *v3.Client, name string, uri string) (*v3.ImageIntentResponse, error) {
-	encodedName := url.QueryEscape(name)
-	filter := fmt.Sprintf("name==%s", encodedName)
-	resp, err := conn.V3.ListAllImage(ctx, filter)
+	resp, err := conn.V3.ListAllImage(ctx, "")
 	if err != nil {
 		return nil, err
 	}
@@ -198,7 +189,7 @@ func sourceImageExists(ctx context.Context, conn *v3.Client, name string, uri st
 
 	found := make([]*v3.ImageIntentResponse, 0)
 	for _, v := range entities {
-		if (*v.Spec.Name == name) && (*v.Status.Resources.SourceURI == uri) {
+		if strings.EqualFold(*v.Spec.Name, name) && strings.EqualFold(*v.Status.Resources.SourceURI, uri) {
 			found = append(found, v)
 		}
 	}
@@ -218,9 +209,7 @@ func findImageByUUID(ctx context.Context, conn *v3.Client, uuid string) (*v3.Ima
 }
 
 func findImageByName(ctx context.Context, conn *v3.Client, name string) (*v3.ImageIntentResponse, error) {
-	encodedName := url.QueryEscape(name)
-	filter := fmt.Sprintf("name==%s", encodedName)
-	resp, err := conn.V3.ListAllImage(ctx, filter)
+	resp, err := conn.V3.ListAllImage(ctx, "")
 	if err != nil {
 		return nil, err
 	}
@@ -229,7 +218,7 @@ func findImageByName(ctx context.Context, conn *v3.Client, name string) (*v3.Ima
 
 	found := make([]*v3.ImageIntentResponse, 0)
 	for _, v := range entities {
-		if *v.Spec.Name == name {
+		if strings.EqualFold(*v.Spec.Name, name) {
 			found = append(found, v)
 		}
 	}
@@ -984,23 +973,33 @@ func (d *NutanixDriver) SaveVMDisk(ctx context.Context, diskUUID string, index i
 	// When force_deregister, check if image already exists
 	if d.Config.ForceDeregister {
 		log.Println("force_deregister is set, check if image already exists")
-		ImageList, err := conn.V3.ListAllImage(ctx, fmt.Sprintf("name==%s", name))
+		resp, err := conn.V3.ListAllImage(ctx, "")
 		if err != nil {
 			return nil, fmt.Errorf("error while ListAllImage, %s", err.Error())
 		}
-		if *ImageList.Metadata.TotalMatches == 0 {
+
+		entities := resp.Entities
+
+		found := make([]*v3.ImageIntentResponse, 0)
+		for _, v := range entities {
+			if strings.EqualFold(*v.Spec.Name, name) {
+				found = append(found, v)
+			}
+		}
+
+		if len(found) == 0 {
 			log.Println("image with given Name not found, no need to deregister")
-		} else if *ImageList.Metadata.TotalMatches > 1 {
+		} else if len(found) > 1 {
 			log.Println("more than one image with given Name found, will not deregister")
-		} else if *ImageList.Metadata.TotalMatches == 1 {
+		} else if len(found) == 1 {
 			log.Println("exactly one image with given Name found, will deregister")
 
-			resp, err := conn.V3.DeleteImage(ctx, *ImageList.Entities[0].Metadata.UUID)
+			resp, err := conn.V3.DeleteImage(ctx, *found[0].Metadata.UUID)
 			if err != nil {
 				return nil, fmt.Errorf("error while Deleting Image, %s", err.Error())
 			}
 
-			log.Printf("deleting image %s...\n", *ImageList.Entities[0].Metadata.UUID)
+			log.Printf("deleting image %s...\n", *found[0].Metadata.UUID)
 			err = checkTask(ctx, conn, resp.Status.ExecutionContext.TaskUUID.(string))
 
 			if err != nil {
@@ -1048,8 +1047,4 @@ func (d *NutanixDriver) SaveVMDisk(ctx context.Context, diskUUID string, index i
 		return &nutanixImage{image: *image}, nil
 	}
 
-}
-
-func getEmptyClientSideFilter() []*client.AdditionalFilter {
-	return make([]*client.AdditionalFilter, 0)
 }
