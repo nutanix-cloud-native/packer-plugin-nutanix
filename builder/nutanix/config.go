@@ -24,6 +24,12 @@ const (
 
 	// NutanixIdentifierBootTypeUEFI is a resource identifier identifying the UEFI boot type for virtual machines.
 	NutanixIdentifierBootTypeUEFI string = "uefi"
+
+	// NutanixIdentifierBootPriorityDisk is a resource identifier identifying the boot priority as disk for virtual machines.
+	NutanixIdentifierBootPriorityDisk string = "disk"
+
+	// NutanixIdentifierBootPriorityCDROM is a resource identifier identifying the boot priority as cdrom for virtual machines.
+	NutanixIdentifierBootPriorityCDROM string = "cdrom"
 )
 
 type Config struct {
@@ -85,6 +91,7 @@ type VmConfig struct {
 	VMName       string     `mapstructure:"vm_name" json:"vm_name" required:"false"`
 	OSType       string     `mapstructure:"os_type" json:"os_type" required:"true"`
 	BootType     string     `mapstructure:"boot_type" json:"boot_type" required:"false"`
+	BootPriority string     `mapstructure:"boot_priority" json:"boot_priority" required:"false"`
 	VmDisks      []VmDisk   `mapstructure:"vm_disks"`
 	VmNICs       []VmNIC    `mapstructure:"vm_nics"`
 	ImageName    string     `mapstructure:"image_name" json:"image_name" required:"false"`
@@ -139,6 +146,16 @@ func (c *Config) Prepare(raws ...interface{}) ([]string, error) {
 	if c.BootType != NutanixIdentifierBootTypeLegacy && c.BootType != NutanixIdentifierBootTypeUEFI {
 		log.Println("No correct VM Boot Type configured, defaulting to 'legacy'")
 		c.BootType = string(NutanixIdentifierBootTypeLegacy)
+	}
+
+	if c.BootType == NutanixIdentifierBootTypeUEFI && c.BootPriority != "" {
+		log.Println("Boot Priority is not supported for UEFI boot type")
+		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("UEFI does not support boot priority"))
+	}
+
+	if c.BootPriority != NutanixIdentifierBootPriorityDisk && c.BootPriority != NutanixIdentifierBootPriorityCDROM {
+		log.Println("No correct VM Boot Priority configured, defaulting to 'cdrom'")
+		c.BootPriority = string(NutanixIdentifierBootPriorityCDROM)
 	}
 
 	// Validate Cluster Endpoint
