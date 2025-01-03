@@ -95,6 +95,7 @@ Sample:
 - `source_image_delete` (bool) - Delete source image once build process is completed (default is false).
 - `source_image_force` (bool) - Always download and replace source image even if already exist (default is false).
 - `disk_size_gb` (number) - size of the disk (in gigabytes).
+- `checksum` (block) - Checksum block containing checksum algorithm and checksum value
 
 Sample:
 ```hcl
@@ -102,6 +103,10 @@ Sample:
       image_type = "DISK_IMAGE"
       source_image_name = "<myDiskImage>"
       disk_size_gb = 40
+      checksum {
+        checksum_algorithm = "SHA_256"
+        checksum_value = "<checksumValue>"
+      }
   }
 ```
 ### ISO Image
