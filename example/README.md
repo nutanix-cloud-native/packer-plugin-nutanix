@@ -1,16 +1,16 @@
 ## Examples
 Validate Manifests:
-packer validate .
+`packer validate .`
 
 Creating CentOS from local Image and running Provisioner:
-packer build -only nutanix.centos .
+`packer build -only nutanix.centos .`
 
 Creating Ubuntu from Upstream Image and running Provisioner:
-packer build -only nutanix.ubuntu .
+`packer build -only nutanix.ubuntu .`
 
 Creating from ISO with Kickstart-File:
-packer build -only nutanix.centos-kickstart .
+`packer build -only nutanix.centos-kickstart .`
 
 Windows Image (ISO Boot, VirtIO Drivers, cd_files)
-packer build -only nutanix.windows .
+`packer build -only nutanix.windows .`
 

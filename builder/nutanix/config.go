@@ -6,6 +6,7 @@ import (
 	//"errors"
 	"fmt"
 	"log"
+	"regexp"
 	"time"
 
 	"github.com/hashicorp/packer-plugin-sdk/common"
@@ -68,13 +69,14 @@ type ClusterConfig struct {
 }
 
 type VmDisk struct {
-	ImageType         string `mapstructure:"image_type" json:"image_type" required:"false"`
-	SourceImageName   string `mapstructure:"source_image_name" json:"source_image_name" required:"false"`
-	SourceImageUUID   string `mapstructure:"source_image_uuid" json:"source_image_uuid" required:"false"`
-	SourceImageURI    string `mapstructure:"source_image_uri" json:"source_image_uri" required:"false"`
-	SourceImageDelete bool   `mapstructure:"source_image_delete" json:"source_image_delete" required:"false"`
-	SourceImageForce  bool   `mapstructure:"source_image_force" json:"source_image_force" required:"false"`
-	DiskSizeGB        int64  `mapstructure:"disk_size_gb" json:"disk_size_gb" required:"false"`
+	ImageType           string `mapstructure:"image_type" json:"image_type" required:"false"`
+	SourceImageName     string `mapstructure:"source_image_name" json:"source_image_name" required:"false"`
+	SourceImageUUID     string `mapstructure:"source_image_uuid" json:"source_image_uuid" required:"false"`
+	SourceImageURI      string `mapstructure:"source_image_uri" json:"source_image_uri" required:"false"`
+	SourceImageChecksum string `mapstructure:"source_image_checksum" json:"source_image_checksum" required:"false"`
+	SourceImageDelete   bool   `mapstructure:"source_image_delete" json:"source_image_delete" required:"false"`
+	SourceImageForce    bool   `mapstructure:"source_image_force" json:"source_image_force" required:"false"`
+	DiskSizeGB          int64  `mapstructure:"disk_size_gb" json:"disk_size_gb" required:"false"`
 }
 
 type VmNIC struct {
@@ -237,6 +239,22 @@ func (c *Config) Prepare(raws ...interface{}) ([]string, error) {
 		}
 	}
 
+	// Validate each disk
+	for index, disk := range c.VmConfig.VmDisks {
+
+		// Validate checksum only with uri
+		if disk.SourceImageChecksum != "" && disk.SourceImageURI == "" {
+			log.Printf("disk %d: Checksum work only with Source Image URI\n", index)
+			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("disk %d: source_image_checksum work only with source_image_uri", index))
+		}
+
+		// Validate checksum format
+		if !IsSHA256Checksum(disk.SourceImageChecksum) {
+			log.Printf("disk %d: Invalid checksum format", index)
+			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("disk %d: invalid checksum format", index))
+		}
+	}
+
 	if c.CommConfig.SSHPort == 0 {
 		log.Println("SSHPort not set, defaulting to 22")
 		c.CommConfig.SSHPort = 22
@@ -261,4 +279,12 @@ func (c *Config) Prepare(raws ...interface{}) ([]string, error) {
 	}
 
 	return warnings, nil
+}
+
+// IsSHA256Checksum validates if the input string is a valid SHA-256 checksum
+func IsSHA256Checksum(input string) bool {
+	// Regular expression for a 64-character hexadecimal string
+	const sha256Regex = `^[a-fA-F0-9]{64}$`
+	match, _ := regexp.MatchString(sha256Regex, input)
+	return match
 }

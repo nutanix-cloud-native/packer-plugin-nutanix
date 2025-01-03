@@ -731,6 +731,14 @@ func (d *NutanixDriver) CreateImageURL(ctx context.Context, disk VmDisk, vm VmCo
 	}
 	req.Spec.Resources.SourceURI = &disk.SourceImageURI
 
+	if disk.SourceImageChecksum != "" {
+
+		req.Spec.Resources.Checksum = &v3.Checksum{
+			ChecksumValue:     &disk.SourceImageChecksum,
+			ChecksumAlgorithm: StringPtr("SHA_256"),
+		}
+	}
+
 	image, err := conn.V3.CreateImage(ctx, req)
 	if err != nil {
 		return nil, fmt.Errorf("error while creating image: %s", err.Error())
