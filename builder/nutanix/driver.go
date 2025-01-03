@@ -682,6 +682,10 @@ func (d *NutanixDriver) CreateImageURL(ctx context.Context, disk VmDisk, vm VmCo
 		Spec: &v3.Image{
 			Name: &file,
 			Resources: &v3.ImageResources{
+				Checksum: &v3.Checksum{
+					ChecksumAlgorithm: &disk.Checksum.ChecksumAlgorithm,
+					ChecksumValue:     &disk.Checksum.ChecksumValue,
+				},
 				ImageType:               &disk.ImageType,
 				InitialPlacementRefList: InitialPlacementRef,
 			},

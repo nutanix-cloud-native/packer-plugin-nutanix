@@ -32,6 +32,31 @@ func (*FlatCategory) HCL2Spec() map[string]hcldec.Spec {
 	return s
 }
 
+// FlatChecksum is an auto-generated flat version of Checksum.
+// Where the contents of a field with a `mapstructure:,squash` tag are bubbled up.
+type FlatChecksum struct {
+	ChecksumAlgorithm *string `json:"checksum_algorithm" mapstructure:"checksum_algorithm" required:"false" cty:"checksum_algorithm" hcl:"checksum_algorithm"`
+	ChecksumValue     *string `json:"checksum_value" mapstructure:"checksum_value" required:"false" cty:"checksum_value" hcl:"checksum_value"`
+}
+
+// FlatMapstructure returns a new FlatChecksum.
+// FlatChecksum is an auto-generated flat version of Checksum.
+// Where the contents a fields with a `mapstructure:,squash` tag are bubbled up.
+func (*Checksum) FlatMapstructure() interface{ HCL2Spec() map[string]hcldec.Spec } {
+	return new(FlatChecksum)
+}
+
+// HCL2Spec returns the hcl spec of a Checksum.
+// This spec is used by HCL to read the fields of Checksum.
+// The decoded values from this spec will then be applied to a FlatChecksum.
+func (*FlatChecksum) HCL2Spec() map[string]hcldec.Spec {
+	s := map[string]hcldec.Spec{
+		"checksum_algorithm": &hcldec.AttrSpec{Name: "checksum_algorithm", Type: cty.String, Required: false},
+		"checksum_value":     &hcldec.AttrSpec{Name: "checksum_value", Type: cty.String, Required: false},
+	}
+	return s
+}
+
 // FlatClusterConfig is an auto-generated flat version of ClusterConfig.
 // Where the contents of a field with a `mapstructure:,squash` tag are bubbled up.
 type FlatClusterConfig struct {
@@ -335,13 +360,14 @@ func (*FlatVmConfig) HCL2Spec() map[string]hcldec.Spec {
 // FlatVmDisk is an auto-generated flat version of VmDisk.
 // Where the contents of a field with a `mapstructure:,squash` tag are bubbled up.
 type FlatVmDisk struct {
-	ImageType         *string `mapstructure:"image_type" json:"image_type" required:"false" cty:"image_type" hcl:"image_type"`
-	SourceImageName   *string `mapstructure:"source_image_name" json:"source_image_name" required:"false" cty:"source_image_name" hcl:"source_image_name"`
-	SourceImageUUID   *string `mapstructure:"source_image_uuid" json:"source_image_uuid" required:"false" cty:"source_image_uuid" hcl:"source_image_uuid"`
-	SourceImageURI    *string `mapstructure:"source_image_uri" json:"source_image_uri" required:"false" cty:"source_image_uri" hcl:"source_image_uri"`
-	SourceImageDelete *bool   `mapstructure:"source_image_delete" json:"source_image_delete" required:"false" cty:"source_image_delete" hcl:"source_image_delete"`
-	SourceImageForce  *bool   `mapstructure:"source_image_force" json:"source_image_force" required:"false" cty:"source_image_force" hcl:"source_image_force"`
-	DiskSizeGB        *int64  `mapstructure:"disk_size_gb" json:"disk_size_gb" required:"false" cty:"disk_size_gb" hcl:"disk_size_gb"`
+	ImageType         *string       `mapstructure:"image_type" json:"image_type" required:"false" cty:"image_type" hcl:"image_type"`
+	SourceImageName   *string       `mapstructure:"source_image_name" json:"source_image_name" required:"false" cty:"source_image_name" hcl:"source_image_name"`
+	SourceImageUUID   *string       `mapstructure:"source_image_uuid" json:"source_image_uuid" required:"false" cty:"source_image_uuid" hcl:"source_image_uuid"`
+	SourceImageURI    *string       `mapstructure:"source_image_uri" json:"source_image_uri" required:"false" cty:"source_image_uri" hcl:"source_image_uri"`
+	SourceImageDelete *bool         `mapstructure:"source_image_delete" json:"source_image_delete" required:"false" cty:"source_image_delete" hcl:"source_image_delete"`
+	SourceImageForce  *bool         `mapstructure:"source_image_force" json:"source_image_force" required:"false" cty:"source_image_force" hcl:"source_image_force"`
+	DiskSizeGB        *int64        `mapstructure:"disk_size_gb" json:"disk_size_gb" required:"false" cty:"disk_size_gb" hcl:"disk_size_gb"`
+	Checksum          *FlatChecksum `mapstructure:"checksum,omitempty" json:"checksum,omitempty" required:"false" cty:"checksum" hcl:"checksum"`
 }
 
 // FlatMapstructure returns a new FlatVmDisk.
@@ -363,6 +389,7 @@ func (*FlatVmDisk) HCL2Spec() map[string]hcldec.Spec {
 		"source_image_delete": &hcldec.AttrSpec{Name: "source_image_delete", Type: cty.Bool, Required: false},
 		"source_image_force":  &hcldec.AttrSpec{Name: "source_image_force", Type: cty.Bool, Required: false},
 		"disk_size_gb":        &hcldec.AttrSpec{Name: "disk_size_gb", Type: cty.Number, Required: false},
+		"checksum":            &hcldec.BlockSpec{TypeName: "checksum", Nested: hcldec.ObjectSpec((*FlatChecksum)(nil).HCL2Spec())},
 	}
 	return s
 }
