@@ -9,7 +9,7 @@ source "nutanix" "centos" {
   
  vm_disks {
       image_type = "ISO_IMAGE"
-      source_image_uri = "http://fr2.rpmfind.net/linux/centos/7.9.2009/isos/x86_64/CentOS-7-x86_64-Minimal-2009.iso"
+      source_image_uri = "https://vault.centos.org/7.9.2009/isos/x86_64/CentOS-7-x86_64-Minimal-2009.iso"
   }
 
   vm_disks {
