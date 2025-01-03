@@ -43,6 +43,7 @@ source "nutanix" "centos" {
   image_name        = "e2e-packer-${var.test}-${formatdate("MDYYhms", timestamp())}"
   image_delete      = true
 
+  boot_priority     = "disk"
 
   force_deregister  = true
 
