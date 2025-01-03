@@ -13,7 +13,10 @@ var (
 	// is a pre-release such as "dev" (in development), "beta", "rc1", etc.
 	VersionPrerelease = "dev"
 
+	// VersionMetadata
+	VersionMetadata = ""
+
 	// PluginVersion is used by the plugin set to allow Packer to recognize
 	// what version this plugin is.
-	PluginVersion = version.InitializePluginVersion(Version, VersionPrerelease)
+	PluginVersion = version.NewPluginVersion(Version, VersionPrerelease, VersionMetadata)
 )
