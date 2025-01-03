@@ -51,7 +51,7 @@ source "nutanix" "ubuntu" {
 
   vm_disks {
     image_type = "DISK_IMAGE"
-    source_image_uri = var.ubuntu_disk_image_name
+    source_image_name = var.ubuntu_disk_image_name
     disk_size_gb = 40
   }
 
