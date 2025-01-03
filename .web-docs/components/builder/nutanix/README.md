@@ -21,7 +21,8 @@ These parameters allow to define information about platform and temporary VM use
   - `memory_mb` (number) - Size of vRAM for temporary VM (in megabytes).
   - `cd_files` (array of strings) - A list of files to place onto a CD that is attached when the VM is booted. This can include either files or directories; any directories will be copied onto the CD recursively, preserving directory structure hierarchy.
   - `cd_label` (string) - Label of this CD Drive.
-  - `boot_type` (string) - Type of boot used on the temporary VM ("legacy" or "uefi").
+  - `boot_type` (string) - Type of boot used on the temporary VM ("legacy" or "uefi", default is "legacy").
+  - `boot_priority` (string) - Priority of boot device ("cdrom" or "disk", default is "cdrom").
   - `ip_wait_timeout` (duration string | ex: "0h42m0s") - Amount of time to wait for VM's IP, similar to 'ssh_timeout'. Defaults to 15m (15 minutes). See the Golang [ParseDuration](https://golang.org/pkg/time/#ParseDuration) documentation for full details.
   - `vm_categories` ([]Category) - Assign Categories to the vm.
   - `project` (string) - Assign Project to the vm.

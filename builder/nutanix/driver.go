@@ -536,11 +536,34 @@ func (d *NutanixDriver) CreateRequest(ctx context.Context, vm VmConfig, state mu
 	}
 
 	if vm.BootType == NutanixIdentifierBootTypeUEFI {
-		bootType := strings.ToUpper(vm.BootType)
+		bootType := strings.ToUpper(NutanixIdentifierBootTypeUEFI)
 
 		req.Spec.Resources.BootConfig = &v3.VMBootConfig{
 			BootType: &bootType,
 		}
+	} else {
+		bootType := strings.ToUpper(NutanixIdentifierBootTypeLegacy)
+
+		var bootDeviceOrderList []*string
+
+		if vm.BootPriority == "cdrom" {
+			bootDeviceOrderList = []*string{
+				StringPtr("CDROM"),
+				StringPtr("DISK"),
+				StringPtr("NETWORK"),
+			}
+		} else {
+			bootDeviceOrderList = []*string{
+				StringPtr("DISK"),
+				StringPtr("CDROM"),
+				StringPtr("NETWORK"),
+			}
+		}
+		req.Spec.Resources.BootConfig = &v3.VMBootConfig{
+			BootType:            &bootType,
+			BootDeviceOrderList: bootDeviceOrderList,
+		}
+
 	}
 
 	if len(vm.VMCategories) != 0 {

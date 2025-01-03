@@ -96,6 +96,8 @@ source "nutanix" "centos-kickstart" {
   cd_files          = ["scripts/ks.cfg"]
   cd_label          = "OEMDRV"
 
+  boot_priority     = "disk"
+
   image_name        ="centos8-{{isotime `Jan-_2-15:04:05`}}"
   shutdown_command  = "echo 'packer' | sudo -S shutdown -P now"
   shutdown_timeout = "2m"
@@ -130,6 +132,8 @@ source "nutanix" "windows" {
   }
 
   cd_files         = ["scripts/gui/autounattend.xml","scripts/win-update.ps1"]
+
+  boot_priority     = "disk"
 
   image_name        ="win-{{isotime `Jan-_2-15:04:05`}}"
   shutdown_command  = "shutdown /s /t 10 /f /d p:4:1 /c \"Packer Shutdown\""
