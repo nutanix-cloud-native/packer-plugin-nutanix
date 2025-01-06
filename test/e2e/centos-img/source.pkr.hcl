@@ -10,6 +10,8 @@ source "nutanix" "centos" {
   vm_disks {
       image_type = "DISK_IMAGE"
       source_image_uri = "https://cloud.centos.org/centos/7/images/CentOS-7-x86_64-GenericCloud-2111.qcow2"
+      source_image_checksum = "4c34278cd7ba51e47d864a5cb34301a2ec7853786cb73877f3fe61bb1040edd4"
+      source_image_checksum_type = "sha256"
       disk_size_gb = 20
   }
 
