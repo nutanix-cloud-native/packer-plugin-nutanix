@@ -30,6 +30,12 @@ const (
 
 	// NutanixIdentifierBootPriorityCDROM is a resource identifier identifying the boot priority as cdrom for virtual machines.
 	NutanixIdentifierBootPriorityCDROM string = "cdrom"
+
+	// NutanixIdentifierChecksunTypeSHA256 is a resource identifier identifying the SHA-256 checksum type for virtual machines.
+	NutanixIdentifierChecksunTypeSHA256 string = "sha256"
+
+	// NutanixIdentifierChecksunTypeSHA1 is a resource identifier identifying the SHA-1 checksum type for virtual machines.
+	NutanixIdentifierChecksunTypeSHA1 string = "sha1"
 )
 
 type Config struct {
@@ -68,13 +74,15 @@ type ClusterConfig struct {
 }
 
 type VmDisk struct {
-	ImageType         string `mapstructure:"image_type" json:"image_type" required:"false"`
-	SourceImageName   string `mapstructure:"source_image_name" json:"source_image_name" required:"false"`
-	SourceImageUUID   string `mapstructure:"source_image_uuid" json:"source_image_uuid" required:"false"`
-	SourceImageURI    string `mapstructure:"source_image_uri" json:"source_image_uri" required:"false"`
-	SourceImageDelete bool   `mapstructure:"source_image_delete" json:"source_image_delete" required:"false"`
-	SourceImageForce  bool   `mapstructure:"source_image_force" json:"source_image_force" required:"false"`
-	DiskSizeGB        int64  `mapstructure:"disk_size_gb" json:"disk_size_gb" required:"false"`
+	ImageType               string `mapstructure:"image_type" json:"image_type" required:"false"`
+	SourceImageName         string `mapstructure:"source_image_name" json:"source_image_name" required:"false"`
+	SourceImageUUID         string `mapstructure:"source_image_uuid" json:"source_image_uuid" required:"false"`
+	SourceImageURI          string `mapstructure:"source_image_uri" json:"source_image_uri" required:"false"`
+	SourceImageChecksum     string `mapstructure:"source_image_checksum" json:"source_image_checksum" required:"false"`
+	SourceImageChecksumType string `mapstructure:"source_image_checksum_type" json:"source_image_checksum_type" required:"false"`
+	SourceImageDelete       bool   `mapstructure:"source_image_delete" json:"source_image_delete" required:"false"`
+	SourceImageForce        bool   `mapstructure:"source_image_force" json:"source_image_force" required:"false"`
+	DiskSizeGB              int64  `mapstructure:"disk_size_gb" json:"disk_size_gb" required:"false"`
 }
 
 type VmNIC struct {
@@ -235,6 +243,35 @@ func (c *Config) Prepare(raws ...interface{}) ([]string, error) {
 			log.Println("Nutanix VM Category name missing from configuration")
 			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("missing name for a vm categories with value %s", vmCategory.Value))
 		}
+	}
+
+	// Validate each disk
+	for index, disk := range c.VmConfig.VmDisks {
+
+		// Validate checksum only with uri
+		if disk.SourceImageChecksum != "" && disk.SourceImageURI == "" {
+			log.Printf("disk %d: Checksum work only with Source Image URI\n", index)
+			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("disk %d: source_image_checksum work only with source_image_uri", index))
+		}
+
+		// Validate supported checksum type
+		if disk.SourceImageChecksumType != "" && disk.SourceImageChecksumType != NutanixIdentifierChecksunTypeSHA1 && disk.SourceImageChecksumType != NutanixIdentifierChecksunTypeSHA256 {
+			log.Printf("disk %d: Checksum type %s not supported\n", index, disk.SourceImageChecksumType)
+			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("disk %d: checksum_type %s not supported", index, disk.SourceImageChecksumType))
+		}
+
+		// Validate Checksum type always defined with checksum
+		if disk.SourceImageChecksum != "" && disk.SourceImageChecksumType == "" {
+			log.Printf("disk %d: Checksum type need to be defined\n", index)
+			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("disk %d: source_image_checksum_type need to be defined", index))
+		}
+
+		// Validate Checksum type is never alone
+		if disk.SourceImageChecksumType != "" && disk.SourceImageChecksum == "" {
+			log.Printf("disk %d: No checksum set despite checksum type configure\n", index)
+			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("disk %d: no source_image_checksum set despite checksum_type configured", index))
+		}
+
 	}
 
 	if c.CommConfig.SSHPort == 0 {

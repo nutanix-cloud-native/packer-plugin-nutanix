@@ -84,6 +84,8 @@ Sample:
 - `source_image_name` (string) - Name of the image used as disk source.
 - `source_image_uuid` (string) - UUID of the image used as disk source.
 - `source_image_uri` (string) - URI of the image used as disk source (if image is not already on the cluster, it will download and store it before launching output image creation process).
+- `source_image_checksum` (string) - Checksum of the image used as disk source (work only with `source_image_uri` and if image is not already present in the library).
+- `source_image_checksum_type` (string) - Type of checksum used for `source_image_checksum` (`sha256` or `sha1` ).
 - `source_image_delete` (bool) - Delete source image once build process is completed (default is false).
 - `source_image_force` (bool) - Always download and replace source image even if already exist (default is false).
 - `disk_size_gb` (number) - size of the disk (in gigabytes).
