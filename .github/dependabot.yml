@@ -5,11 +5,17 @@
 
 version: 2
 updates:
-  # Enable version updates for Go modules
+  # Group all patch and minor Go module updates into a single PR for ease of management. This assumes
+  # that Go modules respect semver, which is generally true but not guaranteed.
+  # Update weekly to avoid excessive PRs.
   - package-ecosystem: "gomod"
     directory: "/"
     schedule:
-      interval: "daily"
+      interval: "weekly"
+    groups:
+      all-go-mod-patch-and-minor:
+        patterns: [ "*" ]
+        update-types: [ "patch", "minor" ]
 
   # Enable version updates for GitHub Actions
   - package-ecosystem: "github-actions"
