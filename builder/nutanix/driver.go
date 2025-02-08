@@ -505,6 +505,19 @@ func (d *NutanixDriver) CreateRequest(ctx context.Context, vm VmConfig, state mu
 		NICList = append(NICList, &newNIC)
 	}
 
+	SerialIndex := 0
+	SerialPortList := []*v3.VMSerialPort{}
+	for ok := true; ok; ok = (SerialIndex < int(vm.SerialPorts)) {
+		DeviceIndex := int64(SerialIndex)
+		isConnected := true
+		newVMSerialPort := v3.VMSerialPort{
+			Index:       &DeviceIndex,
+			IsConnected: &isConnected,
+		}
+		SerialPortList = append(SerialPortList, &newVMSerialPort)
+		SerialIndex++
+	}
+
 	GPUList := make([]*v3.VMGpu, 0, len(vm.GPU))
 	for _, gpu := range vm.GPU {
 		vmGPU, err := findGPUByName(ctx, conn, gpu.Name)
@@ -526,6 +539,7 @@ func (d *NutanixDriver) CreateRequest(ctx context.Context, vm VmConfig, state mu
 				DiskList:           DiskList,
 				NicList:            NICList,
 				GpuList:            GPUList,
+				SerialPortList:     SerialPortList,
 			},
 			ClusterReference: BuildReference(*cluster.Metadata.UUID, "cluster"),
 			Description:      StringPtr(fmt.Sprintf(vmDescription, d.Config.VmConfig.ImageName)),
