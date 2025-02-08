@@ -507,7 +507,7 @@ func (d *NutanixDriver) CreateRequest(ctx context.Context, vm VmConfig, state mu
 
 	SerialIndex := 0
 	SerialPortList := []*v3.VMSerialPort{}
-	for ok := true; ok; ok = (SerialIndex < int(vm.SerialPorts)) {
+	if vm.SerialPort {
 		DeviceIndex := int64(SerialIndex)
 		isConnected := true
 		newVMSerialPort := v3.VMSerialPort{
