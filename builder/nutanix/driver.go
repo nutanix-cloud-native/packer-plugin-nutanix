@@ -515,7 +515,6 @@ func (d *NutanixDriver) CreateRequest(ctx context.Context, vm VmConfig, state mu
 			IsConnected: &isConnected,
 		}
 		SerialPortList = append(SerialPortList, &newVMSerialPort)
-		SerialIndex++
 	}
 
 	GPUList := make([]*v3.VMGpu, 0, len(vm.GPU))
