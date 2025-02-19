@@ -27,7 +27,6 @@ These parameters allow to define information about platform and temporary VM use
   - `vm_categories` ([]Category) - Assign Categories to the vm.
   - `project` (string) - Assign Project to the vm.
   - `gpu` ([] GPU) - GPU in cluster name to be attached on temporary VM.
-  - `serialport` (bool) - Add a serial port to the temporary VM. This is required for some Linux Cloud Images that will have a kernel panic if a serial port is not present on first boot.
 
 
 ## Output configuration
