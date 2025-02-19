@@ -148,6 +148,7 @@ type FlatConfig struct {
 	VMCategories              []FlatCategory    `mapstructure:"vm_categories" required:"false" cty:"vm_categories" hcl:"vm_categories"`
 	Project                   *string           `mapstructure:"project" required:"false" cty:"project" hcl:"project"`
 	GPU                       []FlatGPU         `mapstructure:"gpu" required:"false" cty:"gpu" hcl:"gpu"`
+	SerialPort                *bool             `mapstructure:"serialport" json:"serialport" required:"false" cty:"serialport" hcl:"serialport"`
 	ForceDeregister           *bool             `mapstructure:"force_deregister" json:"force_deregister" required:"false" cty:"force_deregister" hcl:"force_deregister"`
 	ImageDescription          *string           `mapstructure:"image_description" json:"image_description" required:"false" cty:"image_description" hcl:"image_description"`
 	ImageCategories           []FlatCategory    `mapstructure:"image_categories" required:"false" cty:"image_categories" hcl:"image_categories"`
@@ -251,6 +252,7 @@ func (*FlatConfig) HCL2Spec() map[string]hcldec.Spec {
 		"vm_categories":                &hcldec.BlockListSpec{TypeName: "vm_categories", Nested: hcldec.ObjectSpec((*FlatCategory)(nil).HCL2Spec())},
 		"project":                      &hcldec.AttrSpec{Name: "project", Type: cty.String, Required: false},
 		"gpu":                          &hcldec.BlockListSpec{TypeName: "gpu", Nested: hcldec.ObjectSpec((*FlatGPU)(nil).HCL2Spec())},
+		"serialport":                   &hcldec.AttrSpec{Name: "serialport", Type: cty.Bool, Required: false},
 		"force_deregister":             &hcldec.AttrSpec{Name: "force_deregister", Type: cty.Bool, Required: false},
 		"image_description":            &hcldec.AttrSpec{Name: "image_description", Type: cty.String, Required: false},
 		"image_categories":             &hcldec.BlockListSpec{TypeName: "image_categories", Nested: hcldec.ObjectSpec((*FlatCategory)(nil).HCL2Spec())},
@@ -303,6 +305,7 @@ type FlatVmConfig struct {
 	VMCategories []FlatCategory `mapstructure:"vm_categories" required:"false" cty:"vm_categories" hcl:"vm_categories"`
 	Project      *string        `mapstructure:"project" required:"false" cty:"project" hcl:"project"`
 	GPU          []FlatGPU      `mapstructure:"gpu" required:"false" cty:"gpu" hcl:"gpu"`
+	SerialPort   *bool          `mapstructure:"serialport" json:"serialport" required:"false" cty:"serialport" hcl:"serialport"`
 }
 
 // FlatMapstructure returns a new FlatVmConfig.
@@ -332,6 +335,7 @@ func (*FlatVmConfig) HCL2Spec() map[string]hcldec.Spec {
 		"vm_categories": &hcldec.BlockListSpec{TypeName: "vm_categories", Nested: hcldec.ObjectSpec((*FlatCategory)(nil).HCL2Spec())},
 		"project":       &hcldec.AttrSpec{Name: "project", Type: cty.String, Required: false},
 		"gpu":           &hcldec.BlockListSpec{TypeName: "gpu", Nested: hcldec.ObjectSpec((*FlatGPU)(nil).HCL2Spec())},
+		"serialport":    &hcldec.AttrSpec{Name: "serialport", Type: cty.Bool, Required: false},
 	}
 	return s
 }

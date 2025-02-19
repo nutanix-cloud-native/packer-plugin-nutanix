@@ -105,6 +105,7 @@ type VmConfig struct {
 	VMCategories []Category `mapstructure:"vm_categories" required:"false"`
 	Project      string     `mapstructure:"project" required:"false"`
 	GPU          []GPU      `mapstructure:"gpu" required:"false"`
+	SerialPort   bool       `mapstructure:"serialport" json:"serialport" required:"false"`
 }
 
 func (c *Config) Prepare(raws ...interface{}) ([]string, error) {
