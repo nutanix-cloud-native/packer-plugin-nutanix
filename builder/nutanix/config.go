@@ -25,6 +25,9 @@ const (
 	// NutanixIdentifierBootTypeUEFI is a resource identifier identifying the UEFI boot type for virtual machines.
 	NutanixIdentifierBootTypeUEFI string = "uefi"
 
+	// NutanixIdentifierBootTypeSecure is a resource identifier identifying the secure boot type for virtual machines.
+	NutanixIdentifierBootTypeSecure string = "secure_boot"
+
 	// NutanixIdentifierBootPriorityDisk is a resource identifier identifying the boot priority as disk for virtual machines.
 	NutanixIdentifierBootPriorityDisk string = "disk"
 
@@ -92,6 +95,7 @@ type VmNIC struct {
 type VmConfig struct {
 	VMName       string     `mapstructure:"vm_name" json:"vm_name" required:"false"`
 	OSType       string     `mapstructure:"os_type" json:"os_type" required:"true"`
+	MachineType  string     `mapstructure:"machine_type" json:"machine_type" required:"false"`
 	BootType     string     `mapstructure:"boot_type" json:"boot_type" required:"false"`
 	BootPriority string     `mapstructure:"boot_priority" json:"boot_priority" required:"false"`
 	VmDisks      []VmDisk   `mapstructure:"vm_disks"`
@@ -146,7 +150,7 @@ func (c *Config) Prepare(raws ...interface{}) ([]string, error) {
 		c.ClusterConfig.Port = 9440
 	}
 
-	if c.BootType != NutanixIdentifierBootTypeLegacy && c.BootType != NutanixIdentifierBootTypeUEFI {
+	if c.BootType != NutanixIdentifierBootTypeLegacy && c.BootType != NutanixIdentifierBootTypeUEFI && c.BootType != NutanixIdentifierBootTypeSecure {
 		log.Println("No correct VM Boot Type configured, defaulting to 'legacy'")
 		c.BootType = string(NutanixIdentifierBootTypeLegacy)
 	}
@@ -154,6 +158,11 @@ func (c *Config) Prepare(raws ...interface{}) ([]string, error) {
 	if c.BootType == NutanixIdentifierBootTypeUEFI && c.BootPriority != "" {
 		log.Println("Boot Priority is not supported for UEFI boot type")
 		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("UEFI does not support boot priority"))
+	}
+
+	if c.BootType == NutanixIdentifierBootTypeSecure && c.BootPriority != "" {
+		log.Println("Boot Priority is not supported for secure boot type")
+		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("Secure boot does not support boot priority"))
 	}
 
 	if c.BootPriority != NutanixIdentifierBootPriorityDisk && c.BootPriority != NutanixIdentifierBootPriorityCDROM {

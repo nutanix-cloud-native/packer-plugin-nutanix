@@ -554,6 +554,14 @@ func (d *NutanixDriver) CreateRequest(ctx context.Context, vm VmConfig, state mu
 		req.Spec.Resources.BootConfig = &v3.VMBootConfig{
 			BootType: &bootType,
 		}
+	} else if vm.BootType == NutanixIdentifierBootTypeSecure {
+		bootType := strings.ToUpper(NutanixIdentifierBootTypeSecure)
+
+		req.Spec.Resources.BootConfig = &v3.VMBootConfig{
+		BootType: &bootType,
+		}
+		// Force machine type to "Q35", which is required for Secure Boot
+		req.Spec.Resources.MachineType = StringPtr("Q35")
 	} else {
 		bootType := strings.ToUpper(NutanixIdentifierBootTypeLegacy)
 
