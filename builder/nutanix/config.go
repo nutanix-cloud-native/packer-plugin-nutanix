@@ -8,6 +8,7 @@ import (
 	"log"
 	"time"
 
+	"github.com/hashicorp/packer-plugin-sdk/bootcommand"
 	"github.com/hashicorp/packer-plugin-sdk/common"
 	"github.com/hashicorp/packer-plugin-sdk/communicator"
 	"github.com/hashicorp/packer-plugin-sdk/multistep/commonsteps"
@@ -40,7 +41,9 @@ const (
 
 type Config struct {
 	common.PackerConfig            `mapstructure:",squash"`
+	WaitIpConfig                   `mapstructure:",squash"`
 	CommConfig                     communicator.Config `mapstructure:",squash"`
+	bootcommand.VNCConfig          `mapstructure:",squash"`
 	commonsteps.CDConfig           `mapstructure:",squash"`
 	shutdowncommand.ShutdownConfig `mapstructure:",squash"`
 	ClusterConfig                  `mapstructure:",squash"`
@@ -293,6 +296,7 @@ func (c *Config) Prepare(raws ...interface{}) ([]string, error) {
 	errs = packersdk.MultiErrorAppend(errs, c.ShutdownConfig.Prepare(&c.ctx)...)
 	errs = packersdk.MultiErrorAppend(errs, c.CDConfig.Prepare(&c.ctx)...)
 	errs = packersdk.MultiErrorAppend(errs, c.CommConfig.Prepare(&c.ctx)...)
+	errs = packersdk.MultiErrorAppend(errs, c.WaitIpConfig.Prepare()...)
 
 	if errs != nil && len(errs.Errors) > 0 {
 		return warnings, errs

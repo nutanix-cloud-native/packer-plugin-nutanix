@@ -123,6 +123,11 @@ type FlatConfig struct {
 	WinRMUseSSL               *bool             `mapstructure:"winrm_use_ssl" cty:"winrm_use_ssl" hcl:"winrm_use_ssl"`
 	WinRMInsecure             *bool             `mapstructure:"winrm_insecure" cty:"winrm_insecure" hcl:"winrm_insecure"`
 	WinRMUseNTLM              *bool             `mapstructure:"winrm_use_ntlm" cty:"winrm_use_ntlm" hcl:"winrm_use_ntlm"`
+	BootGroupInterval         *string           `mapstructure:"boot_keygroup_interval" cty:"boot_keygroup_interval" hcl:"boot_keygroup_interval"`
+	BootWait                  *string           `mapstructure:"boot_wait" cty:"boot_wait" hcl:"boot_wait"`
+	BootCommand               []string          `mapstructure:"boot_command" cty:"boot_command" hcl:"boot_command"`
+	DisableVNC                *bool             `mapstructure:"disable_vnc" cty:"disable_vnc" hcl:"disable_vnc"`
+	BootKeyInterval           *string           `mapstructure:"boot_key_interval" cty:"boot_key_interval" hcl:"boot_key_interval"`
 	CDFiles                   []string          `mapstructure:"cd_files" cty:"cd_files" hcl:"cd_files"`
 	CDContent                 map[string]string `mapstructure:"cd_content" cty:"cd_content" hcl:"cd_content"`
 	CDLabel                   *string           `mapstructure:"cd_label" cty:"cd_label" hcl:"cd_label"`
@@ -227,6 +232,11 @@ func (*FlatConfig) HCL2Spec() map[string]hcldec.Spec {
 		"winrm_use_ssl":                &hcldec.AttrSpec{Name: "winrm_use_ssl", Type: cty.Bool, Required: false},
 		"winrm_insecure":               &hcldec.AttrSpec{Name: "winrm_insecure", Type: cty.Bool, Required: false},
 		"winrm_use_ntlm":               &hcldec.AttrSpec{Name: "winrm_use_ntlm", Type: cty.Bool, Required: false},
+		"boot_keygroup_interval":       &hcldec.AttrSpec{Name: "boot_keygroup_interval", Type: cty.String, Required: false},
+		"boot_wait":                    &hcldec.AttrSpec{Name: "boot_wait", Type: cty.String, Required: false},
+		"boot_command":                 &hcldec.AttrSpec{Name: "boot_command", Type: cty.List(cty.String), Required: false},
+		"disable_vnc":                  &hcldec.AttrSpec{Name: "disable_vnc", Type: cty.Bool, Required: false},
+		"boot_key_interval":            &hcldec.AttrSpec{Name: "boot_key_interval", Type: cty.String, Required: false},
 		"cd_files":                     &hcldec.AttrSpec{Name: "cd_files", Type: cty.List(cty.String), Required: false},
 		"cd_content":                   &hcldec.AttrSpec{Name: "cd_content", Type: cty.Map(cty.String), Required: false},
 		"cd_label":                     &hcldec.AttrSpec{Name: "cd_label", Type: cty.String, Required: false},
