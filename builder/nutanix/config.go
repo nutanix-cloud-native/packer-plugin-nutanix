@@ -95,7 +95,6 @@ type VmNIC struct {
 type VmConfig struct {
 	VMName       string     `mapstructure:"vm_name" json:"vm_name" required:"false"`
 	OSType       string     `mapstructure:"os_type" json:"os_type" required:"true"`
-	MachineType  string     `mapstructure:"machine_type" json:"machine_type" required:"false"`
 	BootType     string     `mapstructure:"boot_type" json:"boot_type" required:"false"`
 	BootPriority string     `mapstructure:"boot_priority" json:"boot_priority" required:"false"`
 	VmDisks      []VmDisk   `mapstructure:"vm_disks"`
