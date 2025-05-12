@@ -161,7 +161,7 @@ func (c *Config) Prepare(raws ...interface{}) ([]string, error) {
 
 	if c.BootType == NutanixIdentifierBootTypeSecure && c.BootPriority != "" {
 		log.Println("Boot Priority is not supported for secure boot type")
-		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("Secure boot does not support boot priority"))
+		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("secure boot does not support boot priority"))
 	}
 
 	if c.BootPriority != NutanixIdentifierBootPriorityDisk && c.BootPriority != NutanixIdentifierBootPriorityCDROM {
