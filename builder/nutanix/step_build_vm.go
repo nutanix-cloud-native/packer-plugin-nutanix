@@ -61,13 +61,11 @@ func (s *stepBuildVM) Run(ctx context.Context, state multistep.StateBag) multist
 		state.Put("error", err)
 		return multistep.ActionHalt
 	}
-
-	ui.Message(fmt.Sprintf("Virtual machine %s created", config.VMName))
 	log.Printf("Nutanix VM UUID: %s", *vmInstance.nutanix.Metadata.UUID)
-	state.Put("vm_uuid", *vmInstance.nutanix.Metadata.UUID)
-	state.Put("ip", vmInstance.Addresses()[0])
+	ui.Message(fmt.Sprintf("Virtual machine %s created", config.VMName))
 	state.Put("destroy_vm", true)
-	ui.Message("Found IP for virtual machine: " + vmInstance.Addresses()[0])
+	state.Put("vm_uuid", *vmInstance.nutanix.Metadata.UUID)
+	state.Put("cluster_uuid", *vmInstance.nutanix.Spec.ClusterReference.UUID)
 
 	return multistep.ActionContinue
 }

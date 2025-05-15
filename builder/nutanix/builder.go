@@ -62,6 +62,16 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			Label:   b.config.CDConfig.CDLabel,
 		},
 		&stepBuildVM{},
+		&stepVNCConnect{
+			VNCEnabled:    !b.config.DisableVNC,
+			ClusterConfig: &b.config.ClusterConfig,
+		},
+		&stepVNCBootCommand{
+			Config: &b.config,
+		},
+		&stepWaitForIp{
+			Config: &b.config.WaitIpConfig,
+		},
 		&communicator.StepConnect{
 			Config:    &b.config.CommConfig,
 			SSHConfig: b.config.CommConfig.SSHConfigFunc(),
