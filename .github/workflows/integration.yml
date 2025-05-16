@@ -9,13 +9,13 @@ jobs:
     name: Check
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version: "^1.23"
-
-      - name: Checkout Code
-        uses: actions/checkout@v4
+          go-version-file: go.mod
 
       - name: Static Check
         uses: dominikh/staticcheck-action@v1.3.1
@@ -27,13 +27,13 @@ jobs:
     name: Vet
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version: "^1.19"
-
-      - name: Checkout Code
-        uses: actions/checkout@v4
+          go-version-file: go.mod
 
       - name: Vet Go code
         run: go vet ./...
@@ -42,21 +42,21 @@ jobs:
     name: Build
     runs-on: ubuntu-latest
     steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: "^1.19"
-
-      - name: Check out code into the Go module directory
-        uses: actions/checkout@v4
+            go-version-file: go.mod
 
       - name: Compile
         run: make build
 
       - name: Trivy scan
-        uses: aquasecurity/trivy-action@0.29.0
+        uses: aquasecurity/trivy-action@0.30.0
         env:
-           TRIVY_DB_REPOSITORY: "ghcr.io/aquasecurity/trivy-db,public.ecr.aws/aquasecurity/trivy-db"
+          TRIVY_DB_REPOSITORY: "ghcr.io/aquasecurity/trivy-db,public.ecr.aws/aquasecurity/trivy-db"
         with:
           scan-type: "fs"
           ignore-unfixed: true

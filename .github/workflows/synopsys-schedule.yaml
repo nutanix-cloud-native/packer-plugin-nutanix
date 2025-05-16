@@ -19,13 +19,13 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version: "^1.19"
+          go-version-file: go.mod
 
       - name: Build Project
         run: make build
 
       - name: Black Duck Full Scan
-        uses: blackduck-inc/black-duck-security-scan@v2.0.0
+        uses: blackduck-inc/black-duck-security-scan@v2.1.1
         with:
           blackducksca_url : ${{ secrets.BLACKDUCK_URL }}
           blackducksca_token: ${{ secrets.BLACKDUCK_API_TOKEN }}
