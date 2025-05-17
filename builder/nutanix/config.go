@@ -151,10 +151,10 @@ func (c *Config) Prepare(raws ...interface{}) ([]string, error) {
 		c.BootType = string(NutanixIdentifierBootTypeLegacy)
 	}
 
-	if c.BootType == NutanixIdentifierBootTypeUEFI && c.BootPriority != "" {
-		log.Println("Boot Priority is not supported for UEFI boot type")
-		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("UEFI does not support boot priority"))
-	}
+	// if c.BootType == NutanixIdentifierBootTypeUEFI && c.BootPriority != "" {
+	// 	log.Println("Boot Priority is not supported for UEFI boot type")
+	// 	errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("UEFI does not support boot priority"))
+	// }
 
 	if c.BootPriority != NutanixIdentifierBootPriorityDisk && c.BootPriority != NutanixIdentifierBootPriorityCDROM {
 		log.Println("No correct VM Boot Priority configured, defaulting to 'cdrom'")
