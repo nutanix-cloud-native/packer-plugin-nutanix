@@ -137,7 +137,7 @@ Sample
   }
 ```
 
-## Categories Configuration
+### Categories Configuration
 
 Use `image_categories{}` and `vm_categories{}` to assign category to your image or vm.  If you want to assign multiple categories , use the entry multiple times.
 
@@ -167,6 +167,42 @@ Sample
     name = "Ampere 40"
   }
 ```
+
+## Boot Configuration
+
+@include 'packer-plugin-sdk/bootcommand/BootConfig.mdx'
+
+@include 'packer-plugin-sdk/bootcommand/VNCConfig.mdx'
+
+**Optional**:
+
+@include 'packer-plugin-sdk/bootcommand/BootConfig-not-required.mdx'
+
+@include 'packer-plugin-sdk/bootcommand/VNCConfig-not-required.mdx'
+
+## IP Wait configuration
+
+**Optional**:
+
+@include 'builder/nutanix/WaitIpConfig-not-required.mdx'
+
+## Communicator Configuration
+
+**Optional**:
+
+##### Common
+
+@include 'packer-plugin-sdk/communicator/Config-not-required.mdx'
+
+##### SSH
+
+@include 'packer-plugin-sdk/communicator/SSH-not-required.mdx'
+
+@include 'packer-plugin-sdk/communicator/SSH-Private-Key-File-not-required.mdx'
+
+##### Windows Remote Management (WinRM)
+
+@include 'packer-plugin-sdk/communicator/WinRM-not-required.mdx'
 
 ## Samples
 

@@ -105,6 +105,49 @@ source "nutanix" "centos-kickstart" {
   ssh_username     = "root"
 }
 
+source "nutanix" "ubuntu-autoinstall" {
+  nutanix_username = var.nutanix_username
+  nutanix_password = var.nutanix_password
+  nutanix_endpoint = var.nutanix_endpoint
+  nutanix_port     = var.nutanix_port
+  nutanix_insecure = var.nutanix_insecure
+  cluster_name     = var.nutanix_cluster
+  os_type          = "Linux"
+
+
+  vm_disks {
+      image_type = "ISO_IMAGE"
+      source_image_name = var.ubuntu_iso_image_name
+  }
+
+  vm_disks {
+      image_type = "DISK"
+      disk_size_gb = 40
+  }
+
+  vm_nics {
+    subnet_name       = var.nutanix_subnet
+  }
+
+  boot_priority     = "disk"
+
+  boot_command      = [
+    "e<wait>",
+    "<down><down><down>",
+    "<end><bs><bs><bs><bs><wait>",
+    "autoinstall ds=configdrive ---<wait>",
+    "<f10><wait>"
+  ]
+  boot_wait         = "10s"
+  user_data         = base64encode(file("scripts/cloud-init/autoinstall-ubuntu.yaml"))
+
+  image_name        ="ubuntu-{{isotime `Jan-_2-15:04:05`}}"
+  shutdown_command  = "echo 'ubuntu' | sudo -S shutdown -P now"
+  shutdown_timeout = "2m"
+  ssh_password     = "ubuntu"
+  ssh_username     = "ubuntu"
+}
+
 source "nutanix" "windows" {
   nutanix_username = var.nutanix_username
   nutanix_password = var.nutanix_password
