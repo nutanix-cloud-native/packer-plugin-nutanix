@@ -53,6 +53,7 @@ type Config struct {
 	ImageCategories                []Category `mapstructure:"image_categories" required:"false"`
 	ImageDelete                    bool       `mapstructure:"image_delete" json:"image_delete" required:"false"`
 	ImageExport                    bool       `mapstructure:"image_export" json:"image_export" required:"false"`
+	ImageExportType                string     `mapstructure:"image_export_type" json:"image_export_type" required:"false"`
 	VmForceDelete                  bool       `mapstructure:"vm_force_delete" json:"vm_force_delete" required:"false"`
 
 	ctx interpolate.Context
@@ -156,6 +157,16 @@ func (c *Config) Prepare(raws ...interface{}) ([]string, error) {
 	if c.BootPriority != NutanixIdentifierBootPriorityDisk && c.BootPriority != NutanixIdentifierBootPriorityCDROM {
 		log.Println("No correct VM Boot Priority configured, defaulting to 'cdrom'")
 		c.BootPriority = string(NutanixIdentifierBootPriorityCDROM)
+	}
+
+	if c.ImageExport && c.ImageExportType == "" {
+		log.Println("Image Export enabled, but no Image Export Type configured. Defaulting to 'RAW'")
+		c.ImageExportType = "RAW"
+	}
+
+	if c.ImageExportType != "" && c.ImageExportType != "VMDK" && c.ImageExportType != "RAW" && c.ImageExportType != "QCOW2" {
+		log.Println("Only supported export types are VMDK, RAW and QCOW2")
+		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("supported image_export_type is VMDK, RAW or QCOW2"))
 	}
 
 	// Validate Cluster Endpoint

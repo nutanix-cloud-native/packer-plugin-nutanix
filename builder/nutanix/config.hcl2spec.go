@@ -162,6 +162,7 @@ type FlatConfig struct {
 	ImageCategories           []FlatCategory    `mapstructure:"image_categories" required:"false" cty:"image_categories" hcl:"image_categories"`
 	ImageDelete               *bool             `mapstructure:"image_delete" json:"image_delete" required:"false" cty:"image_delete" hcl:"image_delete"`
 	ImageExport               *bool             `mapstructure:"image_export" json:"image_export" required:"false" cty:"image_export" hcl:"image_export"`
+	ImageExportType           *string           `mapstructure:"image_export_type" json:"image_export_type" required:"false" cty:"image_export_type" hcl:"image_export_type"`
 	VmForceDelete             *bool             `mapstructure:"vm_force_delete" json:"vm_force_delete" required:"false" cty:"vm_force_delete" hcl:"vm_force_delete"`
 }
 
@@ -274,6 +275,7 @@ func (*FlatConfig) HCL2Spec() map[string]hcldec.Spec {
 		"image_delete":                 &hcldec.AttrSpec{Name: "image_delete", Type: cty.Bool, Required: false},
 		"image_export":                 &hcldec.AttrSpec{Name: "image_export", Type: cty.Bool, Required: false},
 		"vm_force_delete":              &hcldec.AttrSpec{Name: "vm_force_delete", Type: cty.Bool, Required: false},
+		"image_export_type":            &hcldec.AttrSpec{Name: "image_export_type", Type: cty.String, Required: false},
 	}
 	return s
 }

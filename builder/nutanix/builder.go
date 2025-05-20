@@ -78,6 +78,10 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			Host:      commHost(),
 		},
 		new(commonsteps.StepProvision),
+		&StepExportOVA{
+			VMName:         b.config.VMName,
+			DiskFileFormat: b.config.ImageExportType,
+		},
 		&StepShutdown{
 			Command: b.config.ShutdownCommand,
 			Timeout: b.config.ShutdownTimeout,
@@ -87,7 +91,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 		},
 	}
 
-	if b.config.ImageExport {
+	if b.config.ImageExport && b.config.ImageExportType == "RAW" {
 		steps = append(steps, &stepExportImage{
 			VMName:    b.config.VMName,
 			ImageName: b.config.VmConfig.ImageName,
