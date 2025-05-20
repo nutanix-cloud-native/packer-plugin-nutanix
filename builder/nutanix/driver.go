@@ -955,6 +955,7 @@ func (d *NutanixDriver) getRequest(ctx context.Context, url string) (*http.Respo
 	if err != nil {
 		return nil, err
 	}
+	req = req.WithContext(ctx)
 	req.SetBasicAuth(d.ClusterConfig.Username, d.ClusterConfig.Password)
 	resp, err := httpClient.Do(req)
 	if err != nil {
