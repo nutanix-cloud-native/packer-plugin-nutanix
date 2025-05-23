@@ -126,7 +126,7 @@ func findSubnetByUUID(ctx context.Context, conn *v3.Client, uuid string) (*v3.Su
 	return conn.V3.GetSubnet(ctx, uuid)
 }
 
-func findSubnetByName(ctx context.Context, conn *v3.Client, name string) ([]*v3.SubnetIntentResponse, error) {
+func findSubnetByName(ctx context.Context, conn *v3.Client, name string) (*v3.SubnetIntentResponse, error) {
 	resp, err := conn.V3.ListAllSubnet(ctx, "", nil)
 	if err != nil {
 		return nil, err
@@ -141,11 +141,15 @@ func findSubnetByName(ctx context.Context, conn *v3.Client, name string) ([]*v3.
 		}
 	}
 
-	if len(subnets) == 0 {
-		return nil, fmt.Errorf("subnet with the given name, not found")
+	if len(subnets) > 1 {
+		return nil, fmt.Errorf("your query returned more than one result. Please use subnet_uuid argument instead")
 	}
 
-	return subnets, nil
+	if len(subnets) == 0 {
+		return nil, fmt.Errorf("did not find subnet with name %s", name)
+	}
+
+	return subnets[0], nil
 }
 
 func findGPUByName(ctx context.Context, conn *v3.Client, name string) (*v3.VMGpu, error) {
@@ -469,31 +473,9 @@ func (d *NutanixDriver) CreateRequest(ctx context.Context, vm VmConfig, state mu
 				return nil, fmt.Errorf("subnet with UUID %s not found", nic.SubnetUUID)
 			}
 		} else if nic.SubnetName != "" {
-			subnets, err := findSubnetByName(ctx, conn, nic.SubnetName)
+			subnet, err = findSubnetByName(ctx, conn, nic.SubnetName)
 			if err != nil {
 				return nil, fmt.Errorf("error while findSubnetByName, %s", err.Error())
-			}
-
-			for _, s := range subnets {
-				// overlay subnets don't have a cluster reference
-				if s.Spec.ClusterReference == nil {
-					subnet = s
-					break
-				}
-
-				if s.Spec.ClusterReference != nil &&
-					s.Spec.ClusterReference.UUID != nil &&
-					cluster != nil &&
-					cluster.Metadata != nil &&
-					cluster.Metadata.UUID != nil &&
-					*s.Spec.ClusterReference.UUID == *cluster.Metadata.UUID {
-					subnet = s
-					break
-				}
-			}
-
-			if subnet == nil {
-				return nil, fmt.Errorf("subnet named %s not found", nic.SubnetName)
 			}
 		}
 
