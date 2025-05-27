@@ -126,7 +126,7 @@ func findSubnetByUUID(ctx context.Context, conn *v3.Client, uuid string) (*v3.Su
 	return conn.V3.GetSubnet(ctx, uuid)
 }
 
-func findSubnetByName(ctx context.Context, conn *v3.Client, name string) (*v3.SubnetIntentResponse, error) {
+func findSubnetByName(ctx context.Context, conn *v3.Client, name, clusterUUID string) (*v3.SubnetIntentResponse, error) {
 	resp, err := conn.V3.ListAllSubnet(ctx, "", nil)
 	if err != nil {
 		return nil, err
@@ -141,15 +141,28 @@ func findSubnetByName(ctx context.Context, conn *v3.Client, name string) (*v3.Su
 		}
 	}
 
-	if len(subnets) > 1 {
-		return nil, fmt.Errorf("your query returned more than one result. Please use subnet_uuid argument instead")
+	if len(subnets) == 1 {
+		return subnets[0], nil
 	}
 
 	if len(subnets) == 0 {
 		return nil, fmt.Errorf("did not find subnet with name %s", name)
 	}
 
-	return subnets[0], nil
+	// More than one subnet. Try to narrow the subnets to one by filtering by cluster UUID.
+	clusterSubnets := make([]*v3.SubnetIntentResponse, 0)
+	for _, s := range subnets {
+		if s.Spec.ClusterReference != nil &&
+			s.Spec.ClusterReference.UUID != nil &&
+			*s.Spec.ClusterReference.UUID == clusterUUID {
+			clusterSubnets = append(clusterSubnets, s)
+		}
+	}
+	if len(clusterSubnets) == 1 {
+		return clusterSubnets[0], nil
+	}
+
+	return nil, fmt.Errorf("your query returned more than one result. Please use subnet_uuid argument instead")
 }
 
 func findGPUByName(ctx context.Context, conn *v3.Client, name string) (*v3.VMGpu, error) {
@@ -473,7 +486,7 @@ func (d *NutanixDriver) CreateRequest(ctx context.Context, vm VmConfig, state mu
 				return nil, fmt.Errorf("subnet with UUID %s not found", nic.SubnetUUID)
 			}
 		} else if nic.SubnetName != "" {
-			subnet, err = findSubnetByName(ctx, conn, nic.SubnetName)
+			subnet, err = findSubnetByName(ctx, conn, nic.SubnetName, *cluster.Metadata.UUID)
 			if err != nil {
 				return nil, fmt.Errorf("error while findSubnetByName, %s", err.Error())
 			}
