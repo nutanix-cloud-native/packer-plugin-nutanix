@@ -11,6 +11,10 @@ build {
     name = "centos-kickstart"
   }
 
+  source "nutanix.ubuntu-autoinstall" {
+    name = "ubuntu-autoinstall"
+  }
+
   source "nutanix.windows" {
     name = "windows"
   }
