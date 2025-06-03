@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"net"
 	"net/http"
 	"path"
 	"strings"
@@ -632,24 +633,62 @@ func (d *NutanixDriver) Create(ctx context.Context, req *v3.VMIntentInput) (*nut
 
 	log.Print("vm succesfully created")
 
-	// Wait for the VM obtain an IP address
-
-	log.Printf("[INFO] Waiting for IP, up to timeout: %s", d.Config.WaitTimeout)
-
-	iteration := int(d.Config.WaitTimeout.Seconds()) / 5
 	var vm *v3.VMIntentResponse
-	for i := 0; i < iteration; i++ {
-		vm, err = conn.V3.GetVM(ctx, uuid)
-		if err != nil || len(vm.Status.Resources.NicList[0].IPEndpointList) == (0) {
-			log.Printf("Waiting VM (%s) ip configuration", uuid)
-			<-time.After(5 * time.Second)
-			continue
-		}
-		IPAddress := *vm.Status.Resources.NicList[0].IPEndpointList[0].IP
-		log.Printf("VM (%s) configured with ip address %s", uuid, IPAddress)
-		return &nutanixInstance{nutanix: *vm}, err
+	vm, err = conn.V3.GetVM(ctx, uuid)
+	if err != nil {
+		log.Printf("error getting vm: %s", err.Error())
+		return nil, err
 	}
-	return nil, fmt.Errorf("not able to get ip address for vm (%s)", uuid)
+
+	return &nutanixInstance{nutanix: *vm}, nil
+}
+
+// WaitForIP waits for the virtual machine to obtain an IP address.
+func (d *NutanixDriver) WaitForIP(ctx context.Context, uuid string, ipNet *net.IPNet) (string, error) {
+
+	configCreds := client.Credentials{
+		URL:      fmt.Sprintf("%s:%d", d.ClusterConfig.Endpoint, d.ClusterConfig.Port),
+		Endpoint: d.ClusterConfig.Endpoint,
+		Username: d.ClusterConfig.Username,
+		Password: d.ClusterConfig.Password,
+		Port:     string(d.ClusterConfig.Port),
+		Insecure: d.ClusterConfig.Insecure,
+	}
+
+	conn, err := v3.NewV3Client(configCreds)
+	if err != nil {
+		return "", err
+	}
+
+	var IPAddress string
+
+	vm, err := conn.V3.GetVM(ctx, uuid)
+	if err != nil {
+		log.Printf("error getting vm: %s", err.Error())
+		return "", err
+	}
+
+	if len(vm.Status.Resources.NicList[0].IPEndpointList) == (0) {
+		log.Printf("vm (%s) not configured with ip address", uuid)
+		return "", fmt.Errorf("no IP endpoints found for VM with UUID %s", uuid)
+	}
+
+	IPAddress = *vm.Status.Resources.NicList[0].IPEndpointList[0].IP
+	log.Printf("VM (%s) configured with ip address %s", uuid, IPAddress)
+
+	parseIP := net.ParseIP(IPAddress)
+	if ipNet != nil && !ipNet.Contains(parseIP) {
+		// IP address is not in the expected range.
+		return "", nil
+	}
+	// Default to IPv4 if no IPNet is provided.
+	if ipNet == nil && parseIP.To4() == nil {
+		return "", nil
+	}
+	return IPAddress, nil
+
+	// Unable to find an IP address.
+
 }
 
 func (d *NutanixDriver) Delete(ctx context.Context, vmUUID string) error {

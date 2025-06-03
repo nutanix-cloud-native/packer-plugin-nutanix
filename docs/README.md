@@ -1,6 +1,5 @@
 
-The `Nutanix` multi-component plugin can be used with HashiCorp [Packer](https://www.packer.io)
-to create custom images.
+The `Nutanix` multi-component plugin can be used with HashiCorp [Packer](https://www.packer.io) to create custom images.
 
 ### Installation
 
@@ -10,7 +9,7 @@ To install this plugin, copy and paste this code into your Packer configuration,
 packer {
   required_plugins {
     nutanix = {
-      version = ">= 0.12.2"
+      version = ">= 0.13.0"
       source  = "github.com/nutanix-cloud-native/nutanix"
     }
   }
@@ -31,8 +30,8 @@ $ packer plugins install github.com/nutanix-cloud-native/nutanix
 
 ### Limitations
 #### Building temporary ISOs on MacOS
-If you want to use the cd_files Option to create an additional iso-image for kickstart-files or similar be aware that MacOS won´t create a suitable file.
-Please install xorriso for support on MacOS.
+If you want to use the `cd_files` option to create an additional ISO image for kickstart files or similar purposes, be aware that macOS does not generate a compatible file by default.  
+To enable support on macOS, please install xorriso.
 ```
  brew install xorriso
 ```
