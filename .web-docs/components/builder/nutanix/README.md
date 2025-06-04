@@ -39,7 +39,7 @@ These parameters allow to configure everything around image creation, from the t
 - `force_deregister` (bool) - Allow output image override if already exists.
 - `image_delete` (bool) - Delete image once build process is completed (default is false).
 - `image_export` (bool) - Export raw image in the current folder (default is false).
-- `image_export_type` (bool) - Export image type (default is RAW, accepted values are RAW, VMDK, QCOW2).
+- `image_export_type` (string) - Export image type (default is RAW, accepted values are RAW, VMDK, QCOW2).
 - `shutdown_command` (string) - Command line to shutdown your temporary VM.
 - `shutdown_timeout` (string) - Timeout for VM shutdown (format : 2m).
 - `vm_force_delete` (bool) - Delete vm even if build is not succesful (default is false).

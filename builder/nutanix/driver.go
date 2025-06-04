@@ -962,7 +962,7 @@ func (d *NutanixDriver) getRequest(ctx context.Context, url string) (*http.Respo
 		return nil, err
 	}
 
-	if resp.StatusCode > 200 && resp.StatusCode < 300 {
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return nil, fmt.Errorf(resp.Status)
 	}
 	return resp, nil
