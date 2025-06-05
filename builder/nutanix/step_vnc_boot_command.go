@@ -18,6 +18,10 @@ type stepVNCBootCommand struct {
 }
 
 func (s *stepVNCBootCommand) Run(ctx context.Context, state multistep.StateBag) multistep.StepAction {
+	if s.Config.BootCommand == nil {
+		return multistep.ActionContinue
+	}
+
 	if s.Config.DisableVNC {
 		log.Println("Skipping boot command step...")
 		return multistep.ActionContinue
