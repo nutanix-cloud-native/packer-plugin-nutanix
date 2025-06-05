@@ -662,15 +662,20 @@ func (d *NutanixDriver) WaitForIP(ctx context.Context, uuid string, ipNet *net.I
 
 	var IPAddress string
 
-	vm, err := conn.V3.GetVM(ctx, uuid)
-	if err != nil {
-		log.Printf("error getting vm: %s", err.Error())
-		return "", err
-	}
-
-	if len(vm.Status.Resources.NicList[0].IPEndpointList) == (0) {
-		log.Printf("vm (%s) not configured with ip address", uuid)
-		return "", fmt.Errorf("no IP endpoints found for VM with UUID %s", uuid)
+	var vm *v3.VMIntentResponse
+	for {
+		vm, err = conn.V3.GetVM(ctx, uuid)
+		if err != nil {
+			log.Printf("error getting vm: %s", err.Error())
+			return "", err
+		}
+		if len(vm.Status.Resources.NicList) > 0 &&
+			len(vm.Status.Resources.NicList[0].IPEndpointList) > 0 &&
+			vm.Status.Resources.NicList[0].IPEndpointList[0].IP != nil &&
+			*vm.Status.Resources.NicList[0].IPEndpointList[0].IP != "" {
+			break
+		}
+		time.Sleep(5 * time.Second)
 	}
 
 	IPAddress = *vm.Status.Resources.NicList[0].IPEndpointList[0].IP
