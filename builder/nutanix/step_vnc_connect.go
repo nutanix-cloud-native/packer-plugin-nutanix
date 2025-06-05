@@ -19,16 +19,19 @@ import (
 )
 
 type stepVNCConnect struct {
-	VNCEnabled         bool
-	InsecureConnection bool
-	ClusterConfig      *ClusterConfig
+	Config *Config
 }
 
 func (s *stepVNCConnect) Run(ctx context.Context, state multistep.StateBag) multistep.StepAction {
-	if !s.VNCEnabled {
+	ui := state.Get("ui").(packer.Ui)
+
+	if s.Config.BootCommand == nil {
 		return multistep.ActionContinue
 	}
-	ui := state.Get("ui").(packer.Ui)
+
+	if s.Config.DisableVNC {
+		return multistep.ActionContinue
+	}
 
 	var c *vnc.ClientConn
 	var err error
@@ -48,6 +51,7 @@ func (s *stepVNCConnect) Run(ctx context.Context, state multistep.StateBag) mult
 }
 
 func (s *stepVNCConnect) ConnectVNCOverWebsocketClient(state multistep.StateBag) (*vnc.ClientConn, error) {
+
 	log.Printf("retrieving auth cookie for VNC connection...")
 	cookie, err := s.getAuthCookie(state)
 	if err != nil {
@@ -57,7 +61,7 @@ func (s *stepVNCConnect) ConnectVNCOverWebsocketClient(state multistep.StateBag)
 	vmUUID := state.Get("vm_uuid").(string)
 	clusterUUID := state.Get("cluster_uuid").(string)
 
-	wsURL := fmt.Sprintf("wss://%s:%d/vnc/vm/%s/proxy?proxyClusterUuid=%s", s.ClusterConfig.Endpoint, s.ClusterConfig.Port, vmUUID, clusterUUID)
+	wsURL := fmt.Sprintf("wss://%s:%d/vnc/vm/%s/proxy?proxyClusterUuid=%s", s.Config.ClusterConfig.Endpoint, s.Config.ClusterConfig.Port, vmUUID, clusterUUID)
 
 	// Parse the URL
 	u, err := url.Parse(wsURL)
@@ -82,7 +86,7 @@ func (s *stepVNCConnect) ConnectVNCOverWebsocketClient(state multistep.StateBag)
 	wsConfig.Header.Set("Cookie", strings.Join(cookieHeader, "; "))
 
 	wsConfig.TlsConfig = &tls.Config{
-		InsecureSkipVerify: s.ClusterConfig.Insecure,
+		InsecureSkipVerify: s.Config.ClusterConfig.Insecure,
 	}
 
 	// Connect to the WebSocket server
@@ -110,18 +114,18 @@ func (s *stepVNCConnect) ConnectVNCOverWebsocketClient(state multistep.StateBag)
 
 func (s *stepVNCConnect) getAuthCookie(state multistep.StateBag) ([]*http.Cookie, error) {
 
-	loginURL := fmt.Sprintf("https://%s:%d/api/nutanix/v3/users/me", s.ClusterConfig.Endpoint, s.ClusterConfig.Port)
+	loginURL := fmt.Sprintf("https://%s:%d/api/nutanix/v3/users/me", s.Config.ClusterConfig.Endpoint, s.Config.ClusterConfig.Port)
 
 	req, err := http.NewRequest("GET", loginURL, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %v", err)
 	}
 	req.Header.Add("Content-Type", "application/json")
-	req.SetBasicAuth(s.ClusterConfig.Username, s.ClusterConfig.Password)
+	req.SetBasicAuth(s.Config.ClusterConfig.Username, s.Config.ClusterConfig.Password)
 
 	// Create a custom HTTP client that skips SSL verification
 	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: s.ClusterConfig.Insecure},
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: s.Config.ClusterConfig.Insecure},
 	}
 
 	// Create a cookie jar

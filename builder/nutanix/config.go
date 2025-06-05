@@ -307,11 +307,6 @@ func (c *Config) Prepare(raws ...interface{}) ([]string, error) {
 		c.CommConfig.SSHTimeout = 20 * time.Minute
 	}
 
-	// Define default ip_wait_timeout to 15 min
-	if c.WaitTimeout == 0 {
-		c.WaitTimeout = 15 * time.Minute
-	}
-
 	errs = packersdk.MultiErrorAppend(errs, c.ShutdownConfig.Prepare(&c.ctx)...)
 	errs = packersdk.MultiErrorAppend(errs, c.CDConfig.Prepare(&c.ctx)...)
 	errs = packersdk.MultiErrorAppend(errs, c.CommConfig.Prepare(&c.ctx)...)

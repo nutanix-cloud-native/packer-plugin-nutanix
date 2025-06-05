@@ -63,8 +63,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 		},
 		&stepBuildVM{},
 		&stepVNCConnect{
-			VNCEnabled:    !b.config.DisableVNC,
-			ClusterConfig: &b.config.ClusterConfig,
+			Config: &b.config,
 		},
 		&stepVNCBootCommand{
 			Config: &b.config,
