@@ -85,8 +85,9 @@ func (s *stepWaitForIp) Run(ctx context.Context, state multistep.StateBag) multi
 		cancel()
 	}()
 
+	ui.Say("Waiting for IP...")
+
 	go func() {
-		ui.Say("Waiting for IP...")
 		ip, err = doGetIp(d, vm, sub, s.Config)
 		waitDone <- true
 	}()
