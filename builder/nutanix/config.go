@@ -1,4 +1,4 @@
-//go:generate packer-sdc mapstructure-to-hcl2 -type Config,Category,ClusterConfig,VmConfig,VmDisk,VmNIC,GPU
+//go:generate packer-sdc mapstructure-to-hcl2 -type Config,Category,ClusterConfig,VmConfig,VmDisk,VmNIC,GPU,OvaConfig
 
 package nutanix
 
@@ -48,7 +48,7 @@ type Config struct {
 	shutdowncommand.ShutdownConfig `mapstructure:",squash"`
 	ClusterConfig                  `mapstructure:",squash"`
 	VmConfig                       `mapstructure:",squash"`
-	OvaConfig                      `mapstructure:",squash"`
+	OvaConfig                      OvaConfig  `mapstructure:"ova_config"`
 	ForceDeregister                bool       `mapstructure:"force_deregister" json:"force_deregister" required:"false"`
 	ImageDescription               string     `mapstructure:"image_description" json:"image_description" required:"false"`
 	ImageCategories                []Category `mapstructure:"image_categories" required:"false"`
@@ -112,10 +112,10 @@ type VmConfig struct {
 }
 
 type OvaConfig struct {
-	Export bool   `mapstructure:"ova_export" json:"ova_export" required:"false"`
-	Create bool   `mapstructure:"ova_create" json:"ova_create" required:"false"`
-	Format string `mapstructure:"ova_format" json:"ova_format" required:"false"`
-	Name   string `mapstructure:"ova_name" json:"ova_name" required:"false"`
+	Export bool   `mapstructure:"export" json:"export" required:"false"`
+	Create bool   `mapstructure:"create" json:"create" required:"false"`
+	Format string `mapstructure:"format" json:"format" required:"false"`
+	Name   string `mapstructure:"name" json:"name" required:"false"`
 }
 
 func (c *Config) Prepare(raws ...interface{}) ([]string, error) {

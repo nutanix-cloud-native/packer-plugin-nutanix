@@ -157,10 +157,7 @@ type FlatConfig struct {
 	Project                   *string           `mapstructure:"project" required:"false" cty:"project" hcl:"project"`
 	GPU                       []FlatGPU         `mapstructure:"gpu" required:"false" cty:"gpu" hcl:"gpu"`
 	SerialPort                *bool             `mapstructure:"serialport" json:"serialport" required:"false" cty:"serialport" hcl:"serialport"`
-	Export                    *bool             `mapstructure:"ova_export" json:"ova_export" required:"false" cty:"ova_export" hcl:"ova_export"`
-	Create                    *bool             `mapstructure:"ova_create" json:"ova_create" required:"false" cty:"ova_create" hcl:"ova_create"`
-	Format                    *string           `mapstructure:"ova_format" json:"ova_format" required:"false" cty:"ova_format" hcl:"ova_format"`
-	Name                      *string           `mapstructure:"ova_name" json:"ova_name" required:"false" cty:"ova_name" hcl:"ova_name"`
+	OvaConfig                 *FlatOvaConfig    `mapstructure:"ova_config" cty:"ova_config" hcl:"ova_config"`
 	ForceDeregister           *bool             `mapstructure:"force_deregister" json:"force_deregister" required:"false" cty:"force_deregister" hcl:"force_deregister"`
 	ImageDescription          *string           `mapstructure:"image_description" json:"image_description" required:"false" cty:"image_description" hcl:"image_description"`
 	ImageCategories           []FlatCategory    `mapstructure:"image_categories" required:"false" cty:"image_categories" hcl:"image_categories"`
@@ -272,10 +269,7 @@ func (*FlatConfig) HCL2Spec() map[string]hcldec.Spec {
 		"project":                      &hcldec.AttrSpec{Name: "project", Type: cty.String, Required: false},
 		"gpu":                          &hcldec.BlockListSpec{TypeName: "gpu", Nested: hcldec.ObjectSpec((*FlatGPU)(nil).HCL2Spec())},
 		"serialport":                   &hcldec.AttrSpec{Name: "serialport", Type: cty.Bool, Required: false},
-		"ova_export":                   &hcldec.AttrSpec{Name: "ova_export", Type: cty.Bool, Required: false},
-		"ova_create":                   &hcldec.AttrSpec{Name: "ova_create", Type: cty.Bool, Required: false},
-		"ova_format":                   &hcldec.AttrSpec{Name: "ova_format", Type: cty.String, Required: false},
-		"ova_name":                     &hcldec.AttrSpec{Name: "ova_name", Type: cty.String, Required: false},
+		"ova_config":                   &hcldec.BlockSpec{TypeName: "ova_config", Nested: hcldec.ObjectSpec((*FlatOvaConfig)(nil).HCL2Spec())},
 		"force_deregister":             &hcldec.AttrSpec{Name: "force_deregister", Type: cty.Bool, Required: false},
 		"image_description":            &hcldec.AttrSpec{Name: "image_description", Type: cty.String, Required: false},
 		"image_categories":             &hcldec.BlockListSpec{TypeName: "image_categories", Nested: hcldec.ObjectSpec((*FlatCategory)(nil).HCL2Spec())},
@@ -305,6 +299,35 @@ func (*GPU) FlatMapstructure() interface{ HCL2Spec() map[string]hcldec.Spec } {
 func (*FlatGPU) HCL2Spec() map[string]hcldec.Spec {
 	s := map[string]hcldec.Spec{
 		"name": &hcldec.AttrSpec{Name: "name", Type: cty.String, Required: false},
+	}
+	return s
+}
+
+// FlatOvaConfig is an auto-generated flat version of OvaConfig.
+// Where the contents of a field with a `mapstructure:,squash` tag are bubbled up.
+type FlatOvaConfig struct {
+	Export *bool   `mapstructure:"export" json:"export" required:"false" cty:"export" hcl:"export"`
+	Create *bool   `mapstructure:"create" json:"create" required:"false" cty:"create" hcl:"create"`
+	Format *string `mapstructure:"format" json:"format" required:"false" cty:"format" hcl:"format"`
+	Name   *string `mapstructure:"name" json:"name" required:"false" cty:"name" hcl:"name"`
+}
+
+// FlatMapstructure returns a new FlatOvaConfig.
+// FlatOvaConfig is an auto-generated flat version of OvaConfig.
+// Where the contents a fields with a `mapstructure:,squash` tag are bubbled up.
+func (*OvaConfig) FlatMapstructure() interface{ HCL2Spec() map[string]hcldec.Spec } {
+	return new(FlatOvaConfig)
+}
+
+// HCL2Spec returns the hcl spec of a OvaConfig.
+// This spec is used by HCL to read the fields of OvaConfig.
+// The decoded values from this spec will then be applied to a FlatOvaConfig.
+func (*FlatOvaConfig) HCL2Spec() map[string]hcldec.Spec {
+	s := map[string]hcldec.Spec{
+		"export": &hcldec.AttrSpec{Name: "export", Type: cty.Bool, Required: false},
+		"create": &hcldec.AttrSpec{Name: "create", Type: cty.Bool, Required: false},
+		"format": &hcldec.AttrSpec{Name: "format", Type: cty.String, Required: false},
+		"name":   &hcldec.AttrSpec{Name: "name", Type: cty.String, Required: false},
 	}
 	return s
 }
