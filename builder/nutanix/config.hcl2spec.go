@@ -144,6 +144,7 @@ type FlatConfig struct {
 	VMName                    *string           `mapstructure:"vm_name" json:"vm_name" required:"false" cty:"vm_name" hcl:"vm_name"`
 	OSType                    *string           `mapstructure:"os_type" json:"os_type" required:"true" cty:"os_type" hcl:"os_type"`
 	BootType                  *string           `mapstructure:"boot_type" json:"boot_type" required:"false" cty:"boot_type" hcl:"boot_type"`
+	VTPM                      *FlatVTPM         `mapstructure:"vtpm" json:"vtpm" required:"false" cty:"vtpm" hcl:"vtpm"`
 	BootPriority              *string           `mapstructure:"boot_priority" json:"boot_priority" required:"false" cty:"boot_priority" hcl:"boot_priority"`
 	VmDisks                   []FlatVmDisk      `mapstructure:"vm_disks" cty:"vm_disks" hcl:"vm_disks"`
 	VmNICs                    []FlatVmNIC       `mapstructure:"vm_nics" cty:"vm_nics" hcl:"vm_nics"`
@@ -255,6 +256,7 @@ func (*FlatConfig) HCL2Spec() map[string]hcldec.Spec {
 		"vm_name":                      &hcldec.AttrSpec{Name: "vm_name", Type: cty.String, Required: false},
 		"os_type":                      &hcldec.AttrSpec{Name: "os_type", Type: cty.String, Required: false},
 		"boot_type":                    &hcldec.AttrSpec{Name: "boot_type", Type: cty.String, Required: false},
+		"vtpm":                         &hcldec.BlockSpec{TypeName: "vtpm", Nested: hcldec.ObjectSpec((*FlatVTPM)(nil).HCL2Spec())},
 		"boot_priority":                &hcldec.AttrSpec{Name: "boot_priority", Type: cty.String, Required: false},
 		"vm_disks":                     &hcldec.BlockListSpec{TypeName: "vm_disks", Nested: hcldec.ObjectSpec((*FlatVmDisk)(nil).HCL2Spec())},
 		"vm_nics":                      &hcldec.BlockListSpec{TypeName: "vm_nics", Nested: hcldec.ObjectSpec((*FlatVmNIC)(nil).HCL2Spec())},
@@ -301,12 +303,36 @@ func (*FlatGPU) HCL2Spec() map[string]hcldec.Spec {
 	return s
 }
 
+// FlatVTPM is an auto-generated flat version of VTPM.
+// Where the contents of a field with a `mapstructure:,squash` tag are bubbled up.
+type FlatVTPM struct {
+	Enabled *bool `mapstructure:"enabled" json:"enabled" required:"false" cty:"enabled" hcl:"enabled"`
+}
+
+// FlatMapstructure returns a new FlatVTPM.
+// FlatVTPM is an auto-generated flat version of VTPM.
+// Where the contents a fields with a `mapstructure:,squash` tag are bubbled up.
+func (*VTPM) FlatMapstructure() interface{ HCL2Spec() map[string]hcldec.Spec } {
+	return new(FlatVTPM)
+}
+
+// HCL2Spec returns the hcl spec of a VTPM.
+// This spec is used by HCL to read the fields of VTPM.
+// The decoded values from this spec will then be applied to a FlatVTPM.
+func (*FlatVTPM) HCL2Spec() map[string]hcldec.Spec {
+	s := map[string]hcldec.Spec{
+		"enabled": &hcldec.AttrSpec{Name: "enabled", Type: cty.Bool, Required: false},
+	}
+	return s
+}
+
 // FlatVmConfig is an auto-generated flat version of VmConfig.
 // Where the contents of a field with a `mapstructure:,squash` tag are bubbled up.
 type FlatVmConfig struct {
 	VMName       *string        `mapstructure:"vm_name" json:"vm_name" required:"false" cty:"vm_name" hcl:"vm_name"`
 	OSType       *string        `mapstructure:"os_type" json:"os_type" required:"true" cty:"os_type" hcl:"os_type"`
 	BootType     *string        `mapstructure:"boot_type" json:"boot_type" required:"false" cty:"boot_type" hcl:"boot_type"`
+	VTPM         *FlatVTPM      `mapstructure:"vtpm" json:"vtpm" required:"false" cty:"vtpm" hcl:"vtpm"`
 	BootPriority *string        `mapstructure:"boot_priority" json:"boot_priority" required:"false" cty:"boot_priority" hcl:"boot_priority"`
 	VmDisks      []FlatVmDisk   `mapstructure:"vm_disks" cty:"vm_disks" hcl:"vm_disks"`
 	VmNICs       []FlatVmNIC    `mapstructure:"vm_nics" cty:"vm_nics" hcl:"vm_nics"`
@@ -337,6 +363,7 @@ func (*FlatVmConfig) HCL2Spec() map[string]hcldec.Spec {
 		"vm_name":       &hcldec.AttrSpec{Name: "vm_name", Type: cty.String, Required: false},
 		"os_type":       &hcldec.AttrSpec{Name: "os_type", Type: cty.String, Required: false},
 		"boot_type":     &hcldec.AttrSpec{Name: "boot_type", Type: cty.String, Required: false},
+		"vtpm":          &hcldec.BlockSpec{TypeName: "vtpm", Nested: hcldec.ObjectSpec((*FlatVTPM)(nil).HCL2Spec())},
 		"boot_priority": &hcldec.AttrSpec{Name: "boot_priority", Type: cty.String, Required: false},
 		"vm_disks":      &hcldec.BlockListSpec{TypeName: "vm_disks", Nested: hcldec.ObjectSpec((*FlatVmDisk)(nil).HCL2Spec())},
 		"vm_nics":       &hcldec.BlockListSpec{TypeName: "vm_nics", Nested: hcldec.ObjectSpec((*FlatVmNIC)(nil).HCL2Spec())},

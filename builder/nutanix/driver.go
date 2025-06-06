@@ -546,10 +546,14 @@ func (d *NutanixDriver) CreateRequest(ctx context.Context, vm VmConfig, state mu
 
 	var bootType string
 
-	if vm.BootType == NutanixIdentifierBootTypeUEFI {
+	switch vm.BootType {
+	case NutanixIdentifierBootTypeUEFI:
 		bootType = strings.ToUpper(NutanixIdentifierBootTypeUEFI)
-
-	} else {
+	case NutanixIdentifierBootTypeSecureBoot:
+		bootType = strings.ToUpper(NutanixIdentifierBootTypeSecureBoot)
+		// Force machine type to "Q35", which is required for Secure Boot
+		req.Spec.Resources.MachineType = StringPtr("Q35")
+	default:
 		bootType = strings.ToUpper(NutanixIdentifierBootTypeLegacy)
 	}
 
@@ -572,6 +576,12 @@ func (d *NutanixDriver) CreateRequest(ctx context.Context, vm VmConfig, state mu
 	req.Spec.Resources.BootConfig = &v3.VMBootConfig{
 		BootType:            &bootType,
 		BootDeviceOrderList: bootDeviceOrderList,
+	}
+
+	if bootType == NutanixIdentifierBootTypeUEFI || bootType == NutanixIdentifierBootTypeSecureBoot && vm.VTPM.Enabled {
+		req.Spec.Resources.VTPM = &v3.VTPM{
+			Enabled: &vm.VTPM.Enabled,
+		}
 	}
 
 	if len(vm.VMCategories) != 0 {
