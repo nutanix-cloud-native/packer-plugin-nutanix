@@ -141,9 +141,22 @@ func doGetIp(d *NutanixDriver, uuid string, ctx context.Context, c *WaitIpConfig
 		interval = 1 * time.Second
 	}
 loop:
+	// Check for ctx cancellation first
+	select {
+	case <-ctx.Done():
+		return "", fmt.Errorf("cancelled waiting for IP address")
+	default:
+	}
+
 	ip, err := d.WaitForIP(ctx, uuid, c.ipnet)
 	if err != nil {
-		return "", err
+		log.Printf("[WARN] Error retrieving IP: %v", err)
+		select {
+		case <-ctx.Done():
+			return "", fmt.Errorf("cancelled while retrying after IP retrieval error")
+		case <-time.After(interval):
+			goto loop
+		}
 	}
 
 	// Check for ctx cancellation to avoid printing any IP logs at the timeout

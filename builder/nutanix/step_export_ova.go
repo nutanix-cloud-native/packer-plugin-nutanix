@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
@@ -13,14 +14,11 @@ import (
 )
 
 type StepExportOVA struct {
-	VMName         string
-	DiskFileFormat string
+	VMName    string
+	OvaConfig OvaConfig
 }
 
 func (s *StepExportOVA) Run(ctx context.Context, state multistep.StateBag) multistep.StepAction {
-	if s.DiskFileFormat != "VMDK" && s.DiskFileFormat != "QCOW2" {
-		return multistep.ActionContinue
-	}
 	ui := state.Get("ui").(packer.Ui)
 	d := state.Get("driver").(Driver)
 	vmUUID := state.Get("vm_uuid")
@@ -31,7 +29,7 @@ func (s *StepExportOVA) Run(ctx context.Context, state multistep.StateBag) multi
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
 
-	file, err := d.ExportOVA(ctx, vmUUID.(string), s.DiskFileFormat)
+	file, err := d.ExportOVA(ctx, s.OvaConfig.Name)
 	if err != nil {
 		ui.Error("Image export failed: " + err.Error())
 		state.Put("error", err)
@@ -66,7 +64,7 @@ func (s *StepExportOVA) Run(ctx context.Context, state multistep.StateBag) multi
 			return multistep.ActionHalt
 		}
 
-		name := s.VMName + ".ova"
+		name := s.OvaConfig.Name + "." + strings.ToLower(s.OvaConfig.Format)
 		os.Rename(tempDestinationPath, name)
 
 		ui.Message(fmt.Sprintf("Image exported as \"%s\"", name))

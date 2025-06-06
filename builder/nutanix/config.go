@@ -48,12 +48,12 @@ type Config struct {
 	shutdowncommand.ShutdownConfig `mapstructure:",squash"`
 	ClusterConfig                  `mapstructure:",squash"`
 	VmConfig                       `mapstructure:",squash"`
+	OvaConfig                      `mapstructure:",squash"`
 	ForceDeregister                bool       `mapstructure:"force_deregister" json:"force_deregister" required:"false"`
 	ImageDescription               string     `mapstructure:"image_description" json:"image_description" required:"false"`
 	ImageCategories                []Category `mapstructure:"image_categories" required:"false"`
 	ImageDelete                    bool       `mapstructure:"image_delete" json:"image_delete" required:"false"`
 	ImageExport                    bool       `mapstructure:"image_export" json:"image_export" required:"false"`
-	ImageExportType                string     `mapstructure:"image_export_type" json:"image_export_type" required:"false"`
 	VmForceDelete                  bool       `mapstructure:"vm_force_delete" json:"vm_force_delete" required:"false"`
 
 	ctx interpolate.Context
@@ -111,6 +111,13 @@ type VmConfig struct {
 	SerialPort   bool       `mapstructure:"serialport" json:"serialport" required:"false"`
 }
 
+type OvaConfig struct {
+	Export bool   `mapstructure:"ova_export" json:"ova_export" required:"false"`
+	Create bool   `mapstructure:"ova_create" json:"ova_create" required:"false"`
+	Format string `mapstructure:"ova_format" json:"ova_format" required:"true"`
+	Name   string `mapstructure:"ova_name" json:"ova_name" required:"false"`
+}
+
 func (c *Config) Prepare(raws ...interface{}) ([]string, error) {
 	err := config.Decode(c, &config.DecodeOpts{
 		PluginType:         BuilderId,
@@ -159,20 +166,27 @@ func (c *Config) Prepare(raws ...interface{}) ([]string, error) {
 		c.BootPriority = string(NutanixIdentifierBootPriorityCDROM)
 	}
 
-	if c.ImageExport && c.ImageExportType == "" {
-		log.Println("Image Export enabled, but no Image Export Type configured. Defaulting to 'RAW'")
-		c.ImageExportType = "RAW"
-	}
-
-	if c.ImageExportType != "" && c.ImageExportType != "VMDK" && c.ImageExportType != "RAW" && c.ImageExportType != "QCOW2" {
-		log.Println("Only supported export types are VMDK, RAW and QCOW2")
-		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("supported image_export_type is VMDK, RAW or QCOW2"))
-	}
-
 	// Validate Cluster Endpoint
 	if c.ClusterConfig.Endpoint == "" {
 		log.Println("Nutanix Endpoint missing from configuration")
 		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("missing nutanix_endpoint"))
+	}
+
+	// Set name for OVA if not provided
+	if c.OvaConfig.Create && c.OvaConfig.Name == "" {
+		c.OvaConfig.Name = c.VMName
+	}
+
+	// When trying to export OVA, it should always be created
+	if c.OvaConfig.Export && !c.OvaConfig.Create {
+		log.Println("Setting ova_create to 'true', because ova_export is 'true'")
+		c.OvaConfig.Create = true
+	}
+
+	// OvaConfig format should be vmdk or qcow2
+	if c.OvaConfig.Format != "vmdk" && c.OvaConfig.Format != "qcow2" {
+		log.Println("Incorrect ova format")
+		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("ova_format should be 'vmdk' or 'qcow2'"))
 	}
 
 	// Validate Cluster Name

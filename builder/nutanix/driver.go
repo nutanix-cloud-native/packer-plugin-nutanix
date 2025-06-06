@@ -38,7 +38,8 @@ type Driver interface {
 	CreateImageFile(context.Context, string, VmConfig) (*nutanixImage, error)
 	DeleteImage(context.Context, string) error
 	GetImage(context.Context, string) (*nutanixImage, error)
-	ExportOVA(context.Context, string, string) (io.ReadCloser, error)
+	CreateOVA(context.Context, string, string, string) error
+	ExportOVA(context.Context, string) (io.ReadCloser, error)
 	ExportImage(context.Context, string) (io.ReadCloser, error)
 	SaveVMDisk(context.Context, string, int, []Category) (*nutanixImage, error)
 	WaitForShutdown(string, <-chan struct{}) bool
@@ -1003,7 +1004,7 @@ func (d *NutanixDriver) postRequest(ctx context.Context, url string, payload map
 	return resp, nil
 }
 
-func GetOVAByName(ctx context.Context, entityType string, vmUUID string, conn *v3.Client) string {
+func GetLatestOVAByName(ctx context.Context, entityType string, vmUUID string, conn *v3.Client) string {
 	request := v3.GroupsGetEntitiesRequest{
 		EntityType:     &entityType,
 		FilterCriteria: fmt.Sprintf(`name==%s`, vmUUID),
@@ -1021,25 +1022,41 @@ func GetOVAByName(ctx context.Context, entityType string, vmUUID string, conn *v
 		if len(groupResults) > 0 {
 			entityList := groupResults[0].EntityResults
 			if len(entityList) > 0 {
-				return entityList[0].EntityID
+				var latestEntity *v3.GroupsEntity
+				var latestTime int64
+
+				for _, entity := range entityList {
+					for _, field := range entity.Data {
+						for _, val := range field.Values {
+							if val.Time > latestTime {
+								latestTime = val.Time
+								latestEntity = entity
+							}
+						}
+					}
+				}
+
+				if latestEntity != nil {
+					return latestEntity.EntityID
+				}
 			}
 		}
 	}
 	return ""
 }
 
-func (d *NutanixDriver) createExportOVATask(ctx context.Context, vmUUID string, ovaName string, diskFileFormat string) (string, error) {
+func (d *NutanixDriver) CreateOVA(ctx context.Context, ovaName string, vmUUID string, diskFileFormat string) error {
 	url := fmt.Sprintf("https://%s:%d/api/nutanix/v3/vms/%s/export", d.ClusterConfig.Endpoint, d.ClusterConfig.Port, vmUUID)
 	log.Printf("export ova using api: %s", url)
 
 	payload := map[string]string{
 		"name":             ovaName,
-		"disk_file_format": diskFileFormat,
+		"disk_file_format": strings.ToUpper(diskFileFormat),
 	}
 
 	resp, err := d.postRequest(ctx, url, payload)
 	if err != nil {
-		return "", err
+		return err
 	}
 
 	var result struct {
@@ -1047,14 +1064,35 @@ func (d *NutanixDriver) createExportOVATask(ctx context.Context, vmUUID string, 
 	}
 	err = json.NewDecoder(resp.Body).Decode(&result)
 	if err != nil {
-		return "", err
+		return err
 	}
 	log.Printf("export task created with Task UUID: %s", result.TaskUUID)
-	return result.TaskUUID, nil
+
+	configCreds := client.Credentials{
+		URL:      fmt.Sprintf("%s:%d", d.ClusterConfig.Endpoint, d.ClusterConfig.Port),
+		Endpoint: d.ClusterConfig.Endpoint,
+		Username: d.ClusterConfig.Username,
+		Password: d.ClusterConfig.Password,
+		Port:     string(d.ClusterConfig.Port),
+		Insecure: d.ClusterConfig.Insecure,
+	}
+
+	conn, err := v3.NewV3Client(configCreds)
+	if err != nil {
+		return err
+	}
+
+	err = checkTask(ctx, conn, result.TaskUUID, 3600)
+	if err != nil {
+		return err
+	}
+
+	log.Printf("OVA export task %s completed successfully.", result.TaskUUID)
+	return nil
 }
 
-func (d *NutanixDriver) ExportOVA(ctx context.Context, vmUUID string, diskFileFormat string) (io.ReadCloser, error) {
-	log.Printf("starting OVA export for VM UUID: %s with disk format: %s", vmUUID, diskFileFormat)
+func (d *NutanixDriver) ExportOVA(ctx context.Context, ovaName string) (io.ReadCloser, error) {
+	log.Printf("starting OVA export for OVA: %s", ovaName)
 	configCreds := client.Credentials{
 		URL:      fmt.Sprintf("%s:%d", d.ClusterConfig.Endpoint, d.ClusterConfig.Port),
 		Endpoint: d.ClusterConfig.Endpoint,
@@ -1069,24 +1107,11 @@ func (d *NutanixDriver) ExportOVA(ctx context.Context, vmUUID string, diskFileFo
 		return nil, fmt.Errorf("error while NewV3Client, %s", err.Error())
 	}
 
-	ovaName := fmt.Sprintf("packer-export-%s", vmUUID)
-	taskUUID, err := d.createExportOVATask(ctx, vmUUID, ovaName, diskFileFormat)
-	if err != nil {
-		return nil, err
-	}
-
-	err = checkTask(ctx, conn, taskUUID, 3600)
-	if err != nil {
-		return nil, err
-	}
-
-	log.Printf("OVA export task %s completed successfully.", taskUUID)
-
 	var ovaUUID string
 
 	// Recheck for a little while to make sure the OVA with name ovaName appears
 	for i := 0; i < (60 / 5); i++ {
-		ovaUUID = GetOVAByName(ctx, "ova", ovaName, conn)
+		ovaUUID = GetLatestOVAByName(ctx, "ova", ovaName, conn)
 		if ovaUUID == "" {
 			<-time.After(5 * time.Second)
 		}

@@ -157,12 +157,15 @@ type FlatConfig struct {
 	Project                   *string           `mapstructure:"project" required:"false" cty:"project" hcl:"project"`
 	GPU                       []FlatGPU         `mapstructure:"gpu" required:"false" cty:"gpu" hcl:"gpu"`
 	SerialPort                *bool             `mapstructure:"serialport" json:"serialport" required:"false" cty:"serialport" hcl:"serialport"`
+	Export                    *bool             `mapstructure:"ova_export" json:"ova_export" required:"false" cty:"ova_export" hcl:"ova_export"`
+	Create                    *bool             `mapstructure:"ova_create" json:"ova_create" required:"false" cty:"ova_create" hcl:"ova_create"`
+	Format                    *string           `mapstructure:"ova_format" json:"ova_format" required:"true" cty:"ova_format" hcl:"ova_format"`
+	Name                      *string           `mapstructure:"ova_name" json:"ova_name" required:"false" cty:"ova_name" hcl:"ova_name"`
 	ForceDeregister           *bool             `mapstructure:"force_deregister" json:"force_deregister" required:"false" cty:"force_deregister" hcl:"force_deregister"`
 	ImageDescription          *string           `mapstructure:"image_description" json:"image_description" required:"false" cty:"image_description" hcl:"image_description"`
 	ImageCategories           []FlatCategory    `mapstructure:"image_categories" required:"false" cty:"image_categories" hcl:"image_categories"`
 	ImageDelete               *bool             `mapstructure:"image_delete" json:"image_delete" required:"false" cty:"image_delete" hcl:"image_delete"`
 	ImageExport               *bool             `mapstructure:"image_export" json:"image_export" required:"false" cty:"image_export" hcl:"image_export"`
-	ImageExportType           *string           `mapstructure:"image_export_type" json:"image_export_type" required:"false" cty:"image_export_type" hcl:"image_export_type"`
 	VmForceDelete             *bool             `mapstructure:"vm_force_delete" json:"vm_force_delete" required:"false" cty:"vm_force_delete" hcl:"vm_force_delete"`
 }
 
@@ -269,13 +272,16 @@ func (*FlatConfig) HCL2Spec() map[string]hcldec.Spec {
 		"project":                      &hcldec.AttrSpec{Name: "project", Type: cty.String, Required: false},
 		"gpu":                          &hcldec.BlockListSpec{TypeName: "gpu", Nested: hcldec.ObjectSpec((*FlatGPU)(nil).HCL2Spec())},
 		"serialport":                   &hcldec.AttrSpec{Name: "serialport", Type: cty.Bool, Required: false},
+		"ova_export":                   &hcldec.AttrSpec{Name: "ova_export", Type: cty.Bool, Required: false},
+		"ova_create":                   &hcldec.AttrSpec{Name: "ova_create", Type: cty.Bool, Required: false},
+		"ova_format":                   &hcldec.AttrSpec{Name: "ova_format", Type: cty.String, Required: false},
+		"ova_name":                     &hcldec.AttrSpec{Name: "ova_name", Type: cty.String, Required: false},
 		"force_deregister":             &hcldec.AttrSpec{Name: "force_deregister", Type: cty.Bool, Required: false},
 		"image_description":            &hcldec.AttrSpec{Name: "image_description", Type: cty.String, Required: false},
 		"image_categories":             &hcldec.BlockListSpec{TypeName: "image_categories", Nested: hcldec.ObjectSpec((*FlatCategory)(nil).HCL2Spec())},
 		"image_delete":                 &hcldec.AttrSpec{Name: "image_delete", Type: cty.Bool, Required: false},
 		"image_export":                 &hcldec.AttrSpec{Name: "image_export", Type: cty.Bool, Required: false},
 		"vm_force_delete":              &hcldec.AttrSpec{Name: "vm_force_delete", Type: cty.Bool, Required: false},
-		"image_export_type":            &hcldec.AttrSpec{Name: "image_export_type", Type: cty.String, Required: false},
 	}
 	return s
 }
