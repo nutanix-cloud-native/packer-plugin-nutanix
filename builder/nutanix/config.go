@@ -1,4 +1,4 @@
-//go:generate packer-sdc mapstructure-to-hcl2 -type Config,Category,ClusterConfig,VmConfig,VmDisk,VmNIC,GPU
+//go:generate packer-sdc mapstructure-to-hcl2 -type Config,Category,ClusterConfig,VmConfig,VmDisk,VmNIC,GPU,VTPM
 
 package nutanix
 
@@ -65,6 +65,10 @@ type GPU struct {
 	Name string `mapstructure:"name" json:"name" required:"false"`
 }
 
+type VTPM struct {
+	Enabled bool `mapstructure:"enabled" json:"enabled" required:"false"`
+}
+
 type Category struct {
 	Key   string `mapstructure:"key" json:"key" required:"false"`
 	Value string `mapstructure:"value" json:"value" required:"false"`
@@ -98,6 +102,7 @@ type VmConfig struct {
 	VMName       string     `mapstructure:"vm_name" json:"vm_name" required:"false"`
 	OSType       string     `mapstructure:"os_type" json:"os_type" required:"true"`
 	BootType     string     `mapstructure:"boot_type" json:"boot_type" required:"false"`
+	VTPM         VTPM       `mapstructure:"vtpm" json:"vtpm" required:"false"`
 	BootPriority string     `mapstructure:"boot_priority" json:"boot_priority" required:"false"`
 	VmDisks      []VmDisk   `mapstructure:"vm_disks"`
 	VmNICs       []VmNIC    `mapstructure:"vm_nics"`

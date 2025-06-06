@@ -578,6 +578,12 @@ func (d *NutanixDriver) CreateRequest(ctx context.Context, vm VmConfig, state mu
 		BootDeviceOrderList: bootDeviceOrderList,
 	}
 
+	if bootType == NutanixIdentifierBootTypeUEFI || bootType == NutanixIdentifierBootTypeSecureBoot && vm.VTPM.Enabled {
+		req.Spec.Resources.VTPM = &v3.VTPM{
+			Enabled: &vm.VTPM.Enabled,
+		}
+	}
+
 	if len(vm.VMCategories) != 0 {
 		c := make(map[string]string)
 		for _, category := range vm.VMCategories {
