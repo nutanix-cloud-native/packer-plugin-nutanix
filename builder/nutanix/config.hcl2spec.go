@@ -157,7 +157,7 @@ type FlatConfig struct {
 	Project                   *string           `mapstructure:"project" required:"false" cty:"project" hcl:"project"`
 	GPU                       []FlatGPU         `mapstructure:"gpu" required:"false" cty:"gpu" hcl:"gpu"`
 	SerialPort                *bool             `mapstructure:"serialport" json:"serialport" required:"false" cty:"serialport" hcl:"serialport"`
-	OvaConfig                 *FlatOvaConfig    `mapstructure:"ova_config" cty:"ova_config" hcl:"ova_config"`
+	OvaConfig                 *FlatOvaConfig    `mapstructure:"ova_config" required:"false" cty:"ova_config" hcl:"ova_config"`
 	ForceDeregister           *bool             `mapstructure:"force_deregister" json:"force_deregister" required:"false" cty:"force_deregister" hcl:"force_deregister"`
 	ImageDescription          *string           `mapstructure:"image_description" json:"image_description" required:"false" cty:"image_description" hcl:"image_description"`
 	ImageCategories           []FlatCategory    `mapstructure:"image_categories" required:"false" cty:"image_categories" hcl:"image_categories"`

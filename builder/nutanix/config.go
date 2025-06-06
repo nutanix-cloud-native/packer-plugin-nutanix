@@ -48,7 +48,7 @@ type Config struct {
 	shutdowncommand.ShutdownConfig `mapstructure:",squash"`
 	ClusterConfig                  `mapstructure:",squash"`
 	VmConfig                       `mapstructure:",squash"`
-	OvaConfig                      OvaConfig  `mapstructure:"ova_config"`
+	OvaConfig                      OvaConfig  `mapstructure:"ova_config" required:"false"`
 	ForceDeregister                bool       `mapstructure:"force_deregister" json:"force_deregister" required:"false"`
 	ImageDescription               string     `mapstructure:"image_description" json:"image_description" required:"false"`
 	ImageCategories                []Category `mapstructure:"image_categories" required:"false"`
@@ -189,7 +189,7 @@ func (c *Config) Prepare(raws ...interface{}) ([]string, error) {
 	}
 
 	// OvaConfig format should be vmdk or qcow2
-	if c.OvaConfig.Format != "vmdk" && c.OvaConfig.Format != "qcow2" {
+	if c.OvaConfig.Create && c.OvaConfig.Format != "vmdk" && c.OvaConfig.Format != "qcow2" {
 		log.Println("Incorrect ova format")
 		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("ova_format should be 'vmdk' or 'qcow2'"))
 	}
