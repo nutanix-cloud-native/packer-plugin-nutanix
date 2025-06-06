@@ -114,7 +114,7 @@ type VmConfig struct {
 type OvaConfig struct {
 	Export bool   `mapstructure:"ova_export" json:"ova_export" required:"false"`
 	Create bool   `mapstructure:"ova_create" json:"ova_create" required:"false"`
-	Format string `mapstructure:"ova_format" json:"ova_format" required:"true"`
+	Format string `mapstructure:"ova_format" json:"ova_format" required:"false"`
 	Name   string `mapstructure:"ova_name" json:"ova_name" required:"false"`
 }
 
@@ -181,6 +181,11 @@ func (c *Config) Prepare(raws ...interface{}) ([]string, error) {
 	if c.OvaConfig.Export && !c.OvaConfig.Create {
 		log.Println("Setting ova_create to 'true', because ova_export is 'true'")
 		c.OvaConfig.Create = true
+	}
+
+	// Set name for OVA if not provided
+	if c.OvaConfig.Create && c.OvaConfig.Format == "" {
+		c.OvaConfig.Format = "vmdk"
 	}
 
 	// OvaConfig format should be vmdk or qcow2

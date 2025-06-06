@@ -159,7 +159,7 @@ type FlatConfig struct {
 	SerialPort                *bool             `mapstructure:"serialport" json:"serialport" required:"false" cty:"serialport" hcl:"serialport"`
 	Export                    *bool             `mapstructure:"ova_export" json:"ova_export" required:"false" cty:"ova_export" hcl:"ova_export"`
 	Create                    *bool             `mapstructure:"ova_create" json:"ova_create" required:"false" cty:"ova_create" hcl:"ova_create"`
-	Format                    *string           `mapstructure:"ova_format" json:"ova_format" required:"true" cty:"ova_format" hcl:"ova_format"`
+	Format                    *string           `mapstructure:"ova_format" json:"ova_format" required:"false" cty:"ova_format" hcl:"ova_format"`
 	Name                      *string           `mapstructure:"ova_name" json:"ova_name" required:"false" cty:"ova_name" hcl:"ova_name"`
 	ForceDeregister           *bool             `mapstructure:"force_deregister" json:"force_deregister" required:"false" cty:"force_deregister" hcl:"force_deregister"`
 	ImageDescription          *string           `mapstructure:"image_description" json:"image_description" required:"false" cty:"image_description" hcl:"image_description"`
