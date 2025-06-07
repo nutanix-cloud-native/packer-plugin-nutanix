@@ -172,14 +172,9 @@ func (c *Config) Prepare(raws ...interface{}) ([]string, error) {
 		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("missing nutanix_endpoint"))
 	}
 
-	// Set name for OVA if not provided
-	if c.OvaConfig.Create && c.OvaConfig.Name == "" {
-		c.OvaConfig.Name = c.VMName
-	}
-
 	// When trying to export OVA, it should always be created
 	if c.OvaConfig.Export && !c.OvaConfig.Create {
-		log.Println("Setting ova_create to 'true', because ova_export is 'true'")
+		log.Println("Setting ova_config.create to 'true', because ova_config.export is 'true'")
 		c.OvaConfig.Create = true
 	}
 
@@ -191,7 +186,7 @@ func (c *Config) Prepare(raws ...interface{}) ([]string, error) {
 	// OvaConfig format should be vmdk or qcow2
 	if c.OvaConfig.Create && c.OvaConfig.Format != "vmdk" && c.OvaConfig.Format != "qcow2" {
 		log.Println("Incorrect ova format")
-		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("ova_format should be 'vmdk' or 'qcow2'"))
+		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("ova_config.format should be 'vmdk' or 'qcow2'"))
 	}
 
 	// Validate Cluster Name
@@ -239,6 +234,11 @@ func (c *Config) Prepare(raws ...interface{}) ([]string, error) {
 		log.Println("No vmname assigned, setting to " + p)
 
 		c.VmConfig.VMName = p
+	}
+
+	// Set name for OVA if not provided
+	if c.OvaConfig.Create && c.OvaConfig.Name == "" {
+		c.OvaConfig.Name = c.VmConfig.VMName
 	}
 
 	if c.VmConfig.ImageName == "" {
