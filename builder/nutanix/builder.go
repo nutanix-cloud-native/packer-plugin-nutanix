@@ -86,6 +86,20 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 		},
 	}
 
+	if b.config.OvaConfig.Create {
+		steps = append(steps, &StepCreateOVA{
+			VMName:    b.config.VMName,
+			OvaConfig: b.config.OvaConfig,
+		})
+	}
+
+	if b.config.OvaConfig.Export {
+		steps = append(steps, &StepExportOVA{
+			VMName:    b.config.VMName,
+			OvaConfig: b.config.OvaConfig,
+		})
+	}
+
 	if b.config.ImageExport {
 		steps = append(steps, &stepExportImage{
 			VMName:    b.config.VMName,

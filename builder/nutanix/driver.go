@@ -1,8 +1,10 @@
 package nutanix
 
 import (
+	"bytes"
 	"context"
 	"crypto/tls"
+	"encoding/json"
 	"fmt"
 	"io"
 	"log"
@@ -36,6 +38,8 @@ type Driver interface {
 	CreateImageFile(context.Context, string, VmConfig) (*nutanixImage, error)
 	DeleteImage(context.Context, string) error
 	GetImage(context.Context, string) (*nutanixImage, error)
+	CreateOVA(context.Context, string, string, string) error
+	ExportOVA(context.Context, string) (io.ReadCloser, error)
 	ExportImage(context.Context, string) (io.ReadCloser, error)
 	SaveVMDisk(context.Context, string, int, []Category) (*nutanixImage, error)
 	WaitForShutdown(string, <-chan struct{}) bool
@@ -252,11 +256,11 @@ func findImageByName(ctx context.Context, conn *v3.Client, name string) (*v3.Ima
 	return findImageByUUID(ctx, conn, *found[0].Metadata.UUID)
 }
 
-func checkTask(ctx context.Context, conn *v3.Client, taskUUID string) error {
+func checkTask(ctx context.Context, conn *v3.Client, taskUUID string, timeout int) error {
 	log.Printf("checking task %s...", taskUUID)
 	var task *v3.TasksResponse
 	var err error
-	for i := 0; i < 120; i++ {
+	for i := 0; i < (timeout / 5); i++ {
 		task, err = conn.V3.GetTask(ctx, taskUUID)
 		if err == nil {
 			if *task.Status == "SUCCEEDED" {
@@ -624,7 +628,7 @@ func (d *NutanixDriver) Create(ctx context.Context, req *v3.VMIntentInput) (*nut
 
 	uuid := *resp.Metadata.UUID
 
-	err = checkTask(ctx, conn, resp.Status.ExecutionContext.TaskUUID.(string))
+	err = checkTask(ctx, conn, resp.Status.ExecutionContext.TaskUUID.(string), 600)
 
 	if err != nil {
 		log.Printf("error creating vm: %s", err.Error())
@@ -801,7 +805,7 @@ func (d *NutanixDriver) CreateImageURL(ctx context.Context, disk VmDisk, vm VmCo
 		return nil, fmt.Errorf("error while creating image: %s", err.Error())
 	}
 
-	err = checkTask(ctx, conn, image.Status.ExecutionContext.TaskUUID.(string))
+	err = checkTask(ctx, conn, image.Status.ExecutionContext.TaskUUID.(string), 600)
 	if err != nil {
 		return nil, fmt.Errorf("error while creating image: %s", err.Error())
 	}
@@ -863,7 +867,7 @@ func (d *NutanixDriver) CreateImageFile(ctx context.Context, filePath string, vm
 		return nil, fmt.Errorf("error while creating image: %s", err.Error())
 	}
 
-	err = checkTask(ctx, conn, image.Status.ExecutionContext.TaskUUID.(string))
+	err = checkTask(ctx, conn, image.Status.ExecutionContext.TaskUUID.(string), 600)
 	if err != nil {
 		return nil, fmt.Errorf("error while creating image: %s", err.Error())
 	}
@@ -948,6 +952,189 @@ func (d *NutanixDriver) GetVM(ctx context.Context, vmUUID string) (*nutanixInsta
 	return &nutanixInstance{nutanix: *vm}, nil
 }
 
+func (d *NutanixDriver) getRequest(ctx context.Context, url string) (*http.Response, error) {
+	customTransport := http.DefaultTransport.(*http.Transport).Clone()
+	customTransport.TLSClientConfig = &tls.Config{InsecureSkipVerify: d.ClusterConfig.Insecure}
+	httpClient := &http.Client{Transport: customTransport}
+
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	req.SetBasicAuth(d.ClusterConfig.Username, d.ClusterConfig.Password)
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return nil, fmt.Errorf(resp.Status)
+	}
+	return resp, nil
+}
+
+func (d *NutanixDriver) postRequest(ctx context.Context, url string, payload map[string]string) (*http.Response, error) {
+	customTransport := http.DefaultTransport.(*http.Transport).Clone()
+	customTransport.TLSClientConfig = &tls.Config{InsecureSkipVerify: d.ClusterConfig.Insecure}
+	httpClient := &http.Client{Transport: customTransport}
+
+	jsonData, err := json.Marshal(payload)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "application/json")
+
+	req = req.WithContext(ctx)
+	req.SetBasicAuth(d.ClusterConfig.Username, d.ClusterConfig.Password)
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	if resp.StatusCode < 200 || resp.StatusCode > 300 {
+		err_return := fmt.Errorf(resp.Status)
+		bodyBytes, err := io.ReadAll(resp.Body)
+		if err == nil {
+			return nil, fmt.Errorf("request returned non-200 status: %s, Response Body: %s", resp.Status, string(bodyBytes))
+		}
+		return nil, err_return
+	}
+	return resp, nil
+}
+
+func GetLatestOVAByName(ctx context.Context, entityType string, vmUUID string, conn *v3.Client) string {
+	request := v3.GroupsGetEntitiesRequest{
+		EntityType:     &entityType,
+		FilterCriteria: fmt.Sprintf(`name==%s`, vmUUID),
+	}
+
+	var response *v3.GroupsGetEntitiesResponse
+	response, err := conn.V3.GroupsGetEntities(ctx, &request)
+
+	if err != nil {
+		if response != nil {
+			log.Printf("Partial response: %+v", response)
+		}
+	} else {
+		groupResults := response.GroupResults
+		if len(groupResults) > 0 {
+			entityList := groupResults[0].EntityResults
+			if len(entityList) > 0 {
+				var latestEntity *v3.GroupsEntity
+				var latestTime int64
+
+				for _, entity := range entityList {
+					for _, field := range entity.Data {
+						for _, val := range field.Values {
+							if val.Time > latestTime {
+								latestTime = val.Time
+								latestEntity = entity
+							}
+						}
+					}
+				}
+
+				if latestEntity != nil {
+					return latestEntity.EntityID
+				}
+			}
+		}
+	}
+	return ""
+}
+
+func (d *NutanixDriver) CreateOVA(ctx context.Context, ovaName string, vmUUID string, diskFileFormat string) error {
+	url := fmt.Sprintf("https://%s:%d/api/nutanix/v3/vms/%s/export", d.ClusterConfig.Endpoint, d.ClusterConfig.Port, vmUUID)
+	log.Printf("export ova using api: %s", url)
+
+	payload := map[string]string{
+		"name":             ovaName,
+		"disk_file_format": strings.ToUpper(diskFileFormat),
+	}
+
+	resp, err := d.postRequest(ctx, url, payload)
+	if err != nil {
+		return err
+	}
+
+	var result struct {
+		TaskUUID string `json:"task_uuid"`
+	}
+	err = json.NewDecoder(resp.Body).Decode(&result)
+	if err != nil {
+		return err
+	}
+	log.Printf("export task created with Task UUID: %s", result.TaskUUID)
+
+	configCreds := client.Credentials{
+		URL:      fmt.Sprintf("%s:%d", d.ClusterConfig.Endpoint, d.ClusterConfig.Port),
+		Endpoint: d.ClusterConfig.Endpoint,
+		Username: d.ClusterConfig.Username,
+		Password: d.ClusterConfig.Password,
+		Port:     string(d.ClusterConfig.Port),
+		Insecure: d.ClusterConfig.Insecure,
+	}
+
+	conn, err := v3.NewV3Client(configCreds)
+	if err != nil {
+		return err
+	}
+
+	err = checkTask(ctx, conn, result.TaskUUID, 3600)
+	if err != nil {
+		return err
+	}
+
+	log.Printf("OVA export task %s completed successfully.", result.TaskUUID)
+	return nil
+}
+
+func (d *NutanixDriver) ExportOVA(ctx context.Context, ovaName string) (io.ReadCloser, error) {
+	log.Printf("starting OVA export for OVA: %s", ovaName)
+	configCreds := client.Credentials{
+		URL:      fmt.Sprintf("%s:%d", d.ClusterConfig.Endpoint, d.ClusterConfig.Port),
+		Endpoint: d.ClusterConfig.Endpoint,
+		Username: d.ClusterConfig.Username,
+		Password: d.ClusterConfig.Password,
+		Port:     string(d.ClusterConfig.Port),
+		Insecure: d.ClusterConfig.Insecure,
+	}
+
+	conn, err := v3.NewV3Client(configCreds)
+	if err != nil {
+		return nil, fmt.Errorf("error while NewV3Client, %s", err.Error())
+	}
+
+	var ovaUUID string
+
+	// Recheck for a little while to make sure the OVA with name ovaName appears
+	for i := 0; i < (60 / 5); i++ {
+		ovaUUID = GetLatestOVAByName(ctx, "ova", ovaName, conn)
+		if ovaUUID == "" {
+			<-time.After(5 * time.Second)
+		}
+	}
+
+	if ovaUUID == "" {
+		return nil, fmt.Errorf("timeout waiting for OVA entity to appear")
+	}
+
+	ova_download_url := fmt.Sprintf("https://%s:%d/api/nutanix/v3/ovas/%s/file", d.ClusterConfig.Endpoint, d.ClusterConfig.Port, ovaUUID)
+	log.Printf("The ova download url is: %s", ova_download_url)
+	ova_resp, err := d.getRequest(ctx, ova_download_url)
+	if err != nil {
+		return nil, err
+	}
+	return ova_resp.Body, nil
+}
+
 func (d *NutanixDriver) ExportImage(ctx context.Context, imageUUID string) (io.ReadCloser, error) {
 	customTransport := http.DefaultTransport.(*http.Transport).Clone()
 	customTransport.TLSClientConfig = &tls.Config{InsecureSkipVerify: d.ClusterConfig.Insecure}
@@ -1030,7 +1217,7 @@ func (d *NutanixDriver) PowerOff(ctx context.Context, vmUUID string) error {
 
 	// Wait for the VM to be stopped
 	log.Printf("stopping VM: %s", d.Config.VMName)
-	err = checkTask(ctx, conn, taskUUID)
+	err = checkTask(ctx, conn, taskUUID, 600)
 	if err != nil {
 		return fmt.Errorf("error while stopping VM: %s", err.Error())
 	}
@@ -1088,7 +1275,7 @@ func (d *NutanixDriver) SaveVMDisk(ctx context.Context, diskUUID string, index i
 			}
 
 			log.Printf("deleting image %s...\n", *found[0].Metadata.UUID)
-			err = checkTask(ctx, conn, resp.Status.ExecutionContext.TaskUUID.(string))
+			err = checkTask(ctx, conn, resp.Status.ExecutionContext.TaskUUID.(string), 600)
 
 			if err != nil {
 				return nil, fmt.Errorf("error while Deleting Image, %s", err.Error())
@@ -1128,7 +1315,7 @@ func (d *NutanixDriver) SaveVMDisk(ctx context.Context, diskUUID string, index i
 		return nil, fmt.Errorf("error while Creating Image, %s", err.Error())
 	}
 	log.Printf("creating image %s...\n", *image.Metadata.UUID)
-	err = checkTask(ctx, conn, image.Status.ExecutionContext.TaskUUID.(string))
+	err = checkTask(ctx, conn, image.Status.ExecutionContext.TaskUUID.(string), 600)
 	if err != nil {
 		return nil, fmt.Errorf("error while Creating Image, %s", err.Error())
 	} else {
