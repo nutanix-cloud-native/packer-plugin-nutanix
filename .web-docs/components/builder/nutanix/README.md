@@ -114,9 +114,9 @@ Sample:
 
 
 ## OVA Config
-Use `ova_config{}` entry to configure the OVA creation & export
+Use `ova{}` entry to configure the OVA creation & export
 
-All parameters of this `ova_config` section are described below.
+All parameters of this `ova` section are described below.
 
 3 types of disk configurations can be used:
 - `create` (bool) - Create OVA image for the vm (default is false).
@@ -126,7 +126,7 @@ All parameters of this `ova_config` section are described below.
 
 Sample:
 ```hcl
-  ova_config {
+  ova {
       create = true
       export = true
       format = "vmdk"
