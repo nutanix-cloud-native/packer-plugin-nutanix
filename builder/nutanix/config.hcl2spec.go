@@ -157,7 +157,7 @@ type FlatConfig struct {
 	Project                   *string           `mapstructure:"project" required:"false" cty:"project" hcl:"project"`
 	GPU                       []FlatGPU         `mapstructure:"gpu" required:"false" cty:"gpu" hcl:"gpu"`
 	SerialPort                *bool             `mapstructure:"serialport" json:"serialport" required:"false" cty:"serialport" hcl:"serialport"`
-	OvaConfig                 *FlatOvaConfig    `mapstructure:"ova_config" required:"false" cty:"ova_config" hcl:"ova_config"`
+	OvaConfig                 *FlatOvaConfig    `mapstructure:"ova" required:"false" cty:"ova" hcl:"ova"`
 	ForceDeregister           *bool             `mapstructure:"force_deregister" json:"force_deregister" required:"false" cty:"force_deregister" hcl:"force_deregister"`
 	ImageDescription          *string           `mapstructure:"image_description" json:"image_description" required:"false" cty:"image_description" hcl:"image_description"`
 	ImageCategories           []FlatCategory    `mapstructure:"image_categories" required:"false" cty:"image_categories" hcl:"image_categories"`
@@ -269,7 +269,7 @@ func (*FlatConfig) HCL2Spec() map[string]hcldec.Spec {
 		"project":                      &hcldec.AttrSpec{Name: "project", Type: cty.String, Required: false},
 		"gpu":                          &hcldec.BlockListSpec{TypeName: "gpu", Nested: hcldec.ObjectSpec((*FlatGPU)(nil).HCL2Spec())},
 		"serialport":                   &hcldec.AttrSpec{Name: "serialport", Type: cty.Bool, Required: false},
-		"ova_config":                   &hcldec.BlockSpec{TypeName: "ova_config", Nested: hcldec.ObjectSpec((*FlatOvaConfig)(nil).HCL2Spec())},
+		"ova":                          &hcldec.BlockSpec{TypeName: "ova", Nested: hcldec.ObjectSpec((*FlatOvaConfig)(nil).HCL2Spec())},
 		"force_deregister":             &hcldec.AttrSpec{Name: "force_deregister", Type: cty.Bool, Required: false},
 		"image_description":            &hcldec.AttrSpec{Name: "image_description", Type: cty.String, Required: false},
 		"image_categories":             &hcldec.BlockListSpec{TypeName: "image_categories", Nested: hcldec.ObjectSpec((*FlatCategory)(nil).HCL2Spec())},

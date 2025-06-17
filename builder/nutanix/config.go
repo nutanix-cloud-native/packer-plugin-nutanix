@@ -48,7 +48,7 @@ type Config struct {
 	shutdowncommand.ShutdownConfig `mapstructure:",squash"`
 	ClusterConfig                  `mapstructure:",squash"`
 	VmConfig                       `mapstructure:",squash"`
-	OvaConfig                      OvaConfig  `mapstructure:"ova_config" required:"false"`
+	OvaConfig                      OvaConfig  `mapstructure:"ova" required:"false"`
 	ForceDeregister                bool       `mapstructure:"force_deregister" json:"force_deregister" required:"false"`
 	ImageDescription               string     `mapstructure:"image_description" json:"image_description" required:"false"`
 	ImageCategories                []Category `mapstructure:"image_categories" required:"false"`
@@ -174,7 +174,7 @@ func (c *Config) Prepare(raws ...interface{}) ([]string, error) {
 
 	// When trying to export OVA, it should always be created
 	if c.OvaConfig.Export && !c.OvaConfig.Create {
-		log.Println("Setting ova_config.create to 'true', because ova_config.export is 'true'")
+		log.Println("Setting ova.create to 'true', because ova.export is 'true'")
 		c.OvaConfig.Create = true
 	}
 
@@ -186,7 +186,7 @@ func (c *Config) Prepare(raws ...interface{}) ([]string, error) {
 	// OvaConfig format should be vmdk or qcow2
 	if c.OvaConfig.Create && c.OvaConfig.Format != "vmdk" && c.OvaConfig.Format != "qcow2" {
 		log.Println("Incorrect ova format")
-		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("ova_config.format should be 'vmdk' or 'qcow2'"))
+		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("ova.format should be 'vmdk' or 'qcow2'"))
 	}
 
 	// Validate Cluster Name
