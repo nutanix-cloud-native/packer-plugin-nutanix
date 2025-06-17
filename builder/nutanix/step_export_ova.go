@@ -55,6 +55,7 @@ func (s *StepExportOVA) Run(ctx context.Context, state multistep.StateBag) multi
 	select {
 	case <-copyDone:
 		toRead.Close()
+		f.Close()
 
 		// Check if size is OK
 		_, err := f.Stat()
@@ -65,7 +66,12 @@ func (s *StepExportOVA) Run(ctx context.Context, state multistep.StateBag) multi
 		}
 
 		name := s.OvaConfig.Name + "." + strings.ToLower(s.OvaConfig.Format)
-		os.Rename(tempDestinationPath, name)
+		err = os.Rename(tempDestinationPath, name)
+		if err != nil {
+			ui.Error("Failed to rename temporary file: " + err.Error())
+			state.Put("error", err)
+			return multistep.ActionHalt
+		}
 
 		ui.Message(fmt.Sprintf("Image exported as \"%s\"", name))
 
