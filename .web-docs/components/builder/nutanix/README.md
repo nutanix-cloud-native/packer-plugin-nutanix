@@ -119,7 +119,7 @@ Use `ova{}` entry to configure the OVA creation & export
 All parameters of this `ova` section are described below.
 
 3 types of disk configurations can be used:
-- `create` (bool) - Create OVA image for the vm (default is false).
+- `create` (bool) - Create OVA image for the vm (default is the vm_name).
 - `export` (bool) - Export OVA image in the current folder (default is false).
 - `format` (string) - Format of the ova image (allowed values: 'vmdk', 'qcow2', default 'vmdk').
 - `name` (string) - Name of the the OVA image (default is false).

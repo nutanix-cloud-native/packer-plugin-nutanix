@@ -178,7 +178,7 @@ func (c *Config) Prepare(raws ...interface{}) ([]string, error) {
 		c.OvaConfig.Create = true
 	}
 
-	// Set name for OVA if not provided
+	// Set OVA format if not provided
 	if c.OvaConfig.Create && c.OvaConfig.Format == "" {
 		c.OvaConfig.Format = "vmdk"
 	}
