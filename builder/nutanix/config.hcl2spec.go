@@ -151,6 +151,7 @@ type FlatConfig struct {
 	ClusterUUID               *string           `mapstructure:"cluster_uuid" json:"cluster_uuid" required:"false" cty:"cluster_uuid" hcl:"cluster_uuid"`
 	ClusterName               *string           `mapstructure:"cluster_name" json:"cluster_name" required:"false" cty:"cluster_name" hcl:"cluster_name"`
 	CPU                       *int64            `mapstructure:"cpu" json:"cpu" required:"false" cty:"cpu" hcl:"cpu"`
+	Core                      *int64            `mapstructure:"core" json:"core" required:"false" cty:"core" hcl:"core"`
 	MemoryMB                  *int64            `mapstructure:"memory_mb" json:"memory_mb" required:"false" cty:"memory_mb" hcl:"memory_mb"`
 	UserData                  *string           `mapstructure:"user_data" json:"user_data" required:"false" cty:"user_data" hcl:"user_data"`
 	VMCategories              []FlatCategory    `mapstructure:"vm_categories" required:"false" cty:"vm_categories" hcl:"vm_categories"`
@@ -263,6 +264,7 @@ func (*FlatConfig) HCL2Spec() map[string]hcldec.Spec {
 		"cluster_uuid":                 &hcldec.AttrSpec{Name: "cluster_uuid", Type: cty.String, Required: false},
 		"cluster_name":                 &hcldec.AttrSpec{Name: "cluster_name", Type: cty.String, Required: false},
 		"cpu":                          &hcldec.AttrSpec{Name: "cpu", Type: cty.Number, Required: false},
+		"core":                         &hcldec.AttrSpec{Name: "core", Type: cty.Number, Required: false},
 		"memory_mb":                    &hcldec.AttrSpec{Name: "memory_mb", Type: cty.Number, Required: false},
 		"user_data":                    &hcldec.AttrSpec{Name: "user_data", Type: cty.String, Required: false},
 		"vm_categories":                &hcldec.BlockListSpec{TypeName: "vm_categories", Nested: hcldec.ObjectSpec((*FlatCategory)(nil).HCL2Spec())},
@@ -345,6 +347,7 @@ type FlatVmConfig struct {
 	ClusterUUID  *string        `mapstructure:"cluster_uuid" json:"cluster_uuid" required:"false" cty:"cluster_uuid" hcl:"cluster_uuid"`
 	ClusterName  *string        `mapstructure:"cluster_name" json:"cluster_name" required:"false" cty:"cluster_name" hcl:"cluster_name"`
 	CPU          *int64         `mapstructure:"cpu" json:"cpu" required:"false" cty:"cpu" hcl:"cpu"`
+	Core         *int64         `mapstructure:"core" json:"core" required:"false" cty:"core" hcl:"core"`
 	MemoryMB     *int64         `mapstructure:"memory_mb" json:"memory_mb" required:"false" cty:"memory_mb" hcl:"memory_mb"`
 	UserData     *string        `mapstructure:"user_data" json:"user_data" required:"false" cty:"user_data" hcl:"user_data"`
 	VMCategories []FlatCategory `mapstructure:"vm_categories" required:"false" cty:"vm_categories" hcl:"vm_categories"`
@@ -375,6 +378,7 @@ func (*FlatVmConfig) HCL2Spec() map[string]hcldec.Spec {
 		"cluster_uuid":  &hcldec.AttrSpec{Name: "cluster_uuid", Type: cty.String, Required: false},
 		"cluster_name":  &hcldec.AttrSpec{Name: "cluster_name", Type: cty.String, Required: false},
 		"cpu":           &hcldec.AttrSpec{Name: "cpu", Type: cty.Number, Required: false},
+		"core":          &hcldec.AttrSpec{Name: "core", Type: cty.Number, Required: false},
 		"memory_mb":     &hcldec.AttrSpec{Name: "memory_mb", Type: cty.Number, Required: false},
 		"user_data":     &hcldec.AttrSpec{Name: "user_data", Type: cty.String, Required: false},
 		"vm_categories": &hcldec.BlockListSpec{TypeName: "vm_categories", Nested: hcldec.ObjectSpec((*FlatCategory)(nil).HCL2Spec())},
