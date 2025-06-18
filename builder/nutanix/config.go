@@ -103,6 +103,7 @@ type VmConfig struct {
 	ClusterUUID  string     `mapstructure:"cluster_uuid" json:"cluster_uuid" required:"false"`
 	ClusterName  string     `mapstructure:"cluster_name" json:"cluster_name" required:"false"`
 	CPU          int64      `mapstructure:"cpu" json:"cpu" required:"false"`
+	Core         int64      `mapstructure:"core" json:"core" required:"false"`
 	MemoryMB     int64      `mapstructure:"memory_mb" json:"memory_mb" required:"false"`
 	UserData     string     `mapstructure:"user_data" json:"user_data" required:"false"`
 	VMCategories []Category `mapstructure:"vm_categories" required:"false"`
@@ -145,6 +146,11 @@ func (c *Config) Prepare(raws ...interface{}) ([]string, error) {
 	if c.CPU == 0 {
 		log.Println("No CPU configured, defaulting to '1'")
 		c.CPU = 1
+	}
+
+	if c.Core == 0 {
+		log.Println("No Core configured, defaulting to '1'")
+		c.Core = 1
 	}
 
 	if c.MemoryMB == 0 {

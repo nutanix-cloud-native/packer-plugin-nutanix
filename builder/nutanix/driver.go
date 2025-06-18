@@ -533,6 +533,7 @@ func (d *NutanixDriver) CreateRequest(ctx context.Context, vm VmConfig, state mu
 			Resources: &v3.VMResources{
 				GuestCustomization: guestCustomization,
 				NumSockets:         &vm.CPU,
+				NumVcpusPerSocket:  &vm.Core,
 				MemorySizeMib:      &vm.MemoryMB,
 				PowerState:         &powerStateOn,
 				DiskList:           DiskList,
