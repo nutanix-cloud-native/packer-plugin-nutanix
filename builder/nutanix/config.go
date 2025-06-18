@@ -102,8 +102,8 @@ type VmConfig struct {
 	ImageName    string     `mapstructure:"image_name" json:"image_name" required:"false"`
 	ClusterUUID  string     `mapstructure:"cluster_uuid" json:"cluster_uuid" required:"false"`
 	ClusterName  string     `mapstructure:"cluster_name" json:"cluster_name" required:"false"`
-	CPU          int64      `mapstructure:"cpu" json:"cpu" required:"false"`
-	MemoryMB     int64      `mapstructure:"memory_mb" json:"memory_mb" required:"false"`
+	CPU          int32      `mapstructure:"cpu" json:"cpu" required:"false"`
+	MemoryMB     int32      `mapstructure:"memory_mb" json:"memory_mb" required:"false"`
 	UserData     string     `mapstructure:"user_data" json:"user_data" required:"false"`
 	VMCategories []Category `mapstructure:"vm_categories" required:"false"`
 	Project      string     `mapstructure:"project" required:"false"`

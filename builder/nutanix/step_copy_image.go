@@ -37,8 +37,8 @@ func (s *stepCopyImage) Run(ctx context.Context, state multistep.StateBag) multi
 	for i := range vm.nutanix.Spec.Resources.DiskList {
 		if *vm.nutanix.Spec.Resources.DiskList[i].DeviceProperties.DeviceType == "DISK" {
 			disksToCopy = append(disksToCopy, diskArtefact{
-				uuid: *vm.nutanix.Spec.Resources.DiskList[i].UUID,
-				size: *vm.nutanix.Spec.Resources.DiskList[i].DiskSizeBytes,
+				uuid: vm.nutanix.Spec.Resources.DiskList[i].UUID,
+				size: vm.nutanix.Spec.Resources.DiskList[i].DiskSizeBytes,
 			})
 			diskID := fmt.Sprintf("%s:%d", *vm.nutanix.Spec.Resources.DiskList[i].DeviceProperties.DiskAddress.AdapterType, *vm.nutanix.Spec.Resources.DiskList[i].DeviceProperties.DiskAddress.DeviceIndex)
 			ui.Message("Found disk to copy: " + diskID)

@@ -150,8 +150,8 @@ type FlatConfig struct {
 	ImageName                 *string           `mapstructure:"image_name" json:"image_name" required:"false" cty:"image_name" hcl:"image_name"`
 	ClusterUUID               *string           `mapstructure:"cluster_uuid" json:"cluster_uuid" required:"false" cty:"cluster_uuid" hcl:"cluster_uuid"`
 	ClusterName               *string           `mapstructure:"cluster_name" json:"cluster_name" required:"false" cty:"cluster_name" hcl:"cluster_name"`
-	CPU                       *int64            `mapstructure:"cpu" json:"cpu" required:"false" cty:"cpu" hcl:"cpu"`
-	MemoryMB                  *int64            `mapstructure:"memory_mb" json:"memory_mb" required:"false" cty:"memory_mb" hcl:"memory_mb"`
+	CPU                       *int32            `mapstructure:"cpu" json:"cpu" required:"false" cty:"cpu" hcl:"cpu"`
+	MemoryMB                  *int32            `mapstructure:"memory_mb" json:"memory_mb" required:"false" cty:"memory_mb" hcl:"memory_mb"`
 	UserData                  *string           `mapstructure:"user_data" json:"user_data" required:"false" cty:"user_data" hcl:"user_data"`
 	VMCategories              []FlatCategory    `mapstructure:"vm_categories" required:"false" cty:"vm_categories" hcl:"vm_categories"`
 	Project                   *string           `mapstructure:"project" required:"false" cty:"project" hcl:"project"`
@@ -344,8 +344,8 @@ type FlatVmConfig struct {
 	ImageName    *string        `mapstructure:"image_name" json:"image_name" required:"false" cty:"image_name" hcl:"image_name"`
 	ClusterUUID  *string        `mapstructure:"cluster_uuid" json:"cluster_uuid" required:"false" cty:"cluster_uuid" hcl:"cluster_uuid"`
 	ClusterName  *string        `mapstructure:"cluster_name" json:"cluster_name" required:"false" cty:"cluster_name" hcl:"cluster_name"`
-	CPU          *int64         `mapstructure:"cpu" json:"cpu" required:"false" cty:"cpu" hcl:"cpu"`
-	MemoryMB     *int64         `mapstructure:"memory_mb" json:"memory_mb" required:"false" cty:"memory_mb" hcl:"memory_mb"`
+	CPU          *int32         `mapstructure:"cpu" json:"cpu" required:"false" cty:"cpu" hcl:"cpu"`
+	MemoryMB     *int32         `mapstructure:"memory_mb" json:"memory_mb" required:"false" cty:"memory_mb" hcl:"memory_mb"`
 	UserData     *string        `mapstructure:"user_data" json:"user_data" required:"false" cty:"user_data" hcl:"user_data"`
 	VMCategories []FlatCategory `mapstructure:"vm_categories" required:"false" cty:"vm_categories" hcl:"vm_categories"`
 	Project      *string        `mapstructure:"project" required:"false" cty:"project" hcl:"project"`

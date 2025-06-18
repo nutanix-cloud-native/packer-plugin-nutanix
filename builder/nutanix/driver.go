@@ -17,6 +17,7 @@ import (
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	client "github.com/nutanix-cloud-native/prism-go-client"
 	v3 "github.com/nutanix-cloud-native/prism-go-client/v3"
+	"github.com/nutanix-cloud-native/prism-go-client/v3/models"
 )
 
 const (
@@ -106,7 +107,7 @@ func findClusterByName(ctx context.Context, conn *v3.Client, name string) (*v3.C
 
 	found := make([]*v3.ClusterIntentResponse, 0)
 	for _, v := range entities {
-		if strings.EqualFold(*v.Status.Name, name) {
+		if strings.EqualFold(v.Status.Name, name) {
 			found = append(found, &v3.ClusterIntentResponse{
 				Status:     v.Status,
 				Spec:       v.Spec,
@@ -170,7 +171,7 @@ func findSubnetByName(ctx context.Context, conn *v3.Client, name, clusterUUID st
 	return nil, fmt.Errorf("your query returned more than one result. Please use subnet_uuid argument instead")
 }
 
-func findGPUByName(ctx context.Context, conn *v3.Client, name string) (*v3.VMGpu, error) {
+func findGPUByName(ctx context.Context, conn *v3.Client, name string) (*models.VMGpu, error) {
 	hosts, err := conn.V3.ListAllHost(ctx)
 	if err != nil {
 		return nil, err
@@ -190,10 +191,10 @@ func findGPUByName(ctx context.Context, conn *v3.Client, name string) (*v3.VMGpu
 				continue
 			}
 			if strings.EqualFold(peGpu.Name, name) {
-				return &v3.VMGpu{
-					DeviceID: peGpu.DeviceID,
-					Vendor:   &peGpu.Vendor,
-					Mode:     &peGpu.Mode,
+				return &models.VMGpu{
+					DeviceID: int32(*peGpu.DeviceID),
+					Vendor:   peGpu.Vendor,
+					Mode:     peGpu.Mode,
 				}, nil
 			}
 		}
@@ -282,14 +283,14 @@ func (d *nutanixInstance) Addresses() []string {
 	var addresses []string
 	if len(d.nutanix.Status.Resources.NicList) > 0 {
 		for _, n := range d.nutanix.Status.Resources.NicList {
-			addresses = append(addresses, *n.IPEndpointList[0].IP)
+			addresses = append(addresses, n.IPEndpointList[0].IP)
 		}
 	}
 	return addresses
 }
 
 func (d *nutanixInstance) PowerState() string {
-	return *d.nutanix.Status.Resources.PowerState
+	return d.nutanix.Status.Resources.PowerState
 }
 
 func (d *NutanixDriver) WaitForShutdown(vmUUID string, cancelCh <-chan struct{}) bool {
@@ -325,28 +326,28 @@ func (d *NutanixDriver) CreateRequest(ctx context.Context, vm VmConfig, state mu
 	log.Printf("preparing vm %s...", d.Config.VMName)
 
 	// If UserData exists, create GuestCustomization
-	var guestCustomization *v3.GuestCustomization
+	var guestCustomization *models.GuestCustomization
 	if vm.UserData == "" {
 		guestCustomization = nil
 	} else {
 		if vm.OSType == "Windows" {
 			installType := "FRESH"
-			guestCustomization = &v3.GuestCustomization{
-				Sysprep: &v3.GuestCustomizationSysprep{
+			guestCustomization = &models.GuestCustomization{
+				Sysprep: &models.GuestCustomizationSysprep{
 					InstallType: &installType,
-					UnattendXML: &vm.UserData,
+					UnattendXML: vm.UserData,
 				},
 			}
 		}
 		if vm.OSType == "Linux" {
-			guestCustomization = &v3.GuestCustomization{
-				CloudInit: &v3.GuestCustomizationCloudInit{
-					UserData: &vm.UserData,
+			guestCustomization = &models.GuestCustomization{
+				CloudInit: &models.GuestCustomizationCloudInit{
+					UserData: vm.UserData,
 				},
 			}
 		}
 	}
-	DiskList := []*v3.VMDisk{}
+	DiskList := []*models.VMDisk{}
 	SATAindex := 0
 	SCSIindex := 0
 
@@ -387,16 +388,19 @@ func (d *NutanixDriver) CreateRequest(ctx context.Context, vm VmConfig, state mu
 			if disk.DiskSizeGB == 0 {
 				DiskSizeMib = *image.Status.Resources.SizeBytes / 1024 / 1024
 			}
-			newDisk := v3.VMDisk{
-				DeviceProperties: &v3.VMDiskDeviceProperties{
+			newDisk := models.VMDisk{
+				DeviceProperties: &models.VMDiskDeviceProperties{
 					DeviceType: &DeviceType,
-					DiskAddress: &v3.DiskAddress{
+					DiskAddress: &models.DiskAddress{
 						AdapterType: &AdapterType,
 						DeviceIndex: &DeviceIndex,
 					},
 				},
-				DataSourceReference: BuildReference(*image.Metadata.UUID, "image"),
-				DiskSizeMib:         &DiskSizeMib,
+				DataSourceReference: &models.VMDiskDataSourceReference{
+					Kind: "image",
+					UUID: *image.Metadata.UUID,
+				},
+				DiskSizeMib: int32(DiskSizeMib),
 			}
 			DiskList = append(DiskList, &newDisk)
 			SCSIindex++
@@ -406,15 +410,15 @@ func (d *NutanixDriver) CreateRequest(ctx context.Context, vm VmConfig, state mu
 			AdapterType := "SCSI"
 			DeviceIndex := int64(SCSIindex)
 			DiskSizeMib := disk.DiskSizeGB * 1024
-			newDisk := v3.VMDisk{
-				DeviceProperties: &v3.VMDiskDeviceProperties{
+			newDisk := models.VMDisk{
+				DeviceProperties: &models.VMDiskDeviceProperties{
 					DeviceType: &DeviceType,
-					DiskAddress: &v3.DiskAddress{
+					DiskAddress: &models.DiskAddress{
 						AdapterType: &AdapterType,
 						DeviceIndex: &DeviceIndex,
 					},
 				},
-				DiskSizeMib: &DiskSizeMib,
+				DiskSizeMib: int32(DiskSizeMib),
 			}
 			DiskList = append(DiskList, &newDisk)
 			SCSIindex++
@@ -448,15 +452,18 @@ func (d *NutanixDriver) CreateRequest(ctx context.Context, vm VmConfig, state mu
 			DeviceType := "CDROM"
 			AdapterType := "SATA"
 			DeviceIndex := int64(SATAindex)
-			newDisk := v3.VMDisk{
-				DeviceProperties: &v3.VMDiskDeviceProperties{
+			newDisk := models.VMDisk{
+				DeviceProperties: &models.VMDiskDeviceProperties{
 					DeviceType: &DeviceType,
-					DiskAddress: &v3.DiskAddress{
+					DiskAddress: &models.DiskAddress{
 						AdapterType: &AdapterType,
 						DeviceIndex: &DeviceIndex,
 					},
 				},
-				DataSourceReference: BuildReference(*image.Metadata.UUID, "image"),
+				DataSourceReference: &models.VMDiskDataSourceReference{
+					Kind: "image",
+					UUID: *image.Metadata.UUID,
+				},
 			}
 			DiskList = append(DiskList, &newDisk)
 			SATAindex++
@@ -478,7 +485,7 @@ func (d *NutanixDriver) CreateRequest(ctx context.Context, vm VmConfig, state mu
 		}
 	}
 
-	NICList := []*v3.VMNic{}
+	NICList := []*models.VMNic{}
 	for _, nic := range vm.VmNICs {
 		var subnet *v3.SubnetIntentResponse
 		if nic.SubnetUUID != "" {
@@ -498,26 +505,29 @@ func (d *NutanixDriver) CreateRequest(ctx context.Context, vm VmConfig, state mu
 		}
 
 		isConnected := true
-		newNIC := v3.VMNic{
-			IsConnected:     &isConnected,
-			SubnetReference: BuildReference(*subnet.Metadata.UUID, "subnet"),
+		newNIC := models.VMNic{
+			IsConnected: isConnected,
+			SubnetReference: &models.SubnetReference{
+				Kind: "subnet",
+				UUID: StringPtr(*subnet.Metadata.UUID),
+			},
 		}
 		NICList = append(NICList, &newNIC)
 	}
 
 	SerialIndex := 0
-	SerialPortList := []*v3.VMSerialPort{}
+	SerialPortList := []*models.SerialPort{}
 	if vm.SerialPort {
 		DeviceIndex := int64(SerialIndex)
 		isConnected := true
-		newVMSerialPort := v3.VMSerialPort{
-			Index:       &DeviceIndex,
-			IsConnected: &isConnected,
+		newVMSerialPort := models.SerialPort{
+			Index:       DeviceIndex,
+			IsConnected: isConnected,
 		}
 		SerialPortList = append(SerialPortList, &newVMSerialPort)
 	}
 
-	GPUList := make([]*v3.VMGpu, 0, len(vm.GPU))
+	GPUList := make([]*models.VMGpu, 0, len(vm.GPU))
 	for _, gpu := range vm.GPU {
 		vmGPU, err := findGPUByName(ctx, conn, gpu.Name)
 		if err != nil {
@@ -528,20 +538,23 @@ func (d *NutanixDriver) CreateRequest(ctx context.Context, vm VmConfig, state mu
 
 	powerStateOn := "ON"
 	req := &v3.VMIntentInput{
-		Spec: &v3.VM{
+		Spec: &models.VM{
 			Name: &vm.VMName,
-			Resources: &v3.VMResources{
+			Resources: &models.VMResources{
 				GuestCustomization: guestCustomization,
-				NumSockets:         &vm.CPU,
-				MemorySizeMib:      &vm.MemoryMB,
-				PowerState:         &powerStateOn,
+				NumSockets:         vm.CPU,
+				MemorySizeMib:      vm.MemoryMB,
+				PowerState:         powerStateOn,
 				DiskList:           DiskList,
 				NicList:            NICList,
 				GpuList:            GPUList,
 				SerialPortList:     SerialPortList,
 			},
-			ClusterReference: BuildReference(*cluster.Metadata.UUID, "cluster"),
-			Description:      StringPtr(fmt.Sprintf(vmDescription, d.Config.VmConfig.ImageName)),
+			ClusterReference: &models.ClusterReference{
+				Kind: "cluster",
+				UUID: StringPtr(*cluster.Metadata.UUID),
+			},
+			Description: fmt.Sprintf(vmDescription, d.Config.VmConfig.ImageName),
 		},
 		Metadata: &v3.Metadata{
 			Kind: StringPtr("vm"),
@@ -557,24 +570,24 @@ func (d *NutanixDriver) CreateRequest(ctx context.Context, vm VmConfig, state mu
 		bootType = strings.ToUpper(NutanixIdentifierBootTypeLegacy)
 	}
 
-	var bootDeviceOrderList []*string
+	var bootDeviceOrderList []string
 
 	if vm.BootPriority == "cdrom" {
-		bootDeviceOrderList = []*string{
-			StringPtr("CDROM"),
-			StringPtr("DISK"),
-			StringPtr("NETWORK"),
+		bootDeviceOrderList = []string{
+			"CDROM",
+			"DISK",
+			"NETWORK",
 		}
 	} else {
-		bootDeviceOrderList = []*string{
-			StringPtr("DISK"),
-			StringPtr("CDROM"),
-			StringPtr("NETWORK"),
+		bootDeviceOrderList = []string{
+			"DISK",
+			"CDROM",
+			"NETWORK",
 		}
 	}
 
-	req.Spec.Resources.BootConfig = &v3.VMBootConfig{
-		BootType:            &bootType,
+	req.Spec.Resources.BootConfig = &models.VMBootConfig{
+		BootType:            bootType,
 		BootDeviceOrderList: bootDeviceOrderList,
 	}
 
@@ -675,14 +688,13 @@ func (d *NutanixDriver) WaitForIP(ctx context.Context, uuid string, ipNet *net.I
 		}
 		if len(vm.Status.Resources.NicList) > 0 &&
 			len(vm.Status.Resources.NicList[0].IPEndpointList) > 0 &&
-			vm.Status.Resources.NicList[0].IPEndpointList[0].IP != nil &&
-			*vm.Status.Resources.NicList[0].IPEndpointList[0].IP != "" {
+			vm.Status.Resources.NicList[0].IPEndpointList[0].IP != "" {
 			break
 		}
 		time.Sleep(5 * time.Second)
 	}
 
-	IPAddress = *vm.Status.Resources.NicList[0].IPEndpointList[0].IP
+	IPAddress = vm.Status.Resources.NicList[0].IPEndpointList[0].IP
 	log.Printf("VM (%s) configured with ip address %s", uuid, IPAddress)
 
 	parseIP := net.ParseIP(IPAddress)
@@ -1206,7 +1218,7 @@ func (d *NutanixDriver) PowerOff(ctx context.Context, vmUUID string) error {
 	request := &v3.VMIntentInput{}
 	request.Spec = vmResp.Spec
 	request.Metadata = vmResp.Metadata
-	request.Spec.Resources.PowerState = StringPtr("OFF")
+	request.Spec.Resources.PowerState = "OFF"
 
 	resp, err := conn.V3.UpdateVM(ctx, vmUUID, request)
 	if err != nil {
