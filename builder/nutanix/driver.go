@@ -1009,10 +1009,10 @@ func (d *NutanixDriver) postRequest(ctx context.Context, url string, payload map
 	return resp, nil
 }
 
-func GetLatestOVAByName(ctx context.Context, entityType string, vmUUID string, conn *v3.Client) string {
+func GetLatestOVAByName(ctx context.Context, entityType string, name string, conn *v3.Client) string {
 	request := v3.GroupsGetEntitiesRequest{
 		EntityType:     &entityType,
-		FilterCriteria: fmt.Sprintf(`name==%s`, vmUUID),
+		FilterCriteria: fmt.Sprintf(`name==%s`, name),
 	}
 
 	var response *v3.GroupsGetEntitiesResponse

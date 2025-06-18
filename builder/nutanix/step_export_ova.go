@@ -6,7 +6,6 @@ import (
 	"io"
 	"os"
 	"os/signal"
-	"strings"
 	"syscall"
 
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
@@ -57,15 +56,7 @@ func (s *StepExportOVA) Run(ctx context.Context, state multistep.StateBag) multi
 		toRead.Close()
 		f.Close()
 
-		// Check if size is OK
-		_, err := f.Stat()
-		if err != nil {
-			ui.Error("Image stat failed: " + err.Error())
-			state.Put("error", err)
-			return multistep.ActionHalt
-		}
-
-		name := s.OvaConfig.Name + "." + strings.ToLower(s.OvaConfig.Format)
+		name := s.OvaConfig.Name + ".ova"
 		err = os.Rename(tempDestinationPath, name)
 		if err != nil {
 			ui.Error("Failed to rename temporary file: " + err.Error())
