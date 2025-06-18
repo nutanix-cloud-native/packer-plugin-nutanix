@@ -238,11 +238,12 @@ func (c *Config) Prepare(raws ...interface{}) ([]string, error) {
 
 	// Set name for OVA if not provided
 	if c.OvaConfig.Create && c.OvaConfig.Name == "" {
+		log.Println("No ova.name defined, setting to vm_name")
 		c.OvaConfig.Name = c.VmConfig.VMName
 	}
 
 	if c.VmConfig.ImageName == "" {
-		log.Println("No image_name assigned, setting to vm_name")
+		log.Println("No image_name defined, setting to vm_name")
 
 		c.VmConfig.ImageName = c.VmConfig.VMName
 	}
