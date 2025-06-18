@@ -1,4 +1,4 @@
-//go:generate packer-sdc mapstructure-to-hcl2 -type Config,Category,ClusterConfig,VmConfig,VmDisk,VmNIC,GPU
+//go:generate packer-sdc mapstructure-to-hcl2 -type Config,Category,ClusterConfig,VmConfig,VmDisk,VmNIC,GPU,OvaConfig
 
 package nutanix
 
@@ -48,6 +48,7 @@ type Config struct {
 	shutdowncommand.ShutdownConfig `mapstructure:",squash"`
 	ClusterConfig                  `mapstructure:",squash"`
 	VmConfig                       `mapstructure:",squash"`
+	OvaConfig                      OvaConfig  `mapstructure:"ova" required:"false"`
 	ForceDeregister                bool       `mapstructure:"force_deregister" json:"force_deregister" required:"false"`
 	ImageDescription               string     `mapstructure:"image_description" json:"image_description" required:"false"`
 	ImageCategories                []Category `mapstructure:"image_categories" required:"false"`
@@ -110,6 +111,13 @@ type VmConfig struct {
 	SerialPort   bool       `mapstructure:"serialport" json:"serialport" required:"false"`
 }
 
+type OvaConfig struct {
+	Export bool   `mapstructure:"export" json:"export" required:"false"`
+	Create bool   `mapstructure:"create" json:"create" required:"false"`
+	Format string `mapstructure:"format" json:"format" required:"false"`
+	Name   string `mapstructure:"name" json:"name" required:"false"`
+}
+
 func (c *Config) Prepare(raws ...interface{}) ([]string, error) {
 	err := config.Decode(c, &config.DecodeOpts{
 		PluginType:         BuilderId,
@@ -164,6 +172,23 @@ func (c *Config) Prepare(raws ...interface{}) ([]string, error) {
 		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("missing nutanix_endpoint"))
 	}
 
+	// When trying to export OVA, it should always be created
+	if c.OvaConfig.Export && !c.OvaConfig.Create {
+		log.Println("Setting ova.create to 'true', because ova.export is 'true'")
+		c.OvaConfig.Create = true
+	}
+
+	// Set OVA format if not provided
+	if c.OvaConfig.Create && c.OvaConfig.Format == "" {
+		c.OvaConfig.Format = "vmdk"
+	}
+
+	// OvaConfig format should be vmdk or qcow2
+	if c.OvaConfig.Create && c.OvaConfig.Format != "vmdk" && c.OvaConfig.Format != "qcow2" {
+		log.Println("Incorrect ova format")
+		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("ova.format should be 'vmdk' or 'qcow2'"))
+	}
+
 	// Validate Cluster Name
 	if c.VmConfig.ClusterName == "" && c.VmConfig.ClusterUUID == "" {
 		log.Println("Nutanix Cluster Name or UUID missing from configuration")
@@ -209,6 +234,11 @@ func (c *Config) Prepare(raws ...interface{}) ([]string, error) {
 		log.Println("No vmname assigned, setting to " + p)
 
 		c.VmConfig.VMName = p
+	}
+
+	// Set name for OVA if not provided
+	if c.OvaConfig.Create && c.OvaConfig.Name == "" {
+		c.OvaConfig.Name = c.VmConfig.VMName
 	}
 
 	if c.VmConfig.ImageName == "" {
