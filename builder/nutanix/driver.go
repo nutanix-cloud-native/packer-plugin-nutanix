@@ -14,6 +14,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
+
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	client "github.com/nutanix-cloud-native/prism-go-client"
 	v3 "github.com/nutanix-cloud-native/prism-go-client/v3"
@@ -38,6 +40,7 @@ type Driver interface {
 	CreateImageFile(context.Context, string, VmConfig) (*nutanixImage, error)
 	DeleteImage(context.Context, string) error
 	GetImage(context.Context, string) (*nutanixImage, error)
+	CreateTemplate(context.Context, string, TemplateConfig) error
 	CreateOVA(context.Context, string, string, string) error
 	ExportOVA(context.Context, string) (io.ReadCloser, error)
 	ExportImage(context.Context, string) (io.ReadCloser, error)
@@ -975,7 +978,7 @@ func (d *NutanixDriver) getRequest(ctx context.Context, url string) (*http.Respo
 	return resp, nil
 }
 
-func (d *NutanixDriver) postRequest(ctx context.Context, url string, payload map[string]string) (*http.Response, error) {
+func (d *NutanixDriver) postRequest(ctx context.Context, url string, payload map[string]interface{}) (*http.Response, error) {
 	customTransport := http.DefaultTransport.(*http.Transport).Clone()
 	customTransport.TLSClientConfig = &tls.Config{InsecureSkipVerify: d.ClusterConfig.Insecure}
 	httpClient := &http.Client{Transport: customTransport}
@@ -991,6 +994,10 @@ func (d *NutanixDriver) postRequest(ctx context.Context, url string, payload map
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json")
+
+	if strings.Contains(url, "v4") {
+		req.Header.Set("NTNX-Request-Id", uuid.NewString())
+	}
 
 	req = req.WithContext(ctx)
 	req.SetBasicAuth(d.ClusterConfig.Username, d.ClusterConfig.Password)
@@ -1051,11 +1058,74 @@ func GetLatestOVAByName(ctx context.Context, entityType string, name string, con
 	return ""
 }
 
+func (d *NutanixDriver) CreateTemplate(ctx context.Context, vmUUID string, template TemplateConfig) error {
+	url := fmt.Sprintf("https://%s:%d/api/vmm/v4.0/content/templates", d.ClusterConfig.Endpoint, d.ClusterConfig.Port)
+	log.Printf("create template using api: %s", url)
+
+	payload := map[string]interface{}{
+		"templateName":        template.Name,
+		"templateDescription": template.Description,
+		"templateVersionSpec": map[string]interface{}{
+			"versionSource": map[string]interface{}{
+				"extId":       vmUUID,
+				"$objectType": "vmm.v4.content.TemplateVmReference",
+			},
+			"isActiveVersion":     true,
+			"isGcOverrideEnabled": true,
+			"$objectType":         "vmm.v4.content.TemplateVersionSpec",
+		},
+		"$objectType": "vmm.v4.content.Template",
+	}
+
+	resp, err := d.postRequest(ctx, url, payload)
+	if err != nil {
+		return fmt.Errorf("error creating template: %s", err)
+	}
+
+	var result struct {
+		Data struct {
+			ExtID string `json:"extId"`
+		} `json:"data"`
+	}
+
+	err = json.NewDecoder(resp.Body).Decode(&result)
+	if err != nil {
+		return fmt.Errorf("error decoding response: %s", err)
+	}
+
+	task_uuid := strings.Split(result.Data.ExtID, ":")[1]
+
+	log.Printf("template creation task created with Task UUID: %s", task_uuid)
+
+	configCreds := client.Credentials{
+		URL:      fmt.Sprintf("%s:%d", d.ClusterConfig.Endpoint, d.ClusterConfig.Port),
+		Endpoint: d.ClusterConfig.Endpoint,
+		Username: d.ClusterConfig.Username,
+		Password: d.ClusterConfig.Password,
+		Port:     string(d.ClusterConfig.Port),
+		Insecure: d.ClusterConfig.Insecure,
+	}
+
+	conn, err := v3.NewV3Client(configCreds)
+	if err != nil {
+		return err
+	}
+
+	err = checkTask(ctx, conn, task_uuid, 3600)
+	if err != nil {
+		return err
+	}
+
+	log.Printf("Template creation task %s completed successfully.", task_uuid)
+
+	return nil
+}
+
 func (d *NutanixDriver) CreateOVA(ctx context.Context, ovaName string, vmUUID string, diskFileFormat string) error {
 	url := fmt.Sprintf("https://%s:%d/api/nutanix/v3/vms/%s/export", d.ClusterConfig.Endpoint, d.ClusterConfig.Port, vmUUID)
 	log.Printf("export ova using api: %s", url)
 
-	payload := map[string]string{
+	payload := map[string]interface{}{
 		"name":             ovaName,
 		"disk_file_format": strings.ToUpper(diskFileFormat),
 	}

@@ -22,7 +22,8 @@ func (s *StepCreateOVA) Run(ctx context.Context, state multistep.StateBag) multi
 	err := d.CreateOVA(ctx, s.OvaConfig.Name, vmUUID.(string), s.OvaConfig.Format)
 
 	if err != nil {
-		ui.Message("OVA creation failed")
+		ui.Error("OVA creation failed")
+		state.Put("error", err)
 		return multistep.ActionHalt
 	}
 
