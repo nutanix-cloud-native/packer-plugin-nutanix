@@ -38,6 +38,7 @@ These parameters allow to configure everything around image creation, from the t
 - `image_categories` ([]Category) - Assign Categories to the image.
 - `force_deregister` (bool) - Allow output image override if already exists.
 - `image_delete` (bool) - Delete image once build process is completed (default is false).
+- `image_skip` (bool) - Skip image creation (default is false).
 - `image_export` (bool) - Export raw image in the current folder (default is false).
 - `shutdown_command` (string) - Command line to shutdown your temporary VM.
 - `shutdown_timeout` (string) - Timeout for VM shutdown (format : 2m).

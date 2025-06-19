@@ -162,6 +162,7 @@ type FlatConfig struct {
 	ForceDeregister           *bool             `mapstructure:"force_deregister" json:"force_deregister" required:"false" cty:"force_deregister" hcl:"force_deregister"`
 	ImageDescription          *string           `mapstructure:"image_description" json:"image_description" required:"false" cty:"image_description" hcl:"image_description"`
 	ImageCategories           []FlatCategory    `mapstructure:"image_categories" required:"false" cty:"image_categories" hcl:"image_categories"`
+	ImageSkip                 *bool             `mapstructure:"image_skip" json:"image_skip" required:"false" cty:"image_skip" hcl:"image_skip"`
 	ImageDelete               *bool             `mapstructure:"image_delete" json:"image_delete" required:"false" cty:"image_delete" hcl:"image_delete"`
 	ImageExport               *bool             `mapstructure:"image_export" json:"image_export" required:"false" cty:"image_export" hcl:"image_export"`
 	VmForceDelete             *bool             `mapstructure:"vm_force_delete" json:"vm_force_delete" required:"false" cty:"vm_force_delete" hcl:"vm_force_delete"`
@@ -276,6 +277,7 @@ func (*FlatConfig) HCL2Spec() map[string]hcldec.Spec {
 		"force_deregister":             &hcldec.AttrSpec{Name: "force_deregister", Type: cty.Bool, Required: false},
 		"image_description":            &hcldec.AttrSpec{Name: "image_description", Type: cty.String, Required: false},
 		"image_categories":             &hcldec.BlockListSpec{TypeName: "image_categories", Nested: hcldec.ObjectSpec((*FlatCategory)(nil).HCL2Spec())},
+		"image_skip":                   &hcldec.AttrSpec{Name: "image_skip", Type: cty.Bool, Required: false},
 		"image_delete":                 &hcldec.AttrSpec{Name: "image_delete", Type: cty.Bool, Required: false},
 		"image_export":                 &hcldec.AttrSpec{Name: "image_export", Type: cty.Bool, Required: false},
 		"vm_force_delete":              &hcldec.AttrSpec{Name: "vm_force_delete", Type: cty.Bool, Required: false},

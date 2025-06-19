@@ -19,11 +19,11 @@ type diskArtefact struct {
 	size int64
 }
 
-type stepCopyImage struct {
+type stepCreateImage struct {
 	Config *Config
 }
 
-func (s *stepCopyImage) Run(ctx context.Context, state multistep.StateBag) multistep.StepAction {
+func (s *stepCreateImage) Run(ctx context.Context, state multistep.StateBag) multistep.StepAction {
 	ui := state.Get("ui").(packer.Ui)
 	vmUUID := state.Get("vm_uuid").(string)
 	d := state.Get("driver").(Driver)
@@ -75,7 +75,7 @@ func (s *stepCopyImage) Run(ctx context.Context, state multistep.StateBag) multi
 	return multistep.ActionContinue
 }
 
-func (s *stepCopyImage) Cleanup(state multistep.StateBag) {
+func (s *stepCreateImage) Cleanup(state multistep.StateBag) {
 	ui := state.Get("ui").(packer.Ui)
 	d := state.Get("driver").(Driver)
 	ctx, ok := state.Get("ctx").(context.Context)

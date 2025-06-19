@@ -81,9 +81,12 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			Command: b.config.ShutdownCommand,
 			Timeout: b.config.ShutdownTimeout,
 		},
-		&stepCopyImage{
+	}
+
+	if !b.config.ImageSkip {
+		steps = append(steps, &stepCreateImage{
 			Config: &b.config,
-		},
+		})
 	}
 
 	if b.config.OvaConfig.Create {
