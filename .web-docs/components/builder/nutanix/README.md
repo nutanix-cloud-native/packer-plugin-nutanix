@@ -20,6 +20,7 @@ These parameters allow to define information about platform and temporary VM use
   - `cpu` (number) - Number of vCPU for temporary VM (default is 1).
   - `core` (number) - Number of cores per vCPU for temporary VM (default is 1).
   - `memory_mb` (number) - Size of vRAM for temporary VM (in megabytes).
+  - `hardware_virtualization` (bool) - Enable hardware virtualization for temporary VM (default is false).
   - `cd_files` (array of strings) - A list of files to place onto a CD that is attached when the VM is booted. This can include either files or directories; any directories will be copied onto the CD recursively, preserving directory structure hierarchy.
   - `cd_label` (string) - Label of this CD Drive.
   - `boot_type` (string) - Type of boot used on the temporary VM ("legacy", "uefi" or "secure_boot", default is "legacy").
@@ -28,6 +29,23 @@ These parameters allow to define information about platform and temporary VM use
   - `project` (string) - Assign Project to the vm.
   - `gpu` ([] GPU) - GPU in cluster name to be attached on temporary VM.
   - `serialport` (bool) - Add a serial port to the temporary VM. This is required for some Linux Cloud Images that will have a kernel panic if a serial port is not present on first boot.
+
+#### vTPM
+
+Use `vtpm{}` entry to configure vTPM on the temporary VM.
+
+
+All parameters of this `vtpm` section are described below.
+
+- `enabled` (bool) - Enable vTPM for the temporary VM (default is false).
+
+
+Sample:
+```hcl
+  vtpm {
+      enabled = true
+  }
+```
 
 ## Output configuration
 These parameters allow to configure everything around image creation, from the temporary VM connection to the final image definition.

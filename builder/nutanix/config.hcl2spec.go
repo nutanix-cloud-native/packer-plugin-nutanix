@@ -144,6 +144,8 @@ type FlatConfig struct {
 	VMName                    *string             `mapstructure:"vm_name" json:"vm_name" required:"false" cty:"vm_name" hcl:"vm_name"`
 	OSType                    *string             `mapstructure:"os_type" json:"os_type" required:"true" cty:"os_type" hcl:"os_type"`
 	BootType                  *string             `mapstructure:"boot_type" json:"boot_type" required:"false" cty:"boot_type" hcl:"boot_type"`
+	VTPM                      *FlatVTPM           `mapstructure:"vtpm" json:"vtpm" required:"false" cty:"vtpm" hcl:"vtpm"`
+	HardwareVirtualization    *bool               `mapstructure:"hardware_virtualization" json:"hardware_virtualization" required:"false" cty:"hardware_virtualization" hcl:"hardware_virtualization"`
 	BootPriority              *string             `mapstructure:"boot_priority" json:"boot_priority" required:"false" cty:"boot_priority" hcl:"boot_priority"`
 	VmDisks                   []FlatVmDisk        `mapstructure:"vm_disks" cty:"vm_disks" hcl:"vm_disks"`
 	VmNICs                    []FlatVmNIC         `mapstructure:"vm_nics" cty:"vm_nics" hcl:"vm_nics"`
@@ -260,6 +262,8 @@ func (*FlatConfig) HCL2Spec() map[string]hcldec.Spec {
 		"vm_name":                      &hcldec.AttrSpec{Name: "vm_name", Type: cty.String, Required: false},
 		"os_type":                      &hcldec.AttrSpec{Name: "os_type", Type: cty.String, Required: false},
 		"boot_type":                    &hcldec.AttrSpec{Name: "boot_type", Type: cty.String, Required: false},
+		"vtpm":                         &hcldec.BlockSpec{TypeName: "vtpm", Nested: hcldec.ObjectSpec((*FlatVTPM)(nil).HCL2Spec())},
+		"hardware_virtualization":      &hcldec.AttrSpec{Name: "hardware_virtualization", Type: cty.Bool, Required: false},
 		"boot_priority":                &hcldec.AttrSpec{Name: "boot_priority", Type: cty.String, Required: false},
 		"vm_disks":                     &hcldec.BlockListSpec{TypeName: "vm_disks", Nested: hcldec.ObjectSpec((*FlatVmDisk)(nil).HCL2Spec())},
 		"vm_nics":                      &hcldec.BlockListSpec{TypeName: "vm_nics", Nested: hcldec.ObjectSpec((*FlatVmNIC)(nil).HCL2Spec())},
@@ -367,26 +371,51 @@ func (*FlatTemplateConfig) HCL2Spec() map[string]hcldec.Spec {
 	return s
 }
 
+// FlatVTPM is an auto-generated flat version of VTPM.
+// Where the contents of a field with a `mapstructure:,squash` tag are bubbled up.
+type FlatVTPM struct {
+	Enabled *bool `mapstructure:"enabled" json:"enabled" required:"false" cty:"enabled" hcl:"enabled"`
+}
+
+// FlatMapstructure returns a new FlatVTPM.
+// FlatVTPM is an auto-generated flat version of VTPM.
+// Where the contents a fields with a `mapstructure:,squash` tag are bubbled up.
+func (*VTPM) FlatMapstructure() interface{ HCL2Spec() map[string]hcldec.Spec } {
+	return new(FlatVTPM)
+}
+
+// HCL2Spec returns the hcl spec of a VTPM.
+// This spec is used by HCL to read the fields of VTPM.
+// The decoded values from this spec will then be applied to a FlatVTPM.
+func (*FlatVTPM) HCL2Spec() map[string]hcldec.Spec {
+	s := map[string]hcldec.Spec{
+		"enabled": &hcldec.AttrSpec{Name: "enabled", Type: cty.Bool, Required: false},
+	}
+	return s
+}
+
 // FlatVmConfig is an auto-generated flat version of VmConfig.
 // Where the contents of a field with a `mapstructure:,squash` tag are bubbled up.
 type FlatVmConfig struct {
-	VMName       *string        `mapstructure:"vm_name" json:"vm_name" required:"false" cty:"vm_name" hcl:"vm_name"`
-	OSType       *string        `mapstructure:"os_type" json:"os_type" required:"true" cty:"os_type" hcl:"os_type"`
-	BootType     *string        `mapstructure:"boot_type" json:"boot_type" required:"false" cty:"boot_type" hcl:"boot_type"`
-	BootPriority *string        `mapstructure:"boot_priority" json:"boot_priority" required:"false" cty:"boot_priority" hcl:"boot_priority"`
-	VmDisks      []FlatVmDisk   `mapstructure:"vm_disks" cty:"vm_disks" hcl:"vm_disks"`
-	VmNICs       []FlatVmNIC    `mapstructure:"vm_nics" cty:"vm_nics" hcl:"vm_nics"`
-	ImageName    *string        `mapstructure:"image_name" json:"image_name" required:"false" cty:"image_name" hcl:"image_name"`
-	ClusterUUID  *string        `mapstructure:"cluster_uuid" json:"cluster_uuid" required:"false" cty:"cluster_uuid" hcl:"cluster_uuid"`
-	ClusterName  *string        `mapstructure:"cluster_name" json:"cluster_name" required:"false" cty:"cluster_name" hcl:"cluster_name"`
-	CPU          *int64         `mapstructure:"cpu" json:"cpu" required:"false" cty:"cpu" hcl:"cpu"`
-	Core         *int64         `mapstructure:"core" json:"core" required:"false" cty:"core" hcl:"core"`
-	MemoryMB     *int64         `mapstructure:"memory_mb" json:"memory_mb" required:"false" cty:"memory_mb" hcl:"memory_mb"`
-	UserData     *string        `mapstructure:"user_data" json:"user_data" required:"false" cty:"user_data" hcl:"user_data"`
-	VMCategories []FlatCategory `mapstructure:"vm_categories" required:"false" cty:"vm_categories" hcl:"vm_categories"`
-	Project      *string        `mapstructure:"project" required:"false" cty:"project" hcl:"project"`
-	GPU          []FlatGPU      `mapstructure:"gpu" required:"false" cty:"gpu" hcl:"gpu"`
-	SerialPort   *bool          `mapstructure:"serialport" json:"serialport" required:"false" cty:"serialport" hcl:"serialport"`
+	VMName                 *string        `mapstructure:"vm_name" json:"vm_name" required:"false" cty:"vm_name" hcl:"vm_name"`
+	OSType                 *string        `mapstructure:"os_type" json:"os_type" required:"true" cty:"os_type" hcl:"os_type"`
+	BootType               *string        `mapstructure:"boot_type" json:"boot_type" required:"false" cty:"boot_type" hcl:"boot_type"`
+	VTPM                   *FlatVTPM      `mapstructure:"vtpm" json:"vtpm" required:"false" cty:"vtpm" hcl:"vtpm"`
+	HardwareVirtualization *bool          `mapstructure:"hardware_virtualization" json:"hardware_virtualization" required:"false" cty:"hardware_virtualization" hcl:"hardware_virtualization"`
+	BootPriority           *string        `mapstructure:"boot_priority" json:"boot_priority" required:"false" cty:"boot_priority" hcl:"boot_priority"`
+	VmDisks                []FlatVmDisk   `mapstructure:"vm_disks" cty:"vm_disks" hcl:"vm_disks"`
+	VmNICs                 []FlatVmNIC    `mapstructure:"vm_nics" cty:"vm_nics" hcl:"vm_nics"`
+	ImageName              *string        `mapstructure:"image_name" json:"image_name" required:"false" cty:"image_name" hcl:"image_name"`
+	ClusterUUID            *string        `mapstructure:"cluster_uuid" json:"cluster_uuid" required:"false" cty:"cluster_uuid" hcl:"cluster_uuid"`
+	ClusterName            *string        `mapstructure:"cluster_name" json:"cluster_name" required:"false" cty:"cluster_name" hcl:"cluster_name"`
+	CPU                    *int64         `mapstructure:"cpu" json:"cpu" required:"false" cty:"cpu" hcl:"cpu"`
+	Core                   *int64         `mapstructure:"core" json:"core" required:"false" cty:"core" hcl:"core"`
+	MemoryMB               *int64         `mapstructure:"memory_mb" json:"memory_mb" required:"false" cty:"memory_mb" hcl:"memory_mb"`
+	UserData               *string        `mapstructure:"user_data" json:"user_data" required:"false" cty:"user_data" hcl:"user_data"`
+	VMCategories           []FlatCategory `mapstructure:"vm_categories" required:"false" cty:"vm_categories" hcl:"vm_categories"`
+	Project                *string        `mapstructure:"project" required:"false" cty:"project" hcl:"project"`
+	GPU                    []FlatGPU      `mapstructure:"gpu" required:"false" cty:"gpu" hcl:"gpu"`
+	SerialPort             *bool          `mapstructure:"serialport" json:"serialport" required:"false" cty:"serialport" hcl:"serialport"`
 }
 
 // FlatMapstructure returns a new FlatVmConfig.
@@ -401,23 +430,25 @@ func (*VmConfig) FlatMapstructure() interface{ HCL2Spec() map[string]hcldec.Spec
 // The decoded values from this spec will then be applied to a FlatVmConfig.
 func (*FlatVmConfig) HCL2Spec() map[string]hcldec.Spec {
 	s := map[string]hcldec.Spec{
-		"vm_name":       &hcldec.AttrSpec{Name: "vm_name", Type: cty.String, Required: false},
-		"os_type":       &hcldec.AttrSpec{Name: "os_type", Type: cty.String, Required: false},
-		"boot_type":     &hcldec.AttrSpec{Name: "boot_type", Type: cty.String, Required: false},
-		"boot_priority": &hcldec.AttrSpec{Name: "boot_priority", Type: cty.String, Required: false},
-		"vm_disks":      &hcldec.BlockListSpec{TypeName: "vm_disks", Nested: hcldec.ObjectSpec((*FlatVmDisk)(nil).HCL2Spec())},
-		"vm_nics":       &hcldec.BlockListSpec{TypeName: "vm_nics", Nested: hcldec.ObjectSpec((*FlatVmNIC)(nil).HCL2Spec())},
-		"image_name":    &hcldec.AttrSpec{Name: "image_name", Type: cty.String, Required: false},
-		"cluster_uuid":  &hcldec.AttrSpec{Name: "cluster_uuid", Type: cty.String, Required: false},
-		"cluster_name":  &hcldec.AttrSpec{Name: "cluster_name", Type: cty.String, Required: false},
-		"cpu":           &hcldec.AttrSpec{Name: "cpu", Type: cty.Number, Required: false},
-		"core":          &hcldec.AttrSpec{Name: "core", Type: cty.Number, Required: false},
-		"memory_mb":     &hcldec.AttrSpec{Name: "memory_mb", Type: cty.Number, Required: false},
-		"user_data":     &hcldec.AttrSpec{Name: "user_data", Type: cty.String, Required: false},
-		"vm_categories": &hcldec.BlockListSpec{TypeName: "vm_categories", Nested: hcldec.ObjectSpec((*FlatCategory)(nil).HCL2Spec())},
-		"project":       &hcldec.AttrSpec{Name: "project", Type: cty.String, Required: false},
-		"gpu":           &hcldec.BlockListSpec{TypeName: "gpu", Nested: hcldec.ObjectSpec((*FlatGPU)(nil).HCL2Spec())},
-		"serialport":    &hcldec.AttrSpec{Name: "serialport", Type: cty.Bool, Required: false},
+		"vm_name":                 &hcldec.AttrSpec{Name: "vm_name", Type: cty.String, Required: false},
+		"os_type":                 &hcldec.AttrSpec{Name: "os_type", Type: cty.String, Required: false},
+		"boot_type":               &hcldec.AttrSpec{Name: "boot_type", Type: cty.String, Required: false},
+		"vtpm":                    &hcldec.BlockSpec{TypeName: "vtpm", Nested: hcldec.ObjectSpec((*FlatVTPM)(nil).HCL2Spec())},
+		"hardware_virtualization": &hcldec.AttrSpec{Name: "hardware_virtualization", Type: cty.Bool, Required: false},
+		"boot_priority":           &hcldec.AttrSpec{Name: "boot_priority", Type: cty.String, Required: false},
+		"vm_disks":                &hcldec.BlockListSpec{TypeName: "vm_disks", Nested: hcldec.ObjectSpec((*FlatVmDisk)(nil).HCL2Spec())},
+		"vm_nics":                 &hcldec.BlockListSpec{TypeName: "vm_nics", Nested: hcldec.ObjectSpec((*FlatVmNIC)(nil).HCL2Spec())},
+		"image_name":              &hcldec.AttrSpec{Name: "image_name", Type: cty.String, Required: false},
+		"cluster_uuid":            &hcldec.AttrSpec{Name: "cluster_uuid", Type: cty.String, Required: false},
+		"cluster_name":            &hcldec.AttrSpec{Name: "cluster_name", Type: cty.String, Required: false},
+		"cpu":                     &hcldec.AttrSpec{Name: "cpu", Type: cty.Number, Required: false},
+		"core":                    &hcldec.AttrSpec{Name: "core", Type: cty.Number, Required: false},
+		"memory_mb":               &hcldec.AttrSpec{Name: "memory_mb", Type: cty.Number, Required: false},
+		"user_data":               &hcldec.AttrSpec{Name: "user_data", Type: cty.String, Required: false},
+		"vm_categories":           &hcldec.BlockListSpec{TypeName: "vm_categories", Nested: hcldec.ObjectSpec((*FlatCategory)(nil).HCL2Spec())},
+		"project":                 &hcldec.AttrSpec{Name: "project", Type: cty.String, Required: false},
+		"gpu":                     &hcldec.BlockListSpec{TypeName: "gpu", Nested: hcldec.ObjectSpec((*FlatGPU)(nil).HCL2Spec())},
+		"serialport":              &hcldec.AttrSpec{Name: "serialport", Type: cty.Bool, Required: false},
 	}
 	return s
 }

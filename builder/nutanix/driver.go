@@ -586,6 +586,23 @@ func (d *NutanixDriver) CreateRequest(ctx context.Context, vm VmConfig, state mu
 		BootDeviceOrderList: bootDeviceOrderList,
 	}
 
+	// Configure vTPM if enabled
+	// Note: vTPM is only supported for UEFI and Secure Boot VMs.
+	// If the VM is configured for Legacy boot, vTPM will not be enabled.
+	// If the VM is configured for Secure Boot or UEFI, vTPM will be enabled if the VTPM.Enabled field is true.
+	if (vm.BootType == NutanixIdentifierBootTypeUEFI || vm.BootType == NutanixIdentifierBootTypeSecureBoot) && vm.VTPM.Enabled {
+		log.Printf("enabling VTPM for VM %s", vm.VMName)
+		req.Spec.Resources.VtpmConfig = &v3.VMVtpmConfig{
+			VtpmEnabled: &vm.VTPM.Enabled,
+		}
+	}
+
+	// Configure Hardware Virtualization
+	if vm.HardwareVirtualization {
+		log.Printf("enabling Hardware Virtualization for VM %s", vm.VMName)
+		req.Spec.Resources.HardwareVirtualizationEnabled = &vm.HardwareVirtualization
+	}
+
 	if len(vm.VMCategories) != 0 {
 		c := make(map[string]string)
 		for _, category := range vm.VMCategories {

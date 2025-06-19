@@ -27,12 +27,16 @@ source "nutanix" "centos" {
     value = "Dev"
   }
 
-// project       = "myproject"
+  vtpm {
+    enabled = true
+  }
 
   image_name        = "centos-packer-image"
   image_export      = false
   force_deregister  = true
   user_data         = base64encode(file("scripts/cloud-init/cloud-config-centos.yaml"))
+
+  boot_type         = "secure_boot"
 
   shutdown_command  = "echo 'packer' | sudo -S shutdown -P now"
   shutdown_timeout = "2m"
