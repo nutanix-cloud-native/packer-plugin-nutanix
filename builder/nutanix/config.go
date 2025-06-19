@@ -26,6 +26,9 @@ const (
 	// NutanixIdentifierBootTypeUEFI is a resource identifier identifying the UEFI boot type for virtual machines.
 	NutanixIdentifierBootTypeUEFI string = "uefi"
 
+	// NutanixIdentifierBootTypeSecureBoot is a resource identifier identifying the secure boot type for virtual machines.
+	NutanixIdentifierBootTypeSecureBoot string = "secure_boot"
+
 	// NutanixIdentifierBootPriorityDisk is a resource identifier identifying the boot priority as disk for virtual machines.
 	NutanixIdentifierBootPriorityDisk string = "disk"
 
@@ -171,7 +174,7 @@ func (c *Config) Prepare(raws ...interface{}) ([]string, error) {
 		c.ClusterConfig.Port = 9440
 	}
 
-	if c.BootType != NutanixIdentifierBootTypeLegacy && c.BootType != NutanixIdentifierBootTypeUEFI {
+	if c.BootType != NutanixIdentifierBootTypeLegacy && c.BootType != NutanixIdentifierBootTypeUEFI && c.BootType != NutanixIdentifierBootTypeSecureBoot {
 		log.Println("No correct VM Boot Type configured, defaulting to 'legacy'")
 		c.BootType = string(NutanixIdentifierBootTypeLegacy)
 	}
