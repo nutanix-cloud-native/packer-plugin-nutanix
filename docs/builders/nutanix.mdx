@@ -51,6 +51,7 @@ These parameters allow to configure everything around image creation, from the t
 - `shutdown_command` (string) - Command line to shutdown your temporary VM.
 - `shutdown_timeout` (string) - Timeout for VM shutdown (format : 2m).
 - `vm_force_delete` (bool) - Delete vm even if build is not succesful (default is false).
+- `vm_retain` (bool) - Retain the temporary VM after build process is completed (default is false).
 - `communicator` (string) - Protocol used for Packer connection (ex "winrm" or "ssh"). Default is : "ssh".
 
 ### Dedicated to Linux
