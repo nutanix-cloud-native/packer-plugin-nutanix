@@ -118,13 +118,32 @@ Sample:
   }
 ```
 
+## Template configuration
+
+Use `template{}` entry to create a template from the temporary VM.
+
+Template feature need Prism Central 2024.3+ or later.
+
+All parameters of this `template` section are described below.
+
+- `create` (bool) - Create a template from the temporary VM (default is false).
+- `name` (string) - Name of the template to create (default is the vm_name).
+- `description` (string) - Description of the template to create (default is no description).
+
+Sample:
+```hcl
+  template {
+      create = true
+      name = "myTemplate"
+      description = "This is my template"
+  }
+```
 
 ## OVA Config
 Use `ova{}` entry to configure the OVA creation & export
 
 All parameters of this `ova` section are described below.
 
-3 types of disk configurations can be used:
 - `create` (bool) - Create OVA image for the vm (default is false).
 - `export` (bool) - Export OVA image in the current folder (default is false).
 - `format` (string) - Format of the ova image (allowed values: 'vmdk', 'qcow2', default 'vmdk').

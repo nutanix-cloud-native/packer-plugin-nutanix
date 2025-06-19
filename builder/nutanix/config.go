@@ -1,4 +1,4 @@
-//go:generate packer-sdc mapstructure-to-hcl2 -type Config,Category,ClusterConfig,VmConfig,VmDisk,VmNIC,GPU,OvaConfig
+//go:generate packer-sdc mapstructure-to-hcl2 -type Config,Category,ClusterConfig,VmConfig,VmDisk,VmNIC,GPU,OvaConfig,TemplateConfig
 
 package nutanix
 
@@ -48,15 +48,16 @@ type Config struct {
 	shutdowncommand.ShutdownConfig `mapstructure:",squash"`
 	ClusterConfig                  `mapstructure:",squash"`
 	VmConfig                       `mapstructure:",squash"`
-	OvaConfig                      OvaConfig  `mapstructure:"ova" required:"false"`
-	ForceDeregister                bool       `mapstructure:"force_deregister" json:"force_deregister" required:"false"`
-	ImageDescription               string     `mapstructure:"image_description" json:"image_description" required:"false"`
-	ImageCategories                []Category `mapstructure:"image_categories" required:"false"`
-	ImageSkip                      bool       `mapstructure:"image_skip" json:"image_skip" required:"false"`
-	ImageDelete                    bool       `mapstructure:"image_delete" json:"image_delete" required:"false"`
-	ImageExport                    bool       `mapstructure:"image_export" json:"image_export" required:"false"`
-	VmForceDelete                  bool       `mapstructure:"vm_force_delete" json:"vm_force_delete" required:"false"`
-	VmRetain                       bool       `mapstructure:"vm_retain" json:"vm_retain" required:"false"`
+	OvaConfig                      OvaConfig      `mapstructure:"ova" required:"false"`
+	TemplateConfig                 TemplateConfig `mapstructure:"template" required:"false"`
+	ForceDeregister                bool           `mapstructure:"force_deregister" json:"force_deregister" required:"false"`
+	ImageDescription               string         `mapstructure:"image_description" json:"image_description" required:"false"`
+	ImageCategories                []Category     `mapstructure:"image_categories" required:"false"`
+	ImageSkip                      bool           `mapstructure:"image_skip" json:"image_skip" required:"false"`
+	ImageDelete                    bool           `mapstructure:"image_delete" json:"image_delete" required:"false"`
+	ImageExport                    bool           `mapstructure:"image_export" json:"image_export" required:"false"`
+	VmForceDelete                  bool           `mapstructure:"vm_force_delete" json:"vm_force_delete" required:"false"`
+	VmRetain                       bool           `mapstructure:"vm_retain" json:"vm_retain" required:"false"`
 
 	ctx interpolate.Context
 }
@@ -119,6 +120,12 @@ type OvaConfig struct {
 	Create bool   `mapstructure:"create" json:"create" required:"false"`
 	Format string `mapstructure:"format" json:"format" required:"false"`
 	Name   string `mapstructure:"name" json:"name" required:"false"`
+}
+
+type TemplateConfig struct {
+	Create      bool   `mapstructure:"create" json:"create" required:"false"`
+	Name        string `mapstructure:"name" json:"name" required:"false"`
+	Description string `mapstructure:"description" json:"description" required:"false"`
 }
 
 func (c *Config) Prepare(raws ...interface{}) ([]string, error) {
@@ -254,6 +261,12 @@ func (c *Config) Prepare(raws ...interface{}) ([]string, error) {
 		log.Println("No image_name defined, setting to vm_name")
 
 		c.VmConfig.ImageName = c.VmConfig.VMName
+	}
+
+	// Set name for Template if not provided
+	if c.TemplateConfig.Create && c.TemplateConfig.Name == "" {
+		log.Println("No template.name defined, setting to vm_name")
+		c.TemplateConfig.Name = c.VmConfig.VMName
 	}
 
 	// Validate if both Image Category key and value are given in same time

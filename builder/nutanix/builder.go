@@ -83,6 +83,12 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 		},
 	}
 
+	if b.config.TemplateConfig.Create {
+		steps = append(steps, &stepCreateTemplate{
+			Config: &b.config,
+		})
+	}
+
 	if !b.config.ImageSkip {
 		steps = append(steps, &stepCreateImage{
 			Config: &b.config,
