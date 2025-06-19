@@ -1,4 +1,4 @@
-//go:generate packer-sdc mapstructure-to-hcl2 -type Config,Category,ClusterConfig,VmConfig,VmDisk,VmNIC,GPU,OvaConfig,TemplateConfig
+//go:generate packer-sdc mapstructure-to-hcl2 -type Config,Category,ClusterConfig,VmConfig,VmDisk,VmNIC,GPU,OvaConfig,TemplateConfig,VTPM
 
 package nutanix
 
@@ -25,6 +25,9 @@ const (
 
 	// NutanixIdentifierBootTypeUEFI is a resource identifier identifying the UEFI boot type for virtual machines.
 	NutanixIdentifierBootTypeUEFI string = "uefi"
+
+	// NutanixIdentifierBootTypeSecureBoot is a resource identifier identifying the secure boot type for virtual machines.
+	NutanixIdentifierBootTypeSecureBoot string = "secure_boot"
 
 	// NutanixIdentifierBootPriorityDisk is a resource identifier identifying the boot priority as disk for virtual machines.
 	NutanixIdentifierBootPriorityDisk string = "disk"
@@ -66,6 +69,10 @@ type GPU struct {
 	Name string `mapstructure:"name" json:"name" required:"false"`
 }
 
+type VTPM struct {
+	Enabled bool `mapstructure:"enabled" json:"enabled" required:"false"`
+}
+
 type Category struct {
 	Key   string `mapstructure:"key" json:"key" required:"false"`
 	Value string `mapstructure:"value" json:"value" required:"false"`
@@ -96,23 +103,25 @@ type VmNIC struct {
 	SubnetUUID string `mapstructure:"subnet_uuid" json:"subnet_uuid" required:"false"`
 }
 type VmConfig struct {
-	VMName       string     `mapstructure:"vm_name" json:"vm_name" required:"false"`
-	OSType       string     `mapstructure:"os_type" json:"os_type" required:"true"`
-	BootType     string     `mapstructure:"boot_type" json:"boot_type" required:"false"`
-	BootPriority string     `mapstructure:"boot_priority" json:"boot_priority" required:"false"`
-	VmDisks      []VmDisk   `mapstructure:"vm_disks"`
-	VmNICs       []VmNIC    `mapstructure:"vm_nics"`
-	ImageName    string     `mapstructure:"image_name" json:"image_name" required:"false"`
-	ClusterUUID  string     `mapstructure:"cluster_uuid" json:"cluster_uuid" required:"false"`
-	ClusterName  string     `mapstructure:"cluster_name" json:"cluster_name" required:"false"`
-	CPU          int64      `mapstructure:"cpu" json:"cpu" required:"false"`
-	Core         int64      `mapstructure:"core" json:"core" required:"false"`
-	MemoryMB     int64      `mapstructure:"memory_mb" json:"memory_mb" required:"false"`
-	UserData     string     `mapstructure:"user_data" json:"user_data" required:"false"`
-	VMCategories []Category `mapstructure:"vm_categories" required:"false"`
-	Project      string     `mapstructure:"project" required:"false"`
-	GPU          []GPU      `mapstructure:"gpu" required:"false"`
-	SerialPort   bool       `mapstructure:"serialport" json:"serialport" required:"false"`
+	VMName                 string     `mapstructure:"vm_name" json:"vm_name" required:"false"`
+	OSType                 string     `mapstructure:"os_type" json:"os_type" required:"true"`
+	BootType               string     `mapstructure:"boot_type" json:"boot_type" required:"false"`
+	VTPM                   VTPM       `mapstructure:"vtpm" json:"vtpm" required:"false"`
+	HardwareVirtualization bool       `mapstructure:"hardware_virtualization" json:"hardware_virtualization" required:"false"`
+	BootPriority           string     `mapstructure:"boot_priority" json:"boot_priority" required:"false"`
+	VmDisks                []VmDisk   `mapstructure:"vm_disks"`
+	VmNICs                 []VmNIC    `mapstructure:"vm_nics"`
+	ImageName              string     `mapstructure:"image_name" json:"image_name" required:"false"`
+	ClusterUUID            string     `mapstructure:"cluster_uuid" json:"cluster_uuid" required:"false"`
+	ClusterName            string     `mapstructure:"cluster_name" json:"cluster_name" required:"false"`
+	CPU                    int64      `mapstructure:"cpu" json:"cpu" required:"false"`
+	Core                   int64      `mapstructure:"core" json:"core" required:"false"`
+	MemoryMB               int64      `mapstructure:"memory_mb" json:"memory_mb" required:"false"`
+	UserData               string     `mapstructure:"user_data" json:"user_data" required:"false"`
+	VMCategories           []Category `mapstructure:"vm_categories" required:"false"`
+	Project                string     `mapstructure:"project" required:"false"`
+	GPU                    []GPU      `mapstructure:"gpu" required:"false"`
+	SerialPort             bool       `mapstructure:"serialport" json:"serialport" required:"false"`
 }
 
 type OvaConfig struct {
@@ -171,7 +180,7 @@ func (c *Config) Prepare(raws ...interface{}) ([]string, error) {
 		c.ClusterConfig.Port = 9440
 	}
 
-	if c.BootType != NutanixIdentifierBootTypeLegacy && c.BootType != NutanixIdentifierBootTypeUEFI {
+	if c.BootType != NutanixIdentifierBootTypeLegacy && c.BootType != NutanixIdentifierBootTypeUEFI && c.BootType != NutanixIdentifierBootTypeSecureBoot {
 		log.Println("No correct VM Boot Type configured, defaulting to 'legacy'")
 		c.BootType = string(NutanixIdentifierBootTypeLegacy)
 	}
