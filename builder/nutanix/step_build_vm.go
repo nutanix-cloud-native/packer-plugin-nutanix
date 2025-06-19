@@ -115,6 +115,9 @@ func (s *stepBuildVM) Cleanup(state multistep.StateBag) {
 		return
 	} else if config.VmForceDelete && cancelled || halted {
 		ui.Say("Force deleting virtual machine...")
+	} else if config.VmRetain {
+		ui.Say("Retaining virtual machine...")
+		return
 	} else {
 		ui.Say("Deleting virtual machine...")
 	}
