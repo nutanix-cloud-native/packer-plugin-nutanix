@@ -156,35 +156,49 @@ func (c *Config) Prepare(raws ...interface{}) ([]string, error) {
 	var errs *packersdk.MultiError
 	warnings := make([]string, 0)
 
+	// Set Default Communicator Type
 	if c.CommConfig.Type == "" {
 		log.Println("No Communicator Type set, setting to 'ssh'")
 		c.CommConfig.Type = "ssh"
 	}
 
+	// Set Default CPU Configuration
 	if c.CPU == 0 {
 		log.Println("No CPU configured, defaulting to '1'")
 		c.CPU = 1
 	}
 
+	// Set Default Core Configuration
 	if c.Core == 0 {
 		log.Println("No Core configured, defaulting to '1'")
 		c.Core = 1
 	}
 
+	// Set Default Memory Configuration
 	if c.MemoryMB == 0 {
 		log.Println("No VM Memory configured, defaulting to '4096'")
 		c.MemoryMB = 4096
 	}
+
+	// Set Default Nutanix Port
 	if c.ClusterConfig.Port == 0 {
 		log.Println("No Nutanix Port configured, defaulting to '9440'")
 		c.ClusterConfig.Port = 9440
 	}
 
+	// Validate Boot Type
 	if c.BootType != NutanixIdentifierBootTypeLegacy && c.BootType != NutanixIdentifierBootTypeUEFI && c.BootType != NutanixIdentifierBootTypeSecureBoot {
 		log.Println("No correct VM Boot Type configured, defaulting to 'legacy'")
 		c.BootType = string(NutanixIdentifierBootTypeLegacy)
 	}
 
+	// Validate VTPM is not used with legacy boot type
+	if c.VTPM.Enabled && c.BootType == NutanixIdentifierBootTypeLegacy {
+		log.Println("vTPM is not supported with legacy boot type")
+		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("vTPM is not supported with legacy boot type"))
+	}
+
+	// Validate Boot Priority
 	if c.BootPriority != NutanixIdentifierBootPriorityDisk && c.BootPriority != NutanixIdentifierBootPriorityCDROM {
 		log.Println("No correct VM Boot Priority configured, defaulting to 'cdrom'")
 		c.BootPriority = string(NutanixIdentifierBootPriorityCDROM)
