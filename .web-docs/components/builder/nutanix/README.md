@@ -136,6 +136,22 @@ Sample:
   }
 ```
 
+## VM Clean
+
+Use `vm_clean{}` entry to configure VM cleaning options. This section allows you to clean up the temporary VM after the image creation process is completed.
+It can be useful to remove unnecessary components or reset the VM to a clean state before creating a template or exporting an OVA.
+
+All parameters of this `vm_clean` section are described below.
+
+- `cdrom` (bool) - Remove all CD-ROMs from the VM (default is false).
+
+Sample:
+```hcl
+  vm_clean {
+      cdrom = true
+  }
+```
+
 ## Template configuration
 
 Use `template{}` entry to create a template from the temporary VM.

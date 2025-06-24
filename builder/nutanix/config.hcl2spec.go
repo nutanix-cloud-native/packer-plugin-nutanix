@@ -160,6 +160,7 @@ type FlatConfig struct {
 	Project                   *string             `mapstructure:"project" required:"false" cty:"project" hcl:"project"`
 	GPU                       []FlatGPU           `mapstructure:"gpu" required:"false" cty:"gpu" hcl:"gpu"`
 	SerialPort                *bool               `mapstructure:"serialport" json:"serialport" required:"false" cty:"serialport" hcl:"serialport"`
+	Clean                     *FlatVmClean        `mapstructure:"vm_clean" json:"vm_clean" required:"false" cty:"vm_clean" hcl:"vm_clean"`
 	OvaConfig                 *FlatOvaConfig      `mapstructure:"ova" required:"false" cty:"ova" hcl:"ova"`
 	TemplateConfig            *FlatTemplateConfig `mapstructure:"template" required:"false" cty:"template" hcl:"template"`
 	ForceDeregister           *bool               `mapstructure:"force_deregister" json:"force_deregister" required:"false" cty:"force_deregister" hcl:"force_deregister"`
@@ -278,6 +279,7 @@ func (*FlatConfig) HCL2Spec() map[string]hcldec.Spec {
 		"project":                      &hcldec.AttrSpec{Name: "project", Type: cty.String, Required: false},
 		"gpu":                          &hcldec.BlockListSpec{TypeName: "gpu", Nested: hcldec.ObjectSpec((*FlatGPU)(nil).HCL2Spec())},
 		"serialport":                   &hcldec.AttrSpec{Name: "serialport", Type: cty.Bool, Required: false},
+		"vm_clean":                     &hcldec.BlockSpec{TypeName: "vm_clean", Nested: hcldec.ObjectSpec((*FlatVmClean)(nil).HCL2Spec())},
 		"ova":                          &hcldec.BlockSpec{TypeName: "ova", Nested: hcldec.ObjectSpec((*FlatOvaConfig)(nil).HCL2Spec())},
 		"template":                     &hcldec.BlockSpec{TypeName: "template", Nested: hcldec.ObjectSpec((*FlatTemplateConfig)(nil).HCL2Spec())},
 		"force_deregister":             &hcldec.AttrSpec{Name: "force_deregister", Type: cty.Bool, Required: false},
@@ -394,6 +396,29 @@ func (*FlatVTPM) HCL2Spec() map[string]hcldec.Spec {
 	return s
 }
 
+// FlatVmClean is an auto-generated flat version of VmClean.
+// Where the contents of a field with a `mapstructure:,squash` tag are bubbled up.
+type FlatVmClean struct {
+	Cdrom *bool `mapstructure:"cdrom" json:"cdrom" required:"false" cty:"cdrom" hcl:"cdrom"`
+}
+
+// FlatMapstructure returns a new FlatVmClean.
+// FlatVmClean is an auto-generated flat version of VmClean.
+// Where the contents a fields with a `mapstructure:,squash` tag are bubbled up.
+func (*VmClean) FlatMapstructure() interface{ HCL2Spec() map[string]hcldec.Spec } {
+	return new(FlatVmClean)
+}
+
+// HCL2Spec returns the hcl spec of a VmClean.
+// This spec is used by HCL to read the fields of VmClean.
+// The decoded values from this spec will then be applied to a FlatVmClean.
+func (*FlatVmClean) HCL2Spec() map[string]hcldec.Spec {
+	s := map[string]hcldec.Spec{
+		"cdrom": &hcldec.AttrSpec{Name: "cdrom", Type: cty.Bool, Required: false},
+	}
+	return s
+}
+
 // FlatVmConfig is an auto-generated flat version of VmConfig.
 // Where the contents of a field with a `mapstructure:,squash` tag are bubbled up.
 type FlatVmConfig struct {
@@ -416,6 +441,7 @@ type FlatVmConfig struct {
 	Project                *string        `mapstructure:"project" required:"false" cty:"project" hcl:"project"`
 	GPU                    []FlatGPU      `mapstructure:"gpu" required:"false" cty:"gpu" hcl:"gpu"`
 	SerialPort             *bool          `mapstructure:"serialport" json:"serialport" required:"false" cty:"serialport" hcl:"serialport"`
+	Clean                  *FlatVmClean   `mapstructure:"vm_clean" json:"vm_clean" required:"false" cty:"vm_clean" hcl:"vm_clean"`
 }
 
 // FlatMapstructure returns a new FlatVmConfig.
@@ -449,6 +475,7 @@ func (*FlatVmConfig) HCL2Spec() map[string]hcldec.Spec {
 		"project":                 &hcldec.AttrSpec{Name: "project", Type: cty.String, Required: false},
 		"gpu":                     &hcldec.BlockListSpec{TypeName: "gpu", Nested: hcldec.ObjectSpec((*FlatGPU)(nil).HCL2Spec())},
 		"serialport":              &hcldec.AttrSpec{Name: "serialport", Type: cty.Bool, Required: false},
+		"vm_clean":                &hcldec.BlockSpec{TypeName: "vm_clean", Nested: hcldec.ObjectSpec((*FlatVmClean)(nil).HCL2Spec())},
 	}
 	return s
 }
