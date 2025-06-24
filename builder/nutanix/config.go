@@ -1,4 +1,4 @@
-//go:generate packer-sdc mapstructure-to-hcl2 -type Config,Category,ClusterConfig,VmConfig,VmDisk,VmNIC,GPU,OvaConfig,TemplateConfig,VTPM
+//go:generate packer-sdc mapstructure-to-hcl2 -type Config,Category,ClusterConfig,VmConfig,VmDisk,VmNIC,GPU,OvaConfig,TemplateConfig,VTPM,VmClean
 
 package nutanix
 
@@ -122,6 +122,11 @@ type VmConfig struct {
 	Project                string     `mapstructure:"project" required:"false"`
 	GPU                    []GPU      `mapstructure:"gpu" required:"false"`
 	SerialPort             bool       `mapstructure:"serialport" json:"serialport" required:"false"`
+	Clean                  VmClean    `mapstructure:"vm_clean" json:"vm_clean" required:"false"`
+}
+
+type VmClean struct {
+	Cdrom bool `mapstructure:"cdrom" json:"cdrom" required:"false"`
 }
 
 type OvaConfig struct {

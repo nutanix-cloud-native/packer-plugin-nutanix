@@ -83,6 +83,12 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 		},
 	}
 
+	if b.config.Clean.Cdrom {
+		steps = append(steps, &stepCleanVM{
+			Config: &b.config,
+		})
+	}
+
 	if b.config.TemplateConfig.Create {
 		steps = append(steps, &stepCreateTemplate{
 			Config: &b.config,

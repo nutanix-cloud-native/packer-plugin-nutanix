@@ -32,6 +32,7 @@ const (
 type Driver interface {
 	CreateRequest(context.Context, VmConfig, multistep.StateBag) (*v3.VMIntentInput, error)
 	Create(context.Context, *v3.VMIntentInput) (*nutanixInstance, error)
+	UpdateVM(context.Context, string, *v3.VMIntentInput) (*nutanixInstance, error)
 	Delete(context.Context, string) error
 	GetVM(context.Context, string) (*nutanixInstance, error)
 	GetHost(context.Context, string) (*nutanixHost, error)
@@ -46,6 +47,7 @@ type Driver interface {
 	ExportImage(context.Context, string) (io.ReadCloser, error)
 	SaveVMDisk(context.Context, string, int, []Category) (*nutanixImage, error)
 	WaitForShutdown(string, <-chan struct{}) bool
+	CleanCD(context.Context, *v3.VMIntentInput)
 }
 
 // Verify that NutanixDriver implements the Driver interface
@@ -1413,5 +1415,55 @@ func (d *NutanixDriver) SaveVMDisk(ctx context.Context, diskUUID string, index i
 	} else {
 		return &nutanixImage{image: *image}, nil
 	}
+
+}
+
+func (d *NutanixDriver) UpdateVM(ctx context.Context, vmUUID string, req *v3.VMIntentInput) (*nutanixInstance, error) {
+
+	configCreds := client.Credentials{
+		URL:      fmt.Sprintf("%s:%d", d.ClusterConfig.Endpoint, d.ClusterConfig.Port),
+		Endpoint: d.ClusterConfig.Endpoint,
+		Username: d.ClusterConfig.Username,
+		Password: d.ClusterConfig.Password,
+		Port:     string(d.ClusterConfig.Port),
+		Insecure: d.ClusterConfig.Insecure,
+	}
+
+	conn, err := v3.NewV3Client(configCreds)
+	if err != nil {
+		return nil, fmt.Errorf("error while NewV3Client, %s", err.Error())
+	}
+
+	resp, err := conn.V3.UpdateVM(ctx, vmUUID, req)
+	if err != nil {
+		return nil, fmt.Errorf("error while Updating VM:, %s", err.Error())
+	}
+
+	taskUUID := resp.Status.ExecutionContext.TaskUUID.(string)
+
+	// Wait for the VM to be updated
+	err = checkTask(ctx, conn, taskUUID, 600)
+	if err != nil {
+		return nil, fmt.Errorf("error while waiting updating VM: %s", err.Error())
+	}
+
+	return &nutanixInstance{nutanix: *resp}, nil
+}
+
+func (d *NutanixDriver) CleanCD(ctx context.Context, vm *v3.VMIntentInput) {
+
+	//cleaning CDROMs
+
+	cleanedDisks := make([]*v3.VMDisk, 0, len(vm.Spec.Resources.DiskList))
+
+	for _, disk := range vm.Spec.Resources.DiskList {
+		if *disk.DeviceProperties.DeviceType == "CDROM" {
+			log.Printf("cleaning CDROM %d in VM", *disk.DeviceProperties.DiskAddress.DeviceIndex)
+		} else {
+			cleanedDisks = append(cleanedDisks, disk)
+		}
+	}
+
+	vm.Spec.Resources.DiskList = cleanedDisks
 
 }
