@@ -492,6 +492,7 @@ type FlatVmDisk struct {
 	SourceImageDelete       *bool   `mapstructure:"source_image_delete" json:"source_image_delete" required:"false" cty:"source_image_delete" hcl:"source_image_delete"`
 	SourceImageForce        *bool   `mapstructure:"source_image_force" json:"source_image_force" required:"false" cty:"source_image_force" hcl:"source_image_force"`
 	DiskSizeGB              *int64  `mapstructure:"disk_size_gb" json:"disk_size_gb" required:"false" cty:"disk_size_gb" hcl:"disk_size_gb"`
+	StorageContainerUUID    *string `mapstructure:"storage_container_uuid" json:"storage_container_uuid" required:"false" cty:"storage_container_uuid" hcl:"storage_container_uuid"`
 }
 
 // FlatMapstructure returns a new FlatVmDisk.
@@ -515,6 +516,7 @@ func (*FlatVmDisk) HCL2Spec() map[string]hcldec.Spec {
 		"source_image_delete":        &hcldec.AttrSpec{Name: "source_image_delete", Type: cty.Bool, Required: false},
 		"source_image_force":         &hcldec.AttrSpec{Name: "source_image_force", Type: cty.Bool, Required: false},
 		"disk_size_gb":               &hcldec.AttrSpec{Name: "disk_size_gb", Type: cty.Number, Required: false},
+		"storage_container_uuid":     &hcldec.AttrSpec{Name: "storage_container_uuid", Type: cty.String, Required: false},
 	}
 	return s
 }

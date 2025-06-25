@@ -99,6 +99,8 @@ All parameters of this `vm_disks` section are described below.
 ### Disk 
 - `image_type` (string) - "DISK".
 - `disk_size_gb` (number) - size of th disk (in gigabytes).
+- `storage_container_uuid` (string) - UUID of the storage container where the disk image will be created. If not specified, the default storage container for the cluster will be used.
+
 
 Sample:
 ```hcl
