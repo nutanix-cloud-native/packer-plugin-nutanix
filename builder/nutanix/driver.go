@@ -111,7 +111,7 @@ func findClusterByName(ctx context.Context, conn *v3.Client, name string) (*v3.C
 
 	found := make([]*v3.ClusterIntentResponse, 0)
 	for _, v := range entities {
-		if strings.EqualFold(*v.Status.Name, name) {
+		if strings.EqualFold(*v.Status.Name, name) && !IsPrismCentral(v) {
 			found = append(found, &v3.ClusterIntentResponse{
 				Status:     v.Status,
 				Spec:       v.Spec,
