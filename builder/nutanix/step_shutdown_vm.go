@@ -25,8 +25,9 @@ import (
 //
 //	<nothing>
 type StepShutdown struct {
-	Command string
-	Timeout time.Duration
+	Command             string
+	Timeout             time.Duration
+	DisableStopInstance bool
 }
 
 func (s *StepShutdown) Run(ctx context.Context, state multistep.StateBag) multistep.StepAction {
@@ -36,34 +37,39 @@ func (s *StepShutdown) Run(ctx context.Context, state multistep.StateBag) multis
 	config := state.Get("config").(*Config)
 	vmUUID := state.Get("vm_uuid").(string)
 
-	if config.CommConfig.Type == "none" {
-		ui.Say("No Communicator configured, halting the virtual machine...")
-		if err := driver.PowerOff(ctx, vmUUID); err != nil {
-			err := fmt.Errorf("error stopping VM: %s", err)
-			state.Put("error", err)
-			ui.Error(err.Error())
-			return multistep.ActionHalt
-		}
+	if !s.DisableStopInstance {
 
-	} else if s.Command != "" {
-		ui.Say("Gracefully halting virtual machine...")
-		log.Printf("executing shutdown command: %s", s.Command)
-		cmd := &packersdk.RemoteCmd{Command: s.Command}
-		if err := cmd.RunWithUi(ctx, comm, ui); err != nil {
-			err := fmt.Errorf("failed to send shutdown command: %s", err)
-			state.Put("error", err)
-			ui.Error(err.Error())
-			return multistep.ActionHalt
-		}
+		if config.CommConfig.Type == "none" {
+			ui.Say("No Communicator configured, halting the virtual machine...")
+			if err := driver.PowerOff(ctx, vmUUID); err != nil {
+				err := fmt.Errorf("error stopping VM: %s", err)
+				state.Put("error", err)
+				ui.Error(err.Error())
+				return multistep.ActionHalt
+			}
 
+		} else if s.Command != "" {
+			ui.Say("Gracefully halting virtual machine...")
+			log.Printf("executing shutdown command: %s", s.Command)
+			cmd := &packersdk.RemoteCmd{Command: s.Command}
+			if err := cmd.RunWithUi(ctx, comm, ui); err != nil {
+				err := fmt.Errorf("failed to send shutdown command: %s", err)
+				state.Put("error", err)
+				ui.Error(err.Error())
+				return multistep.ActionHalt
+			}
+
+		} else {
+			ui.Say("Halting the virtual machine...")
+			if err := driver.PowerOff(ctx, vmUUID); err != nil {
+				err := fmt.Errorf("error stopping VM: %s", err)
+				state.Put("error", err)
+				ui.Error(err.Error())
+				return multistep.ActionHalt
+			}
+		}
 	} else {
-		ui.Say("Halting the virtual machine...")
-		if err := driver.PowerOff(ctx, vmUUID); err != nil {
-			err := fmt.Errorf("error stopping VM: %s", err)
-			state.Put("error", err)
-			ui.Error(err.Error())
-			return multistep.ActionHalt
-		}
+		ui.Say("Automatic instance stop disabled. Please stop instance manually.")
 	}
 
 	// Wait for the machine to actually shut down

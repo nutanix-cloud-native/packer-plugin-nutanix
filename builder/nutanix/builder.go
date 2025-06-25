@@ -78,8 +78,9 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 		},
 		new(commonsteps.StepProvision),
 		&StepShutdown{
-			Command: b.config.ShutdownCommand,
-			Timeout: b.config.ShutdownTimeout,
+			Command:             b.config.ShutdownCommand,
+			Timeout:             b.config.ShutdownTimeout,
+			DisableStopInstance: b.config.DisableStopInstance,
 		},
 	}
 
