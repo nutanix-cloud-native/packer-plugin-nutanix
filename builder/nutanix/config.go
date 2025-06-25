@@ -61,6 +61,7 @@ type Config struct {
 	ImageExport                    bool           `mapstructure:"image_export" json:"image_export" required:"false"`
 	VmForceDelete                  bool           `mapstructure:"vm_force_delete" json:"vm_force_delete" required:"false"`
 	VmRetain                       bool           `mapstructure:"vm_retain" json:"vm_retain" required:"false"`
+	DisableStopInstance            bool           `mapstructure:"disable_stop_instance" required:"false"`
 
 	ctx interpolate.Context
 }

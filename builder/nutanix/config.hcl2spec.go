@@ -171,6 +171,7 @@ type FlatConfig struct {
 	ImageExport               *bool               `mapstructure:"image_export" json:"image_export" required:"false" cty:"image_export" hcl:"image_export"`
 	VmForceDelete             *bool               `mapstructure:"vm_force_delete" json:"vm_force_delete" required:"false" cty:"vm_force_delete" hcl:"vm_force_delete"`
 	VmRetain                  *bool               `mapstructure:"vm_retain" json:"vm_retain" required:"false" cty:"vm_retain" hcl:"vm_retain"`
+	DisableStopInstance       *bool               `mapstructure:"disable_stop_instance" required:"false" cty:"disable_stop_instance" hcl:"disable_stop_instance"`
 }
 
 // FlatMapstructure returns a new FlatConfig.
@@ -290,6 +291,7 @@ func (*FlatConfig) HCL2Spec() map[string]hcldec.Spec {
 		"image_export":                 &hcldec.AttrSpec{Name: "image_export", Type: cty.Bool, Required: false},
 		"vm_force_delete":              &hcldec.AttrSpec{Name: "vm_force_delete", Type: cty.Bool, Required: false},
 		"vm_retain":                    &hcldec.AttrSpec{Name: "vm_retain", Type: cty.Bool, Required: false},
+		"disable_stop_instance":        &hcldec.AttrSpec{Name: "disable_stop_instance", Type: cty.Bool, Required: false},
 	}
 	return s
 }
