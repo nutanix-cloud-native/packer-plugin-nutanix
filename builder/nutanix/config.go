@@ -96,6 +96,7 @@ type VmDisk struct {
 	SourceImageDelete       bool   `mapstructure:"source_image_delete" json:"source_image_delete" required:"false"`
 	SourceImageForce        bool   `mapstructure:"source_image_force" json:"source_image_force" required:"false"`
 	DiskSizeGB              int64  `mapstructure:"disk_size_gb" json:"disk_size_gb" required:"false"`
+	StorageContainerUUID    string `mapstructure:"storage_container_uuid" json:"storage_container_uuid" required:"false"`
 }
 
 type VmNIC struct {
@@ -348,6 +349,12 @@ func (c *Config) Prepare(raws ...interface{}) ([]string, error) {
 		if disk.SourceImageChecksumType != "" && disk.SourceImageChecksum == "" {
 			log.Printf("disk %d: No checksum set despite checksum type configure\n", index)
 			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("disk %d: no source_image_checksum set despite checksum_type configured", index))
+		}
+
+		// Validate storage container defined only with disk type
+		if (disk.StorageContainerUUID != "") && disk.ImageType != "DISK" {
+			log.Printf("disk %d: Storage container UUID can be set only with DISK image type\n", index)
+			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("disk %d: storage_container_uuid can be set only with DISK image type", index))
 		}
 
 	}

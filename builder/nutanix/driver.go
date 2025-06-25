@@ -421,6 +421,17 @@ func (d *NutanixDriver) CreateRequest(ctx context.Context, vm VmConfig, state mu
 				},
 				DiskSizeMib: &DiskSizeMib,
 			}
+
+			if disk.StorageContainerUUID != "" {
+				newDisk.StorageConfig = &v3.VMStorageConfig{
+					StorageContainerReference: &v3.StorageContainerReference{
+						Kind: "storage_container",
+						UUID: disk.StorageContainerUUID,
+					},
+				}
+
+			}
+
 			DiskList = append(DiskList, &newDisk)
 			SCSIindex++
 		}
