@@ -1,6 +1,8 @@
 package nutanix
 
 import (
+	"strings"
+
 	v3 "github.com/nutanix-cloud-native/prism-go-client/v3"
 )
 
@@ -18,4 +20,26 @@ func BuildReferenceValue(uuid, kind string) *v3.ReferenceValues {
 		Kind: kind,
 		UUID: uuid,
 	}
+}
+
+const prismCentralService = "PRISM_CENTRAL"
+
+// IsPrismCentral checks if the cluster is a prism central instance or not
+// by checking if the service running on the cluster is PRISM_CENTRAL
+func IsPrismCentral(cluster *v3.ClusterIntentResponse) bool {
+	if cluster.Status == nil ||
+		cluster.Status.Resources == nil ||
+		cluster.Status.Resources.Config == nil ||
+		cluster.Status.Resources.Config.ServiceList == nil ||
+		len(cluster.Status.Resources.Config.ServiceList) == 0 {
+		return false
+	}
+
+	for _, service := range cluster.Status.Resources.Config.ServiceList {
+		if service != nil && strings.EqualFold(*service, prismCentralService) {
+			return true
+		}
+	}
+
+	return false
 }
