@@ -223,6 +223,13 @@ func (c *Config) Prepare(raws ...interface{}) ([]string, error) {
 		c.OvaConfig.Create = true
 	}
 
+	// When trying to export image, it should always be created
+	if c.ImageSkip && c.ImageExport {
+		log.Println("Setting image_skip to 'false' and image_delete to 'true', because image_export is 'true'")
+		c.ImageSkip = false
+		c.ImageDelete = true
+	}
+
 	// Set OVA format if not provided
 	if c.OvaConfig.Create && c.OvaConfig.Format == "" {
 		c.OvaConfig.Format = "vmdk"
