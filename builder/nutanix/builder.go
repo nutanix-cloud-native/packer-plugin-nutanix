@@ -90,14 +90,21 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 		})
 	}
 
-	if b.config.TemplateConfig.Create {
-		steps = append(steps, &stepCreateTemplate{
+	if !b.config.ImageSkip {
+		steps = append(steps, &stepCreateImage{
 			Config: &b.config,
 		})
 	}
 
-	if !b.config.ImageSkip {
-		steps = append(steps, &stepCreateImage{
+	if b.config.ImageExport {
+		steps = append(steps, &stepExportImage{
+			VMName:    b.config.VMName,
+			ImageName: b.config.VmConfig.ImageName,
+		})
+	}
+
+	if b.config.TemplateConfig.Create {
+		steps = append(steps, &stepCreateTemplate{
 			Config: &b.config,
 		})
 	}
@@ -113,13 +120,6 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 		steps = append(steps, &StepExportOVA{
 			VMName:    b.config.VMName,
 			OvaConfig: b.config.OvaConfig,
-		})
-	}
-
-	if b.config.ImageExport {
-		steps = append(steps, &stepExportImage{
-			VMName:    b.config.VMName,
-			ImageName: b.config.VmConfig.ImageName,
 		})
 	}
 
