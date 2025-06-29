@@ -489,6 +489,7 @@ type FlatVmDisk struct {
 	SourceImageName         *string `mapstructure:"source_image_name" json:"source_image_name" required:"false" cty:"source_image_name" hcl:"source_image_name"`
 	SourceImageUUID         *string `mapstructure:"source_image_uuid" json:"source_image_uuid" required:"false" cty:"source_image_uuid" hcl:"source_image_uuid"`
 	SourceImageURI          *string `mapstructure:"source_image_uri" json:"source_image_uri" required:"false" cty:"source_image_uri" hcl:"source_image_uri"`
+	SourceImagePath         *string `mapstructure:"source_image_path" json:"source_image_path" required:"false" cty:"source_image_path" hcl:"source_image_path"`
 	SourceImageChecksum     *string `mapstructure:"source_image_checksum" json:"source_image_checksum" required:"false" cty:"source_image_checksum" hcl:"source_image_checksum"`
 	SourceImageChecksumType *string `mapstructure:"source_image_checksum_type" json:"source_image_checksum_type" required:"false" cty:"source_image_checksum_type" hcl:"source_image_checksum_type"`
 	SourceImageDelete       *bool   `mapstructure:"source_image_delete" json:"source_image_delete" required:"false" cty:"source_image_delete" hcl:"source_image_delete"`
@@ -513,6 +514,7 @@ func (*FlatVmDisk) HCL2Spec() map[string]hcldec.Spec {
 		"source_image_name":          &hcldec.AttrSpec{Name: "source_image_name", Type: cty.String, Required: false},
 		"source_image_uuid":          &hcldec.AttrSpec{Name: "source_image_uuid", Type: cty.String, Required: false},
 		"source_image_uri":           &hcldec.AttrSpec{Name: "source_image_uri", Type: cty.String, Required: false},
+		"source_image_path":          &hcldec.AttrSpec{Name: "source_image_path", Type: cty.String, Required: false},
 		"source_image_checksum":      &hcldec.AttrSpec{Name: "source_image_checksum", Type: cty.String, Required: false},
 		"source_image_checksum_type": &hcldec.AttrSpec{Name: "source_image_checksum_type", Type: cty.String, Required: false},
 		"source_image_delete":        &hcldec.AttrSpec{Name: "source_image_delete", Type: cty.Bool, Required: false},
