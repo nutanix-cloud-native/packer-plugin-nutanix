@@ -1,0 +1,11 @@
+nutanix_username    = "admin"
+nutanix_password    = "XXX"
+nutanix_insecure    = false
+nutanix_endpoint    = "XXX"
+nutanix_port = 9440
+nutanix_cluster = "XXX"
+nutanix_subnet = "XXX"
+windows_11_iso_image_name = "windows_11_business_editions_24h2_april_2025.iso"
+virtio_iso_image_name = "Nutanix-VirtIO-1.2.4.iso"
+winrm_username = "Administrator"
+winrm_password = "Nutanix.123!!"

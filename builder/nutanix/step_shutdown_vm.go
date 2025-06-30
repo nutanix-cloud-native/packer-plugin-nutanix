@@ -39,7 +39,7 @@ func (s *StepShutdown) Run(ctx context.Context, state multistep.StateBag) multis
 
 	if !s.DisableStopInstance {
 
-		if config.CommConfig.Type == "none" {
+		if config.Comm.Type == "none" {
 			ui.Say("No Communicator configured, halting the virtual machine...")
 			if err := driver.PowerOff(ctx, vmUUID); err != nil {
 				err := fmt.Errorf("error stopping VM: %s", err)

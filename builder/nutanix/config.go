@@ -45,7 +45,7 @@ const (
 type Config struct {
 	common.PackerConfig            `mapstructure:",squash"`
 	WaitIpConfig                   `mapstructure:",squash"`
-	CommConfig                     communicator.Config `mapstructure:",squash"`
+	Comm                           communicator.Config `mapstructure:",squash"`
 	bootcommand.VNCConfig          `mapstructure:",squash"`
 	commonsteps.CDConfig           `mapstructure:",squash"`
 	shutdowncommand.ShutdownConfig `mapstructure:",squash"`
@@ -164,9 +164,9 @@ func (c *Config) Prepare(raws ...interface{}) ([]string, error) {
 	warnings := make([]string, 0)
 
 	// Set Default Communicator Type
-	if c.CommConfig.Type == "" {
+	if c.Comm.Type == "" {
 		log.Println("No Communicator Type set, setting to 'ssh'")
-		c.CommConfig.Type = "ssh"
+		c.Comm.Type = "ssh"
 	}
 
 	// Set Default CPU Configuration
@@ -253,7 +253,7 @@ func (c *Config) Prepare(raws ...interface{}) ([]string, error) {
 		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("missing vm_disks"))
 	}
 
-	if c.CommConfig.Type != "none" {
+	if c.Comm.Type != "none" {
 
 		// Validate VM nics
 		if len(c.VmConfig.VmNICs) == 0 {
@@ -367,19 +367,19 @@ func (c *Config) Prepare(raws ...interface{}) ([]string, error) {
 
 	}
 
-	if c.CommConfig.SSHPort == 0 {
+	if c.Comm.SSHPort == 0 {
 		log.Println("SSHPort not set, defaulting to 22")
-		c.CommConfig.SSHPort = 22
+		c.Comm.SSHPort = 22
 	}
 
-	if c.CommConfig.SSHTimeout == 0 {
+	if c.Comm.SSHTimeout == 0 {
 		log.Println("SSHTimeout not set, defaulting to 20min")
-		c.CommConfig.SSHTimeout = 20 * time.Minute
+		c.Comm.SSHTimeout = 20 * time.Minute
 	}
 
 	errs = packersdk.MultiErrorAppend(errs, c.ShutdownConfig.Prepare(&c.ctx)...)
 	errs = packersdk.MultiErrorAppend(errs, c.CDConfig.Prepare(&c.ctx)...)
-	errs = packersdk.MultiErrorAppend(errs, c.CommConfig.Prepare(&c.ctx)...)
+	errs = packersdk.MultiErrorAppend(errs, c.Comm.Prepare(&c.ctx)...)
 	errs = packersdk.MultiErrorAppend(errs, c.WaitIpConfig.Prepare()...)
 
 	if errs != nil && len(errs.Errors) > 0 {

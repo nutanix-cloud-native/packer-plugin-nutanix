@@ -62,9 +62,7 @@ These parameters allow to configure everything around image creation, from the t
 - `shutdown_timeout` (string) - Timeout for VM shutdown (format : 2m).
 - `vm_force_delete` (bool) - Delete vm even if build is not succesful (default is false).
 - `vm_retain` (bool) - Retain the temporary VM after build process is completed (default is false).
-- `disable_stop_instance` (bool) - By default, Packer stops the build instance after provisioning is complete. Setting this option to `true` prevents Packer from stopping the instance itself, expecting your final provisioner to handle stopping the instance instead.
-  Keep in mind, Packer will still wait for the instance to stop; if your provisioner does not stop it, the build process will eventually time out.
-- `communicator` (string) - Protocol used for Packer connection ("winrm", "ssh" or "none"). Default is : "ssh".
+- `disable_stop_instance` (bool) - When `true`, prevents Packer from automatically stopping the build instance after provisioning completes. Your final provisioner must handle stopping the instance, or the build will timeout (default is false).
 
 ### Dedicated to Linux
 - `user_data` (string) - cloud-init content base64 encoded.
