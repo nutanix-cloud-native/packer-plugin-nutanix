@@ -18,6 +18,8 @@ github.com/ChrisTrenkamp/goxpath v0.0.0-20170922090931-c385f95c6022/go.mod h1:nu
 github.com/ChrisTrenkamp/goxpath v0.0.0-20210404020558-97928f7e12b6 h1:w0E0fgc1YafGEh5cROhlROMWXiNoZqApk2PDN0M1+Ns=
 github.com/ChrisTrenkamp/goxpath v0.0.0-20210404020558-97928f7e12b6/go.mod h1:nuWgzSkT5PnyOd+272uUmV0dnAnAn42Mk7PiQC5VzN4=
 github.com/DataDog/datadog-go v3.2.0+incompatible/go.mod h1:LButxg5PwREeZtORoXG3tL4fMGNddJ+vMq1mwgfaqoQ=
+github.com/Microsoft/go-winio v0.6.2 h1:F2VQgta7ecxGYO8k3ZZz3RS8fVIXVxONVUPlNERoyfY=
+github.com/Microsoft/go-winio v0.6.2/go.mod h1:yd8OoFMLzJbo9gZq8j5qaps8bJ9aShtEA8Ipt1oGCvU=
 github.com/PaesslerAG/gval v1.0.0 h1:GEKnRwkWDdf9dOmKcNrar9EA1bz1z9DqPIO1+iLzhd8=
 github.com/PaesslerAG/gval v1.0.0/go.mod h1:y/nm5yEyTeX6av0OfKJNp9rBNj2XrGhAf5+v24IBN1I=
 github.com/PaesslerAG/jsonpath v0.1.0/go.mod h1:4BzmtoM/PI8fPO4aQGIusjGxGir2BzcV0grWtFzq1Y8=
@@ -229,8 +231,8 @@ github.com/hashicorp/logutils v1.0.0/go.mod h1:QIAnNjmIWmVIIkWDTG1z5v++HQmx9WQRO
 github.com/hashicorp/mdns v1.0.4/go.mod h1:mtBihi+LeNXGtG8L9dX59gAEa12BDtBQSp4v/YAJqrc=
 github.com/hashicorp/memberlist v0.5.0 h1:EtYPN8DpAURiapus508I4n9CzHs2W+8NZGbmmR/prTM=
 github.com/hashicorp/memberlist v0.5.0/go.mod h1:yvyXLpo0QaGE59Y7hDTsTzDD25JYBZ4mHgHUZ8lrOI0=
-github.com/hashicorp/packer-plugin-sdk v0.6.1 h1:9lpdiwwqRPVk80bX+XJul5/RrxHMXOta15hT7JOsbGU=
-github.com/hashicorp/packer-plugin-sdk v0.6.1/go.mod h1:B6i8yIPzzFWrZW0hHdH5TLFGYlJEdgRNJnP5eXNxJU4=
+github.com/hashicorp/packer-plugin-sdk v0.6.2 h1:XRIJTcHa9AN13ZvVjL+RpwxEz+yYT7qJ5PA2REViJZ0=
+github.com/hashicorp/packer-plugin-sdk v0.6.2/go.mod h1:mOuey53XeLIIpdOQnREjEBYCndipO7piU+EJAstQq1k=
 github.com/hashicorp/serf v0.10.1 h1:Z1H2J60yRKvfDYAOZLd2MU0ND4AH/WDz7xYHDWQsIPY=
 github.com/hashicorp/serf v0.10.1/go.mod h1:yL2t6BqATOLGc5HF7qbFkTfXoPIY0WZdWHfEvMqbG+4=
 github.com/hashicorp/vault/api v1.14.0 h1:Ah3CFLixD5jmjusOgm8grfN9M0d+Y8fVR2SW0K6pJLU=
@@ -323,8 +325,6 @@ github.com/modern-go/reflect2 v1.0.1/go.mod h1:bx2lNnkwVCuqBIxFjflWJWanXIb3Rllmb
 github.com/mwitkow/go-conntrack v0.0.0-20161129095857-cc309e4a2223/go.mod h1:qRWi+5nqEBWmkhHvq77mSJWrCKwh8bxhgT7d/eI7P4U=
 github.com/nu7hatch/gouuid v0.0.0-20131221200532-179d4d0c4d8d h1:VhgPp6v9qf9Agr/56bj7Y/xa04UccTW04VP0Qed4vnQ=
 github.com/nu7hatch/gouuid v0.0.0-20131221200532-179d4d0c4d8d/go.mod h1:YUTz3bUH2ZwIWBy3CJBeOBEugqcmXREj14T+iG/4k4U=
-github.com/nutanix-cloud-native/prism-go-client v0.5.2-0.20250619210735-9991f0d38b52 h1:MkJL5PCtbkiK7IsLzjgtyMFGftdqz4lOvMQ42Zl7WQs=
-github.com/nutanix-cloud-native/prism-go-client v0.5.2-0.20250619210735-9991f0d38b52/go.mod h1:N/O9fz5fimjb30RxlPbKbGs/Z2lqMgDqrb6CrsZvQrA=
 github.com/nutanix-cloud-native/prism-go-client v0.5.2 h1:qhFJeC3CRrWM8BTaNvxnjShVNH5E99z5MPU3a2BO14A=
 github.com/nutanix-cloud-native/prism-go-client v0.5.2/go.mod h1:N/O9fz5fimjb30RxlPbKbGs/Z2lqMgDqrb6CrsZvQrA=
 github.com/nywilken/go-cty v1.13.3 h1:03U99oXf3j3g9xgqAE3YGpixCjM8Mg09KZ0Ji9LzX0o=
