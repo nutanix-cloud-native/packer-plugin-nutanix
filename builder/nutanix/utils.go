@@ -3,6 +3,7 @@ package nutanix
 import (
 	"strings"
 
+	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	v3 "github.com/nutanix-cloud-native/prism-go-client/v3"
 )
 
@@ -42,4 +43,16 @@ func IsPrismCentral(cluster *v3.ClusterIntentResponse) bool {
 	}
 
 	return false
+}
+
+func commHost(host string) func(multistep.StateBag) (string, error) {
+	return func(state multistep.StateBag) (string, error) {
+		if host != "" {
+			return host, nil
+		} else if guestAddress, ok := state.Get("ip").(string); ok {
+			return guestAddress, nil
+		} else {
+			return "127.0.0.1", nil
+		}
+	}
 }

@@ -72,9 +72,9 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			Config: &b.config.WaitIpConfig,
 		},
 		&communicator.StepConnect{
-			Config:    &b.config.CommConfig,
-			SSHConfig: b.config.CommConfig.SSHConfigFunc(),
-			Host:      commHost(),
+			Config:    &b.config.Comm,
+			SSHConfig: b.config.Comm.SSHConfigFunc(),
+			Host:      commHost(b.config.Comm.Host()),
 		},
 		new(commonsteps.StepProvision),
 		&StepShutdown{
