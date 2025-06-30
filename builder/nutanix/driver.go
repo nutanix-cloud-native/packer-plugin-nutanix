@@ -378,6 +378,12 @@ func (d *NutanixDriver) CreateRequest(ctx context.Context, vm VmConfig, state mu
 				if err != nil {
 					return nil, fmt.Errorf("error while findImageByUUID, Error %s", err.Error())
 				}
+
+				if disk.SourceImageDelete && disk.SourceImagePath != "" {
+					log.Printf("mark this image to delete %s:", *image.Status.Name)
+					imageToDelete = append(imageToDelete, *image.Metadata.UUID)
+				}
+
 			} else if disk.SourceImageName != "" {
 				image, err = findImageByName(ctx, conn, disk.SourceImageName)
 				if err != nil {
@@ -455,6 +461,12 @@ func (d *NutanixDriver) CreateRequest(ctx context.Context, vm VmConfig, state mu
 				if err != nil {
 					return nil, fmt.Errorf("error while findImageByUUID, %s", err.Error())
 				}
+
+				if disk.SourceImageDelete && disk.SourceImagePath != "" {
+					log.Printf("mark this image to delete %s:", *image.Status.Name)
+					imageToDelete = append(imageToDelete, *image.Metadata.UUID)
+				}
+
 			} else if disk.SourceImageName != "" {
 				image, err = findImageByName(ctx, conn, disk.SourceImageName)
 				if err != nil {

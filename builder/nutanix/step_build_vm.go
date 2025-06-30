@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"path/filepath"
 
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	"github.com/hashicorp/packer-plugin-sdk/packer"
@@ -32,7 +33,7 @@ func (s *stepBuildVM) Run(ctx context.Context, state multistep.StateBag) multist
 			state.Put("error", err)
 			return multistep.ActionHalt
 		}
-		ui.Message("CD disk uploaded " + *cdfilesImage.image.Spec.Name)
+		ui.Sayf("CD disk uploaded %s", *cdfilesImage.image.Spec.Name)
 		state.Put("cd_uuid", *cdfilesImage.image.Metadata.UUID)
 		temp_cd := VmDisk{
 			ImageType:       "ISO_IMAGE",
@@ -41,6 +42,29 @@ func (s *stepBuildVM) Run(ctx context.Context, state multistep.StateBag) multist
 		config.VmConfig.VmDisks = append(config.VmConfig.VmDisks, temp_cd)
 	} else {
 		log.Println("no CD disk, not attaching.")
+	}
+
+	// Loop through config.VmConfig.VmDisks and upload source_image_path if present
+	log.Println("check for local ISO to upload and attach")
+	for i, disk := range config.VmConfig.VmDisks {
+		if disk.SourceImagePath != "" {
+
+			filename := filepath.Base(disk.SourceImagePath)
+
+			ui.Sayf("Uploading %s for disk %d ...", filename, i)
+			log.Println("Disk source image path found: " + disk.SourceImagePath)
+			uploadedImage, err := d.CreateImageFile(ctx, disk.SourceImagePath, config.VmConfig)
+			if err != nil {
+				ui.Error(fmt.Sprintf("Error uploading disk %d: %s", i, err.Error()))
+				state.Put("error", err)
+				return multistep.ActionHalt
+			}
+			ui.Message(fmt.Sprintf("Disk %d uploaded: %s", i, *uploadedImage.image.Spec.Name))
+			state.Put(fmt.Sprintf("disk_%d_uuid", i), *uploadedImage.image.Metadata.UUID)
+			config.VmConfig.VmDisks[i].SourceImageUUID = *uploadedImage.image.Metadata.UUID
+		} else {
+			log.Printf("Disk %d has no source image path, skipping upload.", i)
+		}
 	}
 
 	ui.Say("Creating Packer Builder virtual machine...")
