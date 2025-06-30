@@ -83,14 +83,14 @@ func (s *stepExportImage) Run(ctx context.Context, state multistep.StateBag) mul
 			name = name + ".img"
 			os.Rename(tempDestinationPath, name)
 
-			ui.Message(fmt.Sprintf("image %s exported", name))
+			ui.Say(fmt.Sprintf("image %s exported", name))
 
 		case <-sigChan:
 			// We received a signal, cancel the copy operation
 			toRead.Close()
 			f.Close()
 			os.Remove(tempDestinationPath)
-			ui.Message("image export cancelled")
+			ui.Say("image export cancelled")
 			return multistep.ActionHalt
 		}
 
