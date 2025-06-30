@@ -64,13 +64,13 @@ func (s *StepExportOVA) Run(ctx context.Context, state multistep.StateBag) multi
 			return multistep.ActionHalt
 		}
 
-		ui.Message(fmt.Sprintf("Image exported as \"%s\"", name))
+		ui.Say(fmt.Sprintf("Image exported as \"%s\"", name))
 
 	case <-sigChan:
 		toRead.Close()
 		f.Close()
 		os.Remove(tempDestinationPath)
-		ui.Message("image export cancelled")
+		ui.Say("image export cancelled")
 		return multistep.ActionHalt
 	}
 

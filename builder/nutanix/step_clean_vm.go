@@ -38,7 +38,7 @@ func (s *stepCleanVM) Run(ctx context.Context, state multistep.StateBag) multist
 	request.Metadata = vmResp.nutanix.Metadata
 
 	if s.Config.Clean.Cdrom {
-		ui.Message("Cleaning up CD-ROM in virtual machine...")
+		ui.Say("Cleaning up CD-ROM in virtual machine...")
 		d.CleanCD(ctx, request)
 	}
 
@@ -48,7 +48,7 @@ func (s *stepCleanVM) Run(ctx context.Context, state multistep.StateBag) multist
 		return multistep.ActionHalt
 	}
 
-	ui.Message("Virtual machine cleaned successfully.")
+	ui.Say("Virtual machine cleaned successfully.")
 	return multistep.ActionContinue
 }
 

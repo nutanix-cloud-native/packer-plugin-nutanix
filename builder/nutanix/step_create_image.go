@@ -41,7 +41,7 @@ func (s *stepCreateImage) Run(ctx context.Context, state multistep.StateBag) mul
 				size: *vm.nutanix.Spec.Resources.DiskList[i].DiskSizeBytes,
 			})
 			diskID := fmt.Sprintf("%s:%d", *vm.nutanix.Spec.Resources.DiskList[i].DeviceProperties.DiskAddress.AdapterType, *vm.nutanix.Spec.Resources.DiskList[i].DeviceProperties.DiskAddress.DeviceIndex)
-			ui.Message("Found disk to copy: " + diskID)
+			ui.Say("Found disk to copy: " + diskID)
 		}
 	}
 
@@ -68,7 +68,7 @@ func (s *stepCreateImage) Run(ctx context.Context, state multistep.StateBag) mul
 			size: diskToCopy.size,
 		})
 
-		ui.Message(fmt.Sprintf("Image successfully created: %s (%s)", *imageResponse.image.Spec.Name, *imageResponse.image.Metadata.UUID))
+		ui.Say(fmt.Sprintf("Image successfully created: %s (%s)", *imageResponse.image.Spec.Name, *imageResponse.image.Metadata.UUID))
 	}
 
 	state.Put("image_uuid", imageList)
@@ -97,7 +97,7 @@ func (s *stepCreateImage) Cleanup(state multistep.StateBag) {
 				ui.Error("An error occurred while deleting image")
 				return
 			} else {
-				ui.Message(fmt.Sprintf("Image successfully deleted (%s)", image.uuid))
+				ui.Say(fmt.Sprintf("Image successfully deleted (%s)", image.uuid))
 			}
 		}
 	}

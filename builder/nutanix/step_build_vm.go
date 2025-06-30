@@ -59,7 +59,7 @@ func (s *stepBuildVM) Run(ctx context.Context, state multistep.StateBag) multist
 				state.Put("error", err)
 				return multistep.ActionHalt
 			}
-			ui.Message(fmt.Sprintf("Disk %d uploaded: %s", i, *uploadedImage.image.Spec.Name))
+			ui.Say(fmt.Sprintf("Disk %d uploaded: %s", i, *uploadedImage.image.Spec.Name))
 			state.Put(fmt.Sprintf("disk_%d_uuid", i), *uploadedImage.image.Metadata.UUID)
 			config.VmConfig.VmDisks[i].SourceImageUUID = *uploadedImage.image.Metadata.UUID
 		} else {
@@ -86,7 +86,7 @@ func (s *stepBuildVM) Run(ctx context.Context, state multistep.StateBag) multist
 		return multistep.ActionHalt
 	}
 	log.Printf("Nutanix VM UUID: %s", *vmInstance.nutanix.Metadata.UUID)
-	ui.Message(fmt.Sprintf("Virtual machine %s created", config.VMName))
+	ui.Say(fmt.Sprintf("Virtual machine %s created", config.VMName))
 	state.Put("destroy_vm", true)
 	state.Put("vm_uuid", *vmInstance.nutanix.Metadata.UUID)
 	state.Put("cluster_uuid", *vmInstance.nutanix.Spec.ClusterReference.UUID)
@@ -116,7 +116,7 @@ func (s *stepBuildVM) Cleanup(state multistep.StateBag) {
 			ui.Error("An error occurred while deleting CD disk")
 			log.Println(err)
 		}
-		ui.Message("Temporary CD disk successfully deleted")
+		ui.Say("Temporary CD disk successfully deleted")
 	}
 
 	imageToDelete := state.Get("image_to_delete")
@@ -128,7 +128,7 @@ func (s *stepBuildVM) Cleanup(state multistep.StateBag) {
 			ui.Error(fmt.Sprintf("An error occurred while deleting image %s", image))
 			log.Println(err)
 		}
-		ui.Message("Image successfully deleted")
+		ui.Say("Image successfully deleted")
 	}
 
 	_, cancelled := state.GetOk(multistep.StateCancelled)
@@ -151,7 +151,7 @@ func (s *stepBuildVM) Cleanup(state multistep.StateBag) {
 		ui.Error("An error occurred while deleting the Virtual machine")
 		log.Println(err)
 	} else {
-		ui.Message("Virtual machine successfully deleted")
+		ui.Say("Virtual machine successfully deleted")
 	}
 
 }
