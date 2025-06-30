@@ -1,6 +1,8 @@
 package nutanix
 
 import (
+	"errors"
+	"os"
 	"strings"
 
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
@@ -55,4 +57,9 @@ func commHost(host string) func(multistep.StateBag) (string, error) {
 			return "127.0.0.1", nil
 		}
 	}
+}
+
+func fileExists(filename string) bool {
+	_, err := os.Stat(filename)
+	return !errors.Is(err, os.ErrNotExist)
 }

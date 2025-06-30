@@ -92,7 +92,7 @@ type VmDisk struct {
 	SourceImageName         string `mapstructure:"source_image_name" json:"source_image_name" required:"false"`
 	SourceImageUUID         string `mapstructure:"source_image_uuid" json:"source_image_uuid" required:"false"`
 	SourceImageURI          string `mapstructure:"source_image_uri" json:"source_image_uri" required:"false"`
-	SourceImagePath          string `mapstructure:"source_image_path" json:"source_image_path" required:"false"`
+	SourceImagePath         string `mapstructure:"source_image_path" json:"source_image_path" required:"false"`
 	SourceImageChecksum     string `mapstructure:"source_image_checksum" json:"source_image_checksum" required:"false"`
 	SourceImageChecksumType string `mapstructure:"source_image_checksum_type" json:"source_image_checksum_type" required:"false"`
 	SourceImageDelete       bool   `mapstructure:"source_image_delete" json:"source_image_delete" required:"false"`
@@ -366,6 +366,20 @@ func (c *Config) Prepare(raws ...interface{}) ([]string, error) {
 			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("disk %d: storage_container_uuid can be set only with DISK image type", index))
 		}
 
+		// Validate if file to upload exists
+		if disk.SourceImagePath != "" {
+			log.Printf("Checking if file exists: %s\n", disk.SourceImagePath)
+			if !fileExists(disk.SourceImagePath) {
+				log.Printf("disk %d: Source image  %s does not exist\n", index, disk.SourceImagePath)
+				errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("disk %d: Source image %s does not exist", index, disk.SourceImagePath))
+			}
+		}
+
+		// Validate if delete is used only with path or URI
+		if disk.SourceImageDelete && disk.SourceImagePath == "" && disk.SourceImageURI == "" {
+			log.Printf("disk %d: Source image delete can be used only with source_image_path or source_image_uri", index)
+			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("disk %d: source_image_delete can be used only with source_image_path or source_image_uri", index))
+		}
 	}
 
 	if c.Comm.SSHPort == 0 {
