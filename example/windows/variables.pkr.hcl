@@ -44,3 +44,7 @@ variable "winrm_password" {
   type = string
 }
 
+variable "nutanix_storage_container_uuid" {
+  type = string
+  description = "UUID of the storage container where the VM disk will be created."
+}
