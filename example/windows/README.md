@@ -25,7 +25,7 @@ This Packer template automates the creation of a Windows 11 VM template on a Nut
 
 - **Set Boot Priority**
   - Configure the VM to boot from CD-ROM.
-  - Wait 10 seconds after initial boot. (depending of your hardware this value need to be adjusted)
+  - Wait 10 seconds after initial boot (depending on your hardware, this value may need to be adjusted).
   - Send keyboard input to bypass the "Press any key to boot from CD or DVD" prompt.
 
 - **Automate the Installation**
