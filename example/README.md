@@ -17,3 +17,4 @@ Creating Ubuntu from ISO with Autoinstall:
 Windows Image (ISO Boot, VirtIO Drivers, cd_files)
 `packer build -only nutanix.windows .`
 
+Advanced Windows 11 EUC example is available in the [`windows`](https://github.com/nutanix-cloud-native/packer-plugin-nutanix/tree/main/example/windows) directory
