@@ -204,6 +204,7 @@ In this section, you have to define network you will to connect with one of this
 
 - `subnet_name` (string) - Name of the cluster subnet to use.
 - `subnet_uuid` (string) - UUID of the cluster subnet to use.
+- `mac_address` (string) - The network card MAC address. If not specified, a random MAC address will be generated.
 
 Sample
 ```hcl

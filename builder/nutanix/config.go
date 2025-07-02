@@ -104,6 +104,7 @@ type VmDisk struct {
 type VmNIC struct {
 	SubnetName string `mapstructure:"subnet_name" json:"subnet_name" required:"false"`
 	SubnetUUID string `mapstructure:"subnet_uuid" json:"subnet_uuid" required:"false"`
+	MacAddress string `mapstructure:"mac_address" json:"mac_address" required:"false"`
 }
 type VmConfig struct {
 	VMName                 string     `mapstructure:"vm_name" json:"vm_name" required:"false"`
@@ -261,15 +262,21 @@ func (c *Config) Prepare(raws ...interface{}) ([]string, error) {
 			log.Println("Nutanix VM Nics missing from configuration")
 			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("missing vm_nics"))
 		}
+	}
 
-		// Validate VM Subnet
-		for i, nic := range c.VmConfig.VmNICs {
-			if nic.SubnetName == "" && nic.SubnetUUID == "" {
-				log.Printf("Nutanix Subnet is missing in nic %d configuration", i+1)
-				errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("missing subnet in vm_nics %d", i+1))
-			}
+	// Validate VM Subnet
+	for i, nic := range c.VmConfig.VmNICs {
+		if nic.SubnetName == "" && nic.SubnetUUID == "" {
+			log.Printf("Nutanix Subnet is missing in nic %d configuration", i+1)
+			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("missing subnet in vm_nics %d", i+1))
+		}
+
+		if nic.MacAddress != "" && !isValidMACAddress(nic.MacAddress) {
+			log.Printf("Mac address is invalid for nic %d", i+1)
+			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("mac address is invalid in vm_nics %d", i+1))
 		}
 	}
+
 	// Validate Cluster Username
 	if c.ClusterConfig.Username == "" {
 		log.Println("Nutanix Username missing from configuration")
