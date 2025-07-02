@@ -530,6 +530,11 @@ func (d *NutanixDriver) CreateRequest(ctx context.Context, vm VmConfig, state mu
 			IsConnected:     &isConnected,
 			SubnetReference: BuildReference(*subnet.Metadata.UUID, "subnet"),
 		}
+
+		if nic.MacAddress != "" {
+			newNIC.MacAddress = StringPtr(nic.MacAddress)
+		}
+
 		NICList = append(NICList, &newNIC)
 	}
 

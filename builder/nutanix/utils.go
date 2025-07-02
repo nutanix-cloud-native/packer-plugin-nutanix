@@ -2,6 +2,7 @@ package nutanix
 
 import (
 	"errors"
+	"net"
 	"os"
 	"strings"
 
@@ -62,4 +63,9 @@ func commHost(host string) func(multistep.StateBag) (string, error) {
 func fileExists(filename string) bool {
 	_, err := os.Stat(filename)
 	return !errors.Is(err, os.ErrNotExist)
+}
+
+func isValidMACAddress(mac string) bool {
+	_, err := net.ParseMAC(mac)
+	return err == nil
 }
