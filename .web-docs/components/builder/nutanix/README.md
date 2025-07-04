@@ -58,6 +58,7 @@ These parameters allow to configure everything around image creation, from the t
 - `image_delete` (bool) - Delete image once build process is completed (default is false).
 - `image_skip` (bool) - Skip image creation (default is false).
 - `image_export` (bool) - Export raw image in the current folder (default is false).
+- `fail_if_image_exists` (bool) - Fail the build if an image with the same name already exists (default is false).
 - `shutdown_command` (string) - Command line to shutdown your temporary VM.
 - `shutdown_timeout` (string) - Timeout for VM shutdown (format : 2m).
 - `vm_force_delete` (bool) - Delete vm even if build is not succesful (default is false).

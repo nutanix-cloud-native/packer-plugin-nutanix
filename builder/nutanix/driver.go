@@ -1367,9 +1367,9 @@ func (d *NutanixDriver) SaveVMDisk(ctx context.Context, diskUUID string, index i
 		name = fmt.Sprintf("%s-disk%d", name, index+1)
 	}
 
-	// When force_deregister, check if image already exists
-	if d.Config.ForceDeregister {
-		log.Println("force_deregister is set, check if image already exists")
+	// When force_deregister or fail_if_image_exists, check if image already exists
+	if d.Config.ForceDeregister || d.Config.FailIfImageExists {
+		log.Println("check if image already exists")
 		resp, err := conn.V3.ListAllImage(ctx, "")
 		if err != nil {
 			return nil, fmt.Errorf("error while ListAllImage, %s", err.Error())
@@ -1387,9 +1387,16 @@ func (d *NutanixDriver) SaveVMDisk(ctx context.Context, diskUUID string, index i
 		if len(found) == 0 {
 			log.Println("image with given Name not found, no need to deregister")
 		} else if len(found) > 1 {
+			if d.Config.FailIfImageExists {
+				return nil, fmt.Errorf("more than one image with name %s found, please use a unique name", name)
+			}
 			log.Println("more than one image with given Name found, will not deregister")
 		} else if len(found) == 1 {
-			log.Println("exactly one image with given Name found, will deregister")
+			if d.Config.FailIfImageExists {
+				return nil, fmt.Errorf("one image with name %s found, please use a unique name", name)
+			}
+
+			log.Println("one image with given Name found, will deregister")
 
 			resp, err := conn.V3.DeleteImage(ctx, *found[0].Metadata.UUID)
 			if err != nil {
