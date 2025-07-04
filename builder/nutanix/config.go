@@ -59,6 +59,7 @@ type Config struct {
 	ImageSkip                      bool           `mapstructure:"image_skip" json:"image_skip" required:"false"`
 	ImageDelete                    bool           `mapstructure:"image_delete" json:"image_delete" required:"false"`
 	ImageExport                    bool           `mapstructure:"image_export" json:"image_export" required:"false"`
+	FailIfImageExists              bool           `mapstructure:"fail_if_image_exists" required:"false"`
 	VmForceDelete                  bool           `mapstructure:"vm_force_delete" json:"vm_force_delete" required:"false"`
 	VmRetain                       bool           `mapstructure:"vm_retain" json:"vm_retain" required:"false"`
 	DisableStopInstance            bool           `mapstructure:"disable_stop_instance" required:"false"`
@@ -230,6 +231,12 @@ func (c *Config) Prepare(raws ...interface{}) ([]string, error) {
 		log.Println("Setting image_skip to 'false' and image_delete to 'true', because image_export is 'true'")
 		c.ImageSkip = false
 		c.ImageDelete = true
+	}
+
+	// fail_if_image_exists and force_deregister are mutually exclusive
+	if c.FailIfImageExists && c.ForceDeregister {
+		log.Println("fail_if_image_exists and force_deregister are mutually exclusive, please use only one of them")
+		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("fail_if_image_exists and force_deregister are mutually exclusive, please use only one of them"))
 	}
 
 	// Set OVA format if not provided
