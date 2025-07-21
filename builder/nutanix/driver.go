@@ -690,14 +690,14 @@ func (d *NutanixDriver) Create(ctx context.Context, req *v3.VMIntentInput) (*nut
 		return nil, err
 	}
 
-	log.Print("vm succesfully created")
-
 	var vm *v3.VMIntentResponse
 	vm, err = conn.V3.GetVM(ctx, uuid)
 	if err != nil {
 		log.Printf("error getting vm: %s", err.Error())
 		return nil, err
 	}
+
+	log.Printf("vm successfully created on host %s", *vm.Status.Resources.HostReference.Name)
 
 	return &nutanixInstance{nutanix: *vm}, nil
 }
