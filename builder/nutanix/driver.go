@@ -634,11 +634,12 @@ func (d *NutanixDriver) CreateRequest(ctx context.Context, vm VmConfig, state mu
 	}
 
 	if len(vm.VMCategories) != 0 {
-		c := make(map[string]string)
+		cm := make(map[string][]string)
 		for _, category := range vm.VMCategories {
-			c[category.Key] = category.Value
+			cm[category.Key] = append(cm[category.Key], category.Value)
 		}
-		req.Metadata.Categories = c
+		req.Metadata.UseCategoriesMapping = BoolPtr(true)
+		req.Metadata.CategoriesMapping = cm
 	}
 
 	if vm.Project != "" {
