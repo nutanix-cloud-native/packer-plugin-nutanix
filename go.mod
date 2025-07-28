@@ -9,7 +9,7 @@ require (
 	github.com/hashicorp/hcl/v2 v2.24.0
 	github.com/hashicorp/packer-plugin-sdk v0.6.2
 	github.com/mitchellh/go-vnc v0.0.0-20150629162542-723ed9867aed
-	github.com/nutanix-cloud-native/prism-go-client v0.5.2
+	github.com/nutanix-cloud-native/prism-go-client v0.5.3
 	github.com/zclconf/go-cty v1.16.3
 	golang.org/x/net v0.42.0
 )
