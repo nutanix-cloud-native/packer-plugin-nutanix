@@ -261,11 +261,11 @@ func findImageByName(ctx context.Context, conn *v3.Client, name string) (*v3.Ima
 	return findImageByUUID(ctx, conn, *found[0].Metadata.UUID)
 }
 
-func checkTask(ctx context.Context, conn *v3.Client, taskUUID string, timeout int) error {
+func checkTask(ctx context.Context, conn *v3.Client, taskUUID string, timeout int, interval int) error {
 	log.Printf("checking task %s...", taskUUID)
 	var task *v3.TasksResponse
 	var err error
-	for i := 0; i < (timeout / 5); i++ {
+	for i := 0; i < (timeout / interval); i++ {
 		task, err = conn.V3.GetTask(ctx, taskUUID)
 		if err == nil {
 			if *task.Status == "SUCCEEDED" {
@@ -274,7 +274,7 @@ func checkTask(ctx context.Context, conn *v3.Client, taskUUID string, timeout in
 				return fmt.Errorf(*task.ErrorDetail)
 			} else {
 				log.Printf("task status is " + *task.Status)
-				<-time.After(5 * time.Second)
+				<-time.After(time.Duration(interval) * time.Second)
 			}
 		} else {
 			return err
@@ -684,7 +684,7 @@ func (d *NutanixDriver) Create(ctx context.Context, req *v3.VMIntentInput) (*nut
 
 	uuid := *resp.Metadata.UUID
 
-	err = checkTask(ctx, conn, resp.Status.ExecutionContext.TaskUUID.(string), 600)
+	err = checkTask(ctx, conn, resp.Status.ExecutionContext.TaskUUID.(string), 600, 1)
 
 	if err != nil {
 		log.Printf("error creating vm: %s", err.Error())
@@ -861,7 +861,7 @@ func (d *NutanixDriver) CreateImageURL(ctx context.Context, disk VmDisk, vm VmCo
 		return nil, fmt.Errorf("error while creating image: %s", err.Error())
 	}
 
-	err = checkTask(ctx, conn, image.Status.ExecutionContext.TaskUUID.(string), 600)
+	err = checkTask(ctx, conn, image.Status.ExecutionContext.TaskUUID.(string), 600, 5)
 	if err != nil {
 		return nil, fmt.Errorf("error while creating image: %s", err.Error())
 	}
@@ -923,7 +923,7 @@ func (d *NutanixDriver) CreateImageFile(ctx context.Context, filePath string, vm
 		return nil, fmt.Errorf("error while creating image: %s", err.Error())
 	}
 
-	err = checkTask(ctx, conn, image.Status.ExecutionContext.TaskUUID.(string), 600)
+	err = checkTask(ctx, conn, image.Status.ExecutionContext.TaskUUID.(string), 600, 5)
 	if err != nil {
 		return nil, fmt.Errorf("error while creating image: %s", err.Error())
 	}
@@ -1163,7 +1163,7 @@ func (d *NutanixDriver) CreateTemplate(ctx context.Context, vmUUID string, templ
 		return err
 	}
 
-	err = checkTask(ctx, conn, task_uuid, 3600)
+	err = checkTask(ctx, conn, task_uuid, 3600, 15)
 	if err != nil {
 		return err
 	}
@@ -1210,7 +1210,7 @@ func (d *NutanixDriver) CreateOVA(ctx context.Context, ovaName string, vmUUID st
 		return err
 	}
 
-	err = checkTask(ctx, conn, result.TaskUUID, 3600)
+	err = checkTask(ctx, conn, result.TaskUUID, 3600, 15)
 	if err != nil {
 		return err
 	}
@@ -1340,7 +1340,7 @@ func (d *NutanixDriver) PowerOff(ctx context.Context, vmUUID string) error {
 
 	// Wait for the VM to be stopped
 	log.Printf("stopping VM: %s", d.Config.VMName)
-	err = checkTask(ctx, conn, taskUUID, 600)
+	err = checkTask(ctx, conn, taskUUID, 600, 5)
 	if err != nil {
 		return fmt.Errorf("error while stopping VM: %s", err.Error())
 	}
@@ -1405,7 +1405,7 @@ func (d *NutanixDriver) SaveVMDisk(ctx context.Context, diskUUID string, index i
 			}
 
 			log.Printf("deleting image %s...\n", *found[0].Metadata.UUID)
-			err = checkTask(ctx, conn, resp.Status.ExecutionContext.TaskUUID.(string), 600)
+			err = checkTask(ctx, conn, resp.Status.ExecutionContext.TaskUUID.(string), 600, 5)
 
 			if err != nil {
 				return nil, fmt.Errorf("error while Deleting Image, %s", err.Error())
@@ -1445,7 +1445,7 @@ func (d *NutanixDriver) SaveVMDisk(ctx context.Context, diskUUID string, index i
 		return nil, fmt.Errorf("error while Creating Image, %s", err.Error())
 	}
 	log.Printf("creating image %s...\n", *image.Metadata.UUID)
-	err = checkTask(ctx, conn, image.Status.ExecutionContext.TaskUUID.(string), 600)
+	err = checkTask(ctx, conn, image.Status.ExecutionContext.TaskUUID.(string), 600, 5)
 	if err != nil {
 		return nil, fmt.Errorf("error while Creating Image, %s", err.Error())
 	} else {
@@ -1478,7 +1478,7 @@ func (d *NutanixDriver) UpdateVM(ctx context.Context, vmUUID string, req *v3.VMI
 	taskUUID := resp.Status.ExecutionContext.TaskUUID.(string)
 
 	// Wait for the VM to be updated
-	err = checkTask(ctx, conn, taskUUID, 600)
+	err = checkTask(ctx, conn, taskUUID, 600, 5)
 	if err != nil {
 		return nil, fmt.Errorf("error while waiting updating VM: %s", err.Error())
 	}
