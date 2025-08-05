@@ -323,8 +323,8 @@ github.com/modern-go/reflect2 v1.0.1/go.mod h1:bx2lNnkwVCuqBIxFjflWJWanXIb3Rllmb
 github.com/mwitkow/go-conntrack v0.0.0-20161129095857-cc309e4a2223/go.mod h1:qRWi+5nqEBWmkhHvq77mSJWrCKwh8bxhgT7d/eI7P4U=
 github.com/nu7hatch/gouuid v0.0.0-20131221200532-179d4d0c4d8d h1:VhgPp6v9qf9Agr/56bj7Y/xa04UccTW04VP0Qed4vnQ=
 github.com/nu7hatch/gouuid v0.0.0-20131221200532-179d4d0c4d8d/go.mod h1:YUTz3bUH2ZwIWBy3CJBeOBEugqcmXREj14T+iG/4k4U=
-github.com/nutanix-cloud-native/prism-go-client v0.5.2 h1:qhFJeC3CRrWM8BTaNvxnjShVNH5E99z5MPU3a2BO14A=
-github.com/nutanix-cloud-native/prism-go-client v0.5.2/go.mod h1:N/O9fz5fimjb30RxlPbKbGs/Z2lqMgDqrb6CrsZvQrA=
+github.com/nutanix-cloud-native/prism-go-client v0.5.3 h1:kcwbrWQOkQHiK20LcL2HyRYMlOWXLgqR93JD7D9ZgAs=
+github.com/nutanix-cloud-native/prism-go-client v0.5.3/go.mod h1:N/O9fz5fimjb30RxlPbKbGs/Z2lqMgDqrb6CrsZvQrA=
 github.com/nywilken/go-cty v1.13.3 h1:03U99oXf3j3g9xgqAE3YGpixCjM8Mg09KZ0Ji9LzX0o=
 github.com/nywilken/go-cty v1.13.3/go.mod h1:YKQzy/7pZ7iq2jNFzy5go57xdxdWoLLpaEp4u238AE0=
 github.com/oklog/ulid v1.3.1 h1:EGfNDEx6MqHz8B3uNV6QAib1UR2Lm97sHi3ocA6ESJ4=
