@@ -245,7 +245,7 @@ func findImageByName(ctx context.Context, conn *v3.Client, name string) (*v3.Ima
 
 	found := make([]*v3.ImageIntentResponse, 0)
 	for _, v := range entities {
-		if strings.EqualFold(*v.Spec.Name, name) {
+		if v.Spec != nil && v.Spec.Name != nil && strings.EqualFold(*v.Spec.Name, name) {
 			found = append(found, v)
 		}
 	}
