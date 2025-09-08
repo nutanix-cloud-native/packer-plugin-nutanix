@@ -7,7 +7,7 @@ toolchain go1.23.8
 require (
 	github.com/google/uuid v1.6.0
 	github.com/hashicorp/hcl/v2 v2.24.0
-	github.com/hashicorp/packer-plugin-sdk v0.6.2
+	github.com/hashicorp/packer-plugin-sdk v0.6.3
 	github.com/mitchellh/go-vnc v0.0.0-20150629162542-723ed9867aed
 	github.com/nutanix-cloud-native/prism-go-client v0.5.3
 	github.com/zclconf/go-cty v1.16.3
