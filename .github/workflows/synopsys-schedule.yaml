@@ -25,7 +25,7 @@ jobs:
         run: make build
 
       - name: Black Duck Full Scan
-        uses: blackduck-inc/black-duck-security-scan@v2.3.0
+        uses: blackduck-inc/black-duck-security-scan@v2.4.0
         with:
           blackducksca_url : ${{ secrets.BLACKDUCK_URL }}
           blackducksca_token: ${{ secrets.BLACKDUCK_API_TOKEN }}
