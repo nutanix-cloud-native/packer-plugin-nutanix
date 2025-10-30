@@ -176,7 +176,7 @@ func findSubnetByName(ctx context.Context, conn *v3.Client, name, clusterUUID st
 }
 
 func findGPUByName(ctx context.Context, conn *v3.Client, name string) (*v3.VMGpu, error) {
-	hosts, err := conn.V3.ListAllHost(ctx)
+	hosts, err := conn.V3.ListHost(ctx, &v3.DSMetadata{})
 	if err != nil {
 		return nil, err
 	}
