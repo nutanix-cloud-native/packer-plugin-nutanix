@@ -22,6 +22,8 @@ These parameters allow to define information about platform and temporary VM use
   - `cluster_name` or `cluster_uuid` (string) - Nutanix cluster name or uuid used to create and store image.
   - `os_type` (string) - OS Type ("Linux" or "Windows").
 
+Starting `v1.1.4` the Nutanix Packer Plugin supports Prism Central Service Accounts. To use a Service Account, you need to provide `X-ntnx-api-key` as the `nutanix_username` and the corresponding API Key as the `nutanix_password`.
+
 ### Optional
   - `nutanix_port` (number) - Port used for connection to Prism Central.
   - `nutanix_insecure` (bool) - Authorize connection to Prism Central without valid certificate.
