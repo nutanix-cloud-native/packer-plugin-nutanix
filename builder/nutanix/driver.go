@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/tls"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -271,9 +272,9 @@ func checkTask(ctx context.Context, conn *v3.Client, taskUUID string, timeout in
 			if *task.Status == "SUCCEEDED" {
 				return nil
 			} else if *task.Status == "FAILED" {
-				return fmt.Errorf(*task.ErrorDetail)
+				return errors.New(*task.ErrorDetail)
 			} else {
-				log.Printf("task status is " + *task.Status)
+				log.Printf("task status is %s", *task.Status)
 				<-time.After(5 * time.Second)
 			}
 		} else {
@@ -1025,7 +1026,7 @@ func (d *NutanixDriver) getRequest(ctx context.Context, url string) (*http.Respo
 	}
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return nil, fmt.Errorf(resp.Status)
+		return nil, errors.New(resp.Status)
 	}
 	return resp, nil
 }
@@ -1059,7 +1060,7 @@ func (d *NutanixDriver) postRequest(ctx context.Context, url string, payload map
 	}
 
 	if resp.StatusCode < 200 || resp.StatusCode > 300 {
-		err_return := fmt.Errorf(resp.Status)
+		err_return := errors.New(resp.Status)
 		bodyBytes, err := io.ReadAll(resp.Body)
 		if err == nil {
 			return nil, fmt.Errorf("request returned non-200 status: %s, Response Body: %s", resp.Status, string(bodyBytes))
@@ -1277,7 +1278,7 @@ func (d *NutanixDriver) ExportImage(ctx context.Context, imageUUID string) (io.R
 	}
 
 	if resp.StatusCode != 200 {
-		return nil, fmt.Errorf(resp.Status)
+		return nil, errors.New(resp.Status)
 	}
 
 	return resp.Body, nil
