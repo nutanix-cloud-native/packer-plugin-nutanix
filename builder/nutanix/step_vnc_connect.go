@@ -18,6 +18,10 @@ import (
 	"golang.org/x/net/websocket"
 )
 
+const (
+	ntnxAPIKeyHeaderKey = "X-ntnx-api-key"
+)
+
 type stepVNCConnect struct {
 	Config *Config
 }
@@ -121,7 +125,15 @@ func (s *stepVNCConnect) getAuthCookie(state multistep.StateBag) ([]*http.Cookie
 		return nil, fmt.Errorf("failed to create request: %v", err)
 	}
 	req.Header.Add("Content-Type", "application/json")
-	req.SetBasicAuth(s.Config.ClusterConfig.Username, s.Config.ClusterConfig.Password)
+
+	// Implement transparent authentication for service accounts by using statically defined username
+	if s.Config.ClusterConfig.Username == "X-ntnx-api-key" {
+		// Use API key authentication
+		req.Header.Add(ntnxAPIKeyHeaderKey, s.Config.ClusterConfig.Password)
+	} else {
+		// Use basic auth for username/password
+		req.SetBasicAuth(s.Config.ClusterConfig.Username, s.Config.ClusterConfig.Password)
+	}
 
 	// Create a custom HTTP client that skips SSL verification
 	tr := &http.Transport{
