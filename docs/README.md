@@ -9,7 +9,7 @@ To install this plugin, copy and paste this code into your Packer configuration,
 packer {
   required_plugins {
     nutanix = {
-      version = ">= 1.1.3"
+      version = ">= 1.1.4"
       source  = "github.com/nutanix-cloud-native/nutanix"
     }
   }
