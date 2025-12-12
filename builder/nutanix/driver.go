@@ -284,6 +284,32 @@ func checkTask(ctx context.Context, conn *v3.Client, taskUUID string, timeout in
 	return fmt.Errorf("check task %s timeout", taskUUID)
 }
 
+// Temporary feature to skip task checking for debug vm creation.
+func checkVm(ctx context.Context, conn *v3.Client, vmUUID string, taskUUID string, timeout int) error {
+	log.Printf("checking vm %s...", vmUUID)
+	var vm *v3.VMIntentResponse
+	var err error
+	for i := 0; i < (timeout); i++ {
+		vm, err = conn.V3.GetVM(ctx, vmUUID)
+		task, taskErr := conn.V3.GetTask(ctx, taskUUID)
+
+		if err == nil && taskErr == nil {
+			if *vm.Status.State == "COMPLETE" {
+				log.Printf("vm state is %s", *vm.Status.State)
+				log.Printf("task status is %s", *task.Status)
+				return nil
+			} else {
+				log.Printf("vm state is %s", *vm.Status.State)
+				log.Printf("task status is %s", *task.Status)
+				<-time.After(time.Second)
+			}
+		} else {
+			return err
+		}
+	}
+	return fmt.Errorf("check vm %s timeout", vmUUID)
+}
+
 func (d *nutanixInstance) Addresses() []string {
 	var addresses []string
 	if len(d.nutanix.Status.Resources.NicList) > 0 {
@@ -685,7 +711,12 @@ func (d *NutanixDriver) Create(ctx context.Context, req *v3.VMIntentInput) (*nut
 
 	uuid := *resp.Metadata.UUID
 
-	err = checkTask(ctx, conn, resp.Status.ExecutionContext.TaskUUID.(string), 600)
+	// Temporary feature to skip task checking for debug vm creation.
+	if !d.Config.SkipVMCreateTaskCheck {
+		err = checkTask(ctx, conn, resp.Status.ExecutionContext.TaskUUID.(string), 600)
+	} else {
+		err = checkVm(ctx, conn, uuid, resp.Status.ExecutionContext.TaskUUID.(string), 600)
+	}
 
 	if err != nil {
 		log.Printf("error creating vm: %s", err.Error())

@@ -63,6 +63,7 @@ type Config struct {
 	VmForceDelete                  bool           `mapstructure:"vm_force_delete" json:"vm_force_delete" required:"false"`
 	VmRetain                       bool           `mapstructure:"vm_retain" json:"vm_retain" required:"false"`
 	DisableStopInstance            bool           `mapstructure:"disable_stop_instance" required:"false"`
+	SkipVMCreateTaskCheck          bool           `mapstructure:"skip_vm_create_task_check" required:"false"`
 
 	ctx interpolate.Context
 }

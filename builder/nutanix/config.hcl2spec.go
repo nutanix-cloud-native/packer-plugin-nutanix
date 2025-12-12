@@ -173,6 +173,7 @@ type FlatConfig struct {
 	VmForceDelete             *bool               `mapstructure:"vm_force_delete" json:"vm_force_delete" required:"false" cty:"vm_force_delete" hcl:"vm_force_delete"`
 	VmRetain                  *bool               `mapstructure:"vm_retain" json:"vm_retain" required:"false" cty:"vm_retain" hcl:"vm_retain"`
 	DisableStopInstance       *bool               `mapstructure:"disable_stop_instance" required:"false" cty:"disable_stop_instance" hcl:"disable_stop_instance"`
+	SkipVMCreateTaskCheck     *bool               `mapstructure:"skip_vm_create_task_check" required:"false" cty:"skip_vm_create_task_check" hcl:"skip_vm_create_task_check"`
 }
 
 // FlatMapstructure returns a new FlatConfig.
@@ -294,6 +295,7 @@ func (*FlatConfig) HCL2Spec() map[string]hcldec.Spec {
 		"vm_force_delete":              &hcldec.AttrSpec{Name: "vm_force_delete", Type: cty.Bool, Required: false},
 		"vm_retain":                    &hcldec.AttrSpec{Name: "vm_retain", Type: cty.Bool, Required: false},
 		"disable_stop_instance":        &hcldec.AttrSpec{Name: "disable_stop_instance", Type: cty.Bool, Required: false},
+		"skip_vm_create_task_check":    &hcldec.AttrSpec{Name: "skip_vm_create_task_check", Type: cty.Bool, Required: false},
 	}
 	return s
 }
