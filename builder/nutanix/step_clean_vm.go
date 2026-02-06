@@ -6,7 +6,6 @@ import (
 
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	"github.com/hashicorp/packer-plugin-sdk/packer"
-	v3 "github.com/nutanix-cloud-native/prism-go-client/v3"
 )
 
 // stepCleanVM is the default struct which contains the step's information
@@ -32,17 +31,15 @@ func (s *stepCleanVM) Run(ctx context.Context, state multistep.StateBag) multist
 		return multistep.ActionHalt
 	}
 
-	// Prepare VM update request
-	request := &v3.VMIntentInput{}
-	request.Spec = vmResp.nutanix.Spec
-	request.Metadata = vmResp.nutanix.Metadata
+	// Get the V4 VM directly for modification
+	v4vm := vmResp.VM()
 
 	if s.Config.Clean.Cdrom {
 		ui.Say("Cleaning up CD-ROM in virtual machine...")
-		d.CleanCD(ctx, request)
+		d.CleanCD(ctx, v4vm)
 	}
 
-	_, err = d.UpdateVM(ctx, vmUUID, request)
+	_, err = d.UpdateVM(ctx, vmUUID, v4vm)
 	if err != nil {
 		ui.Error("Error updating virtual machine: " + err.Error())
 		return multistep.ActionHalt
