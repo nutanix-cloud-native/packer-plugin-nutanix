@@ -345,6 +345,50 @@ func (d *NutanixDriver) CreateRequest(ctx context.Context, vmConfig VmConfig, st
 	v4vm.NumCoresPerSocket = &numCoresPerSocket
 	v4vm.MemorySizeBytes = &memorySizeBytes
 
+	// Configure boot type and boot order
+	bootOrder := []vmmModels.BootDeviceType{}
+	if vmConfig.BootPriority == NutanixIdentifierBootPriorityCDROM {
+		bootOrder = []vmmModels.BootDeviceType{
+			vmmModels.BOOTDEVICETYPE_CDROM,
+			vmmModels.BOOTDEVICETYPE_DISK,
+			vmmModels.BOOTDEVICETYPE_NETWORK,
+		}
+	} else {
+		bootOrder = []vmmModels.BootDeviceType{
+			vmmModels.BOOTDEVICETYPE_DISK,
+			vmmModels.BOOTDEVICETYPE_CDROM,
+			vmmModels.BOOTDEVICETYPE_NETWORK,
+		}
+	}
+
+	v4vm.BootConfig = vmmModels.NewOneOfVmBootConfig()
+	switch vmConfig.BootType {
+	case NutanixIdentifierBootTypeUEFI:
+		uefiBoot := vmmModels.NewUefiBoot()
+		uefiBoot.BootOrder = bootOrder
+		if err := v4vm.BootConfig.SetValue(*uefiBoot); err != nil {
+			return nil, fmt.Errorf("error setting UEFI boot config: %s", err.Error())
+		}
+	case NutanixIdentifierBootTypeSecureBoot:
+		uefiBoot := vmmModels.NewUefiBoot()
+		uefiBoot.BootOrder = bootOrder
+		isSecureBootEnabled := true
+		uefiBoot.IsSecureBootEnabled = &isSecureBootEnabled
+		if err := v4vm.BootConfig.SetValue(*uefiBoot); err != nil {
+			return nil, fmt.Errorf("error setting Secure Boot config: %s", err.Error())
+		}
+		// Force machine type to Q35, which is required for Secure Boot
+		machineType := vmmModels.MACHINETYPE_Q35
+		v4vm.MachineType = &machineType
+	default:
+		// Legacy boot (default)
+		legacyBoot := vmmModels.NewLegacyBoot()
+		legacyBoot.BootOrder = bootOrder
+		if err := v4vm.BootConfig.SetValue(*legacyBoot); err != nil {
+			return nil, fmt.Errorf("error setting Legacy boot config: %s", err.Error())
+		}
+	}
+
 	// Power state must be set via separate API call after creation in V4
 	var imageToDelete []string
 	SATAindex := 0
@@ -573,12 +617,7 @@ func (d *NutanixDriver) CreateRequest(ctx context.Context, vmConfig VmConfig, st
 		}
 	}
 
-	// V4 boot order uses defaults; machine type required for Secure Boot
-	if vmConfig.BootType == NutanixIdentifierBootTypeSecureBoot {
-		machineType := vmmModels.MACHINETYPE_Q35
-		v4vm.MachineType = &machineType
-	}
-
+	// Configure vTPM for UEFI/SecureBoot VMs
 	if (vmConfig.BootType == NutanixIdentifierBootTypeUEFI || vmConfig.BootType == NutanixIdentifierBootTypeSecureBoot) && vmConfig.VTPM.Enabled {
 		log.Printf("enabling VTPM for VM %s", vmConfig.VMName)
 		v4vm.VtpmConfig = vmmModels.NewVtpmConfig()
