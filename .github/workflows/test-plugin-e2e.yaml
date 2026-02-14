@@ -130,13 +130,13 @@ jobs:
         id: validate
         run: packer validate -var "test=${{ matrix.test}}" .
         env:
-          PACKER_LOG: ${{ github.event.inputs.logs }}
+          PACKER_LOG: 1
 
       - name: Run `packer build`
         id: build
         run: packer build -var "test=${{ matrix.test}}" .
         env:
-          PACKER_LOG: ${{ github.event.inputs.logs }}
+          PACKER_LOG: 1
 
   results:
     if: ${{ always() }}
