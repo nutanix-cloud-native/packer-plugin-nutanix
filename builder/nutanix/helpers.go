@@ -16,6 +16,8 @@ import (
 // VM helpers
 
 // findVMByUUID finds a VM by UUID using V4 API
+//
+//lint:ignore U1000 kept for future use
 func findVMByUUID(ctx context.Context, client *convergedv4.Client, uuid string) (*vmmModels.Vm, error) {
 	vm, err := client.VMs.Get(ctx, uuid)
 	if err != nil {
@@ -28,6 +30,8 @@ func findVMByUUID(ctx context.Context, client *convergedv4.Client, uuid string) 
 }
 
 // findVMByName finds a VM by name using V4 API
+//
+//lint:ignore U1000 kept for future use
 func findVMByName(ctx context.Context, client *convergedv4.Client, name string) (*vmmModels.Vm, error) {
 	vms, err := client.VMs.List(ctx, converged.WithFilter(fmt.Sprintf("name eq '%s'", name)))
 	if err != nil {

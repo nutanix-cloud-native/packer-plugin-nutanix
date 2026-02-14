@@ -80,9 +80,22 @@ jobs:
 
       - name: Debug V4 API support
         run: |
-          URL="https://${PKR_VAR_nutanix_endpoint}:${PKR_VAR_nutanix_port}/api/clustermgmt/v4.0/config/clusters?\$top=1"
-          echo "Testing V4 API at: $URL"
-          curl -sk -u "${PKR_VAR_nutanix_username}:${PKR_VAR_nutanix_password}" "$URL" | head -c 500 || echo "V4 API not available"
+          echo "=== Testing V4.0 API ==="
+          URL_V40="https://${PKR_VAR_nutanix_endpoint}:${PKR_VAR_nutanix_port}/api/clustermgmt/v4.0/config/clusters?\$top=1"
+          echo "URL: $URL_V40"
+          curl -sk -u "${PKR_VAR_nutanix_username}:${PKR_VAR_nutanix_password}" "$URL_V40" | head -c 300 || echo "V4.0 API not available"
+          
+          echo ""
+          echo "=== Testing V4.1 API (SDK v4.1.1 uses this) ==="
+          URL_V41="https://${PKR_VAR_nutanix_endpoint}:${PKR_VAR_nutanix_port}/api/clustermgmt/v4.1/config/clusters?\$top=1"
+          echo "URL: $URL_V41"
+          curl -sk -u "${PKR_VAR_nutanix_username}:${PKR_VAR_nutanix_password}" "$URL_V41" | head -c 300 || echo "V4.1 API not available"
+          
+          echo ""
+          echo "=== Testing V4.2 API (SDK v4.2.x uses this) ==="
+          URL_V42="https://${PKR_VAR_nutanix_endpoint}:${PKR_VAR_nutanix_port}/api/clustermgmt/v4.2/config/clusters?\$top=1"
+          echo "URL: $URL_V42"
+          curl -sk -u "${PKR_VAR_nutanix_username}:${PKR_VAR_nutanix_password}" "$URL_V42" | head -c 300 || echo "V4.2 API not available"
 
       - name: Run `packer init`
         id: init
