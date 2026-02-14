@@ -60,7 +60,7 @@ func (c *WaitIpConfig) Prepare() []error {
 		var err error
 		_, c.ipnet, err = net.ParseCIDR(*c.WaitAddress)
 		if err != nil {
-			errs = append(errs, fmt.Errorf("unable to parse \"ip_wait_address\": %w", err))
+			errs = append(errs, fmt.Errorf("unable to parse \"ip_wait_address\": %s", err.Error()))
 		}
 	}
 

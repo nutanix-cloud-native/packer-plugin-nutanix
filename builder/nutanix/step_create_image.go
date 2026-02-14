@@ -7,6 +7,7 @@ import (
 
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	"github.com/hashicorp/packer-plugin-sdk/packer"
+	vmmModels "github.com/nutanix/ntnx-api-golang-clients/vmm-go-client/v4/models/vmm/v4/ahv/config"
 )
 
 type imageArtefact struct {
@@ -31,17 +32,41 @@ func (s *stepCreateImage) Run(ctx context.Context, state multistep.StateBag) mul
 
 	ui.Say(fmt.Sprintf("Creating image(s) from virtual machine %s...", s.Config.VMName))
 
-	// Choose disk to replicate - looking for first "DISK"
+	// Choose disk to replicate - looking for SCSI disks (data disks, not CDROMs)
+	// In V4, CDROMs use SATA bus while data disks use SCSI
 	var disksToCopy []diskArtefact
 
-	for i := range vm.nutanix.Spec.Resources.DiskList {
-		if *vm.nutanix.Spec.Resources.DiskList[i].DeviceProperties.DeviceType == "DISK" {
-			disksToCopy = append(disksToCopy, diskArtefact{
-				uuid: *vm.nutanix.Spec.Resources.DiskList[i].UUID,
-				size: *vm.nutanix.Spec.Resources.DiskList[i].DiskSizeBytes,
-			})
-			diskID := fmt.Sprintf("%s:%d", *vm.nutanix.Spec.Resources.DiskList[i].DeviceProperties.DiskAddress.AdapterType, *vm.nutanix.Spec.Resources.DiskList[i].DeviceProperties.DiskAddress.DeviceIndex)
-			ui.Say("Found disk to copy: " + diskID)
+	for _, disk := range vm.Disks() {
+		// Only process SCSI disks (data disks)
+		if disk.DiskAddress != nil && disk.DiskAddress.BusType != nil {
+			if disk.DiskAddress.BusType.GetName() == vmmModels.DISKBUSTYPE_SCSI.GetName() {
+				diskUUID := ""
+				if disk.ExtId != nil {
+					diskUUID = *disk.ExtId
+				}
+
+				// Get disk size from backing info if available
+				var diskSize int64 = 0
+				if disk.BackingInfo != nil {
+					if backingValue := disk.BackingInfo.GetValue(); backingValue != nil {
+						if vmDiskInfo, ok := backingValue.(vmmModels.VmDisk); ok && vmDiskInfo.DiskSizeBytes != nil {
+							diskSize = *vmDiskInfo.DiskSizeBytes
+						}
+					}
+				}
+
+				disksToCopy = append(disksToCopy, diskArtefact{
+					uuid: diskUUID,
+					size: diskSize,
+				})
+
+				diskIndex := 0
+				if disk.DiskAddress.Index != nil {
+					diskIndex = *disk.DiskAddress.Index
+				}
+				diskID := fmt.Sprintf("SCSI:%d", diskIndex)
+				ui.Say("Found disk to copy: " + diskID)
+			}
 		}
 	}
 
@@ -64,11 +89,11 @@ func (s *stepCreateImage) Run(ctx context.Context, state multistep.StateBag) mul
 		}
 
 		imageList = append(imageList, imageArtefact{
-			uuid: *imageResponse.image.Metadata.UUID,
+			uuid: imageResponse.UUID(),
 			size: diskToCopy.size,
 		})
 
-		ui.Say(fmt.Sprintf("Image successfully created: %s (%s)", *imageResponse.image.Spec.Name, *imageResponse.image.Metadata.UUID))
+		ui.Say(fmt.Sprintf("Image successfully created: %s (%s)", imageResponse.Name(), imageResponse.UUID()))
 	}
 
 	state.Put("image_uuid", imageList)

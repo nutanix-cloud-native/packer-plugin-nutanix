@@ -35,11 +35,12 @@ func (*FlatCategory) HCL2Spec() map[string]hcldec.Spec {
 // FlatClusterConfig is an auto-generated flat version of ClusterConfig.
 // Where the contents of a field with a `mapstructure:,squash` tag are bubbled up.
 type FlatClusterConfig struct {
-	Username *string `mapstructure:"nutanix_username" required:"false" cty:"nutanix_username" hcl:"nutanix_username"`
-	Password *string `mapstructure:"nutanix_password" required:"false" cty:"nutanix_password" hcl:"nutanix_password"`
-	Insecure *bool   `mapstructure:"nutanix_insecure" required:"false" cty:"nutanix_insecure" hcl:"nutanix_insecure"`
-	Endpoint *string `mapstructure:"nutanix_endpoint" required:"true" cty:"nutanix_endpoint" hcl:"nutanix_endpoint"`
-	Port     *int32  `mapstructure:"nutanix_port" required:"false" cty:"nutanix_port" hcl:"nutanix_port"`
+	Username    *string `mapstructure:"nutanix_username" required:"false" cty:"nutanix_username" hcl:"nutanix_username"`
+	Password    *string `mapstructure:"nutanix_password" required:"false" cty:"nutanix_password" hcl:"nutanix_password"`
+	Insecure    *bool   `mapstructure:"nutanix_insecure" required:"false" cty:"nutanix_insecure" hcl:"nutanix_insecure"`
+	Endpoint    *string `mapstructure:"nutanix_endpoint" required:"true" cty:"nutanix_endpoint" hcl:"nutanix_endpoint"`
+	Port        *int32  `mapstructure:"nutanix_port" required:"false" cty:"nutanix_port" hcl:"nutanix_port"`
+	ReadTimeout *int    `mapstructure:"read_timeout_minutes" required:"false" cty:"read_timeout_minutes" hcl:"read_timeout_minutes"`
 }
 
 // FlatMapstructure returns a new FlatClusterConfig.
@@ -54,11 +55,12 @@ func (*ClusterConfig) FlatMapstructure() interface{ HCL2Spec() map[string]hcldec
 // The decoded values from this spec will then be applied to a FlatClusterConfig.
 func (*FlatClusterConfig) HCL2Spec() map[string]hcldec.Spec {
 	s := map[string]hcldec.Spec{
-		"nutanix_username": &hcldec.AttrSpec{Name: "nutanix_username", Type: cty.String, Required: false},
-		"nutanix_password": &hcldec.AttrSpec{Name: "nutanix_password", Type: cty.String, Required: false},
-		"nutanix_insecure": &hcldec.AttrSpec{Name: "nutanix_insecure", Type: cty.Bool, Required: false},
-		"nutanix_endpoint": &hcldec.AttrSpec{Name: "nutanix_endpoint", Type: cty.String, Required: false},
-		"nutanix_port":     &hcldec.AttrSpec{Name: "nutanix_port", Type: cty.Number, Required: false},
+		"nutanix_username":     &hcldec.AttrSpec{Name: "nutanix_username", Type: cty.String, Required: false},
+		"nutanix_password":     &hcldec.AttrSpec{Name: "nutanix_password", Type: cty.String, Required: false},
+		"nutanix_insecure":     &hcldec.AttrSpec{Name: "nutanix_insecure", Type: cty.Bool, Required: false},
+		"nutanix_endpoint":     &hcldec.AttrSpec{Name: "nutanix_endpoint", Type: cty.String, Required: false},
+		"nutanix_port":         &hcldec.AttrSpec{Name: "nutanix_port", Type: cty.Number, Required: false},
+		"read_timeout_minutes": &hcldec.AttrSpec{Name: "read_timeout_minutes", Type: cty.Number, Required: false},
 	}
 	return s
 }
@@ -141,6 +143,7 @@ type FlatConfig struct {
 	Insecure                  *bool               `mapstructure:"nutanix_insecure" required:"false" cty:"nutanix_insecure" hcl:"nutanix_insecure"`
 	Endpoint                  *string             `mapstructure:"nutanix_endpoint" required:"true" cty:"nutanix_endpoint" hcl:"nutanix_endpoint"`
 	Port                      *int32              `mapstructure:"nutanix_port" required:"false" cty:"nutanix_port" hcl:"nutanix_port"`
+	ReadTimeout               *int                `mapstructure:"read_timeout_minutes" required:"false" cty:"read_timeout_minutes" hcl:"read_timeout_minutes"`
 	VMName                    *string             `mapstructure:"vm_name" json:"vm_name" required:"false" cty:"vm_name" hcl:"vm_name"`
 	OSType                    *string             `mapstructure:"os_type" json:"os_type" required:"true" cty:"os_type" hcl:"os_type"`
 	BootType                  *string             `mapstructure:"boot_type" json:"boot_type" required:"false" cty:"boot_type" hcl:"boot_type"`
@@ -263,6 +266,7 @@ func (*FlatConfig) HCL2Spec() map[string]hcldec.Spec {
 		"nutanix_insecure":             &hcldec.AttrSpec{Name: "nutanix_insecure", Type: cty.Bool, Required: false},
 		"nutanix_endpoint":             &hcldec.AttrSpec{Name: "nutanix_endpoint", Type: cty.String, Required: false},
 		"nutanix_port":                 &hcldec.AttrSpec{Name: "nutanix_port", Type: cty.Number, Required: false},
+		"read_timeout_minutes":         &hcldec.AttrSpec{Name: "read_timeout_minutes", Type: cty.Number, Required: false},
 		"vm_name":                      &hcldec.AttrSpec{Name: "vm_name", Type: cty.String, Required: false},
 		"os_type":                      &hcldec.AttrSpec{Name: "os_type", Type: cty.String, Required: false},
 		"boot_type":                    &hcldec.AttrSpec{Name: "boot_type", Type: cty.String, Required: false},

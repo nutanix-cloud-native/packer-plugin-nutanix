@@ -3,10 +3,7 @@ package nutanix
 import (
 	"context"
 	"fmt"
-	"io"
 	"os"
-	"os/signal"
-	"syscall"
 
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	"github.com/hashicorp/packer-plugin-sdk/packer"
@@ -21,13 +18,8 @@ func (s *stepExportImage) Run(ctx context.Context, state multistep.StateBag) mul
 	ui := state.Get("ui").(packer.Ui)
 	imageList := state.Get("image_uuid").([]imageArtefact)
 	d := state.Get("driver").(Driver)
-	// vm, _ := d.GetVM(vmUUID)
 
 	ui.Say(fmt.Sprintf("Exporting image(s) from virtual machine %s...", s.VMName))
-
-	// Create a channel to receive signals
-	sigChan := make(chan os.Signal, 1)
-	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
 
 	for index, imageToExport := range imageList {
 
@@ -36,65 +28,43 @@ func (s *stepExportImage) Run(ctx context.Context, state multistep.StateBag) mul
 			name = fmt.Sprintf("%s-disk%d", name, index+1)
 		}
 
-		file, err := d.ExportImage(ctx, imageToExport.uuid)
+		ui.Say(fmt.Sprintf("Downloading image %s...", name))
+
+		// ExportImage now returns the path to the downloaded file
+		downloadedFilePath, err := d.ExportImage(ctx, imageToExport.uuid)
 		if err != nil {
 			ui.Error("Image export failed: " + err.Error())
 			state.Put("error", err)
 			return multistep.ActionHalt
 		}
-		defer file.Close()
 
-		toRead := ui.TrackProgress(name, 0, imageToExport.size, file)
-
-		tempDestinationPath := name + ".tmp"
-
-		f, err := os.OpenFile(tempDestinationPath, os.O_CREATE|os.O_WRONLY, 0644)
+		// Check if size is OK
+		fi, err := os.Stat(downloadedFilePath)
 		if err != nil {
+			ui.Error("Image stat failed: " + err.Error())
+			state.Put("error", err)
 			return multistep.ActionHalt
 		}
 
-		// Use a goroutine to copy the data, so that we can
-		// interrupt it if necessary
-		copyDone := make(chan bool)
-		go func() {
-			io.Copy(f, toRead)
-			copyDone <- true
-		}()
-
-		select {
-		case <-copyDone:
-			toRead.Close()
-
-			// Check if size is OK
-			fi, err := f.Stat()
-			if err != nil {
-				ui.Error("Image stat failed: " + err.Error())
-				state.Put("error", err)
-				return multistep.ActionHalt
-			}
-
-			if fi.Size() != imageToExport.size {
-				os.Remove(tempDestinationPath)
-				ui.Error("image size mistmatch")
-				state.Put("error", fmt.Errorf("image size mistmatch"))
-				return multistep.ActionHalt
-			}
-
-			name = name + ".img"
-			os.Rename(tempDestinationPath, name)
-
-			ui.Say(fmt.Sprintf("image %s exported", name))
-
-		case <-sigChan:
-			// We received a signal, cancel the copy operation
-			toRead.Close()
-			f.Close()
-			os.Remove(tempDestinationPath)
-			ui.Say("image export cancelled")
+		if imageToExport.size > 0 && fi.Size() != imageToExport.size {
+			os.Remove(downloadedFilePath)
+			ui.Error("image size mismatch")
+			state.Put("error", fmt.Errorf("image size mismatch: expected %d, got %d", imageToExport.size, fi.Size()))
 			return multistep.ActionHalt
 		}
 
+		// Rename to final name
+		finalName := name + ".img"
+		err = os.Rename(downloadedFilePath, finalName)
+		if err != nil {
+			ui.Error("Failed to rename image file: " + err.Error())
+			state.Put("error", err)
+			return multistep.ActionHalt
+		}
+
+		ui.Say(fmt.Sprintf("Image %s exported", finalName))
 	}
+
 	return multistep.ActionContinue
 }
 
