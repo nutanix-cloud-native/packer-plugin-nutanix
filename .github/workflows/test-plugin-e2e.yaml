@@ -78,6 +78,12 @@ jobs:
         run: |
           packer plugins install --path /tmp/packer-plugin-nutanix "github.com/nutanix-cloud-native/nutanix"
 
+      - name: Debug V4 API support
+        run: |
+          URL="https://${PKR_VAR_nutanix_endpoint}:${PKR_VAR_nutanix_port}/api/clustermgmt/v4.0/config/clusters?\$top=1"
+          echo "Testing V4 API at: $URL"
+          curl -sk -u "${PKR_VAR_nutanix_username}:${PKR_VAR_nutanix_password}" "$URL" | head -c 500 || echo "V4 API not available"
+
       - name: Run `packer init`
         id: init
         run: |
