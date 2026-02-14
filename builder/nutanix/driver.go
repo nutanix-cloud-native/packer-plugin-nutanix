@@ -620,10 +620,17 @@ func (d *NutanixDriver) Create(ctx context.Context, v4vm *vmmModels.Vm) (*nutani
 	}
 
 	log.Printf("creating vm %s...", d.Config.VMName)
+	log.Printf("DEBUG: VM config - Name: %s, Cluster: %s, NumSockets: %d, MemorySizeBytes: %d",
+		*v4vm.Name, *v4vm.Cluster.ExtId, *v4vm.NumSockets, *v4vm.MemorySizeBytes)
+	log.Printf("DEBUG: VM has %d disks, %d NICs", len(v4vm.Disks), len(v4vm.Nics))
+	if len(v4vm.Categories) > 0 {
+		log.Printf("DEBUG: VM has %d categories", len(v4vm.Categories))
+	}
 
 	createdVM, err := v4Client.VMs.Create(ctx, v4vm)
 	if err != nil {
-		log.Printf("error creating vm: %s", err.Error())
+		log.Printf("ERROR: VM creation failed: %s", err.Error())
+		log.Printf("DEBUG: Full error details: %+v", err)
 		return nil, err
 	}
 
@@ -796,8 +803,12 @@ func (d *NutanixDriver) CreateImageURL(ctx context.Context, disk VmDisk, vm VmCo
 
 	v4Image.ClusterLocationExtIds = []string{clusterUUID}
 
+	log.Printf("DEBUG: Creating image - Name: %s, Type: %s, Cluster: %s", *v4Image.Name, v4Image.Type.GetName(), clusterUUID)
+
 	createdImage, err := v4Client.Images.Create(ctx, v4Image)
 	if err != nil {
+		log.Printf("ERROR: Image creation failed: %s", err.Error())
+		log.Printf("DEBUG: Full error details: %+v", err)
 		return nil, fmt.Errorf("error while creating image: %s", err.Error())
 	}
 
