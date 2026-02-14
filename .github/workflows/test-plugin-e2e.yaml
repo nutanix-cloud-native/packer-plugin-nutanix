@@ -78,24 +78,30 @@ jobs:
         run: |
           packer plugins install --path /tmp/packer-plugin-nutanix "github.com/nutanix-cloud-native/nutanix"
 
-      - name: Debug V4 API support
+      - name: Debug V4 API and resources
         run: |
-          echo "=== Testing V4.0 API ==="
-          URL_V40="https://${PKR_VAR_nutanix_endpoint}:${PKR_VAR_nutanix_port}/api/clustermgmt/v4.0/config/clusters?\$top=1"
-          echo "URL: $URL_V40"
-          curl -sk -u "${PKR_VAR_nutanix_username}:${PKR_VAR_nutanix_password}" "$URL_V40" | head -c 300 || echo "V4.0 API not available"
+          BASE="https://${PKR_VAR_nutanix_endpoint}:${PKR_VAR_nutanix_port}"
+          AUTH="${PKR_VAR_nutanix_username}:${PKR_VAR_nutanix_password}"
+          
+          echo "=== Testing V4.1 API ==="
+          curl -sk -u "$AUTH" "$BASE/api/clustermgmt/v4.1/config/clusters?\$top=1" | head -c 300
           
           echo ""
-          echo "=== Testing V4.1 API (SDK v4.1.1 uses this) ==="
-          URL_V41="https://${PKR_VAR_nutanix_endpoint}:${PKR_VAR_nutanix_port}/api/clustermgmt/v4.1/config/clusters?\$top=1"
-          echo "URL: $URL_V41"
-          curl -sk -u "${PKR_VAR_nutanix_username}:${PKR_VAR_nutanix_password}" "$URL_V41" | head -c 300 || echo "V4.1 API not available"
+          echo "=== Checking cluster: ${PKR_VAR_nutanix_cluster} ==="
+          curl -sk -u "$AUTH" "$BASE/api/clustermgmt/v4.1/config/clusters?\$filter=name%20eq%20'${PKR_VAR_nutanix_cluster}'" | jq -r '.data[] | {name, extId}' 2>/dev/null || echo "Cluster not found or jq error"
           
           echo ""
-          echo "=== Testing V4.2 API (SDK v4.2.x uses this) ==="
-          URL_V42="https://${PKR_VAR_nutanix_endpoint}:${PKR_VAR_nutanix_port}/api/clustermgmt/v4.2/config/clusters?\$top=1"
-          echo "URL: $URL_V42"
-          curl -sk -u "${PKR_VAR_nutanix_username}:${PKR_VAR_nutanix_password}" "$URL_V42" | head -c 300 || echo "V4.2 API not available"
+          echo "=== Checking subnet: ${PKR_VAR_nutanix_subnet} ==="
+          curl -sk -u "$AUTH" "$BASE/api/networking/v4.0/config/subnets?\$filter=name%20eq%20'${PKR_VAR_nutanix_subnet}'" | jq -r '.data[] | {name, extId, subnetType}' 2>/dev/null || echo "Subnet not found or jq error"
+          
+          echo ""
+          echo "=== Checking categories ==="
+          curl -sk -u "$AUTH" "$BASE/api/prism/v4.0/config/categories?\$filter=key%20eq%20'TemplateType'" | jq -r '.data[] | {key, type}' 2>/dev/null || echo "Category check failed"
+          curl -sk -u "$AUTH" "$BASE/api/prism/v4.0/config/categories?\$filter=key%20eq%20'Environment'" | jq -r '.data[] | {key, type}' 2>/dev/null || echo "Category check failed"
+          
+          echo ""
+          echo "=== Listing available images (first 5) ==="
+          curl -sk -u "$AUTH" "$BASE/api/vmm/v4.0/content/images?\$top=5" | jq -r '.data[] | {name, extId}' 2>/dev/null || echo "Image list failed"
 
       - name: Run `packer init`
         id: init
