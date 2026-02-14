@@ -2,6 +2,7 @@ package nutanix
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"net"
@@ -590,6 +591,7 @@ func (d *NutanixDriver) CreateRequest(ctx context.Context, vmConfig VmConfig, st
 	}
 
 	if vmConfig.UserData != "" {
+		log.Printf("DEBUG: Setting up GuestCustomization for OS type: %s", vmConfig.OSType)
 		v4vm.GuestCustomization = vmmModels.NewGuestCustomizationParams()
 
 		if vmConfig.OSType == "Linux" {
@@ -606,6 +608,7 @@ func (d *NutanixDriver) CreateRequest(ctx context.Context, vmConfig VmConfig, st
 				return nil, fmt.Errorf("error setting guest customization config: %s", err.Error())
 			}
 			v4vm.GuestCustomization.Config = guestConfig
+			log.Printf("DEBUG: CloudInit configured for Linux VM")
 		} else if vmConfig.OSType == "Windows" {
 			sysprep := vmmModels.NewSysprep()
 			unattendXml := vmmModels.NewUnattendxml()
@@ -620,6 +623,7 @@ func (d *NutanixDriver) CreateRequest(ctx context.Context, vmConfig VmConfig, st
 				return nil, fmt.Errorf("error setting guest customization config: %s", err.Error())
 			}
 			v4vm.GuestCustomization.Config = guestConfig
+			log.Printf("DEBUG: Sysprep configured for Windows VM")
 		}
 	}
 
@@ -676,6 +680,13 @@ func (d *NutanixDriver) Create(ctx context.Context, v4vm *vmmModels.Vm) (*nutani
 	log.Printf("DEBUG: VM has %d disks, %d NICs", len(v4vm.Disks), len(v4vm.Nics))
 	if len(v4vm.Categories) > 0 {
 		log.Printf("DEBUG: VM has %d categories", len(v4vm.Categories))
+	}
+
+	// Debug: dump full VM JSON payload
+	if vmJSON, err := json.MarshalIndent(v4vm, "", "  "); err == nil {
+		log.Printf("DEBUG: Full VM JSON payload:\n%s", string(vmJSON))
+	} else {
+		log.Printf("DEBUG: Failed to marshal VM to JSON: %s", err.Error())
 	}
 
 	createdVM, err := v4Client.VMs.Create(ctx, v4vm)
