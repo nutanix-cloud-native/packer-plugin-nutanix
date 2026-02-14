@@ -346,7 +346,7 @@ func (d *NutanixDriver) CreateRequest(ctx context.Context, vmConfig VmConfig, st
 	v4vm.MemorySizeBytes = &memorySizeBytes
 
 	// Configure boot type and boot order
-	bootOrder := []vmmModels.BootDeviceType{}
+	var bootOrder []vmmModels.BootDeviceType
 	if vmConfig.BootPriority == NutanixIdentifierBootPriorityCDROM {
 		bootOrder = []vmmModels.BootDeviceType{
 			vmmModels.BOOTDEVICETYPE_CDROM,
@@ -441,17 +441,15 @@ func (d *NutanixDriver) CreateRequest(ctx context.Context, vmConfig VmConfig, st
 			}
 			vmDisk.DiskSizeBytes = &diskSizeBytes
 
-			// Assign image reference directly to avoid ReferenceItemDiscriminator_ API rejection
+			// Use NewDataSource() and SetReference() to properly initialize all fields
 			imageUUID := image.UUID()
 			imageRef := vmmModels.NewImageReference()
 			imageRef.ImageExtId = &imageUUID
-			dataSourceRef := vmmModels.NewOneOfDataSourceReference()
-			if err := dataSourceRef.SetValue(*imageRef); err != nil {
+			dataSource := vmmModels.NewDataSource()
+			if err := dataSource.SetReference(*imageRef); err != nil {
 				return nil, fmt.Errorf("error setting data source reference: %s", err.Error())
 			}
-			vmDisk.DataSource = &vmmModels.DataSource{
-				Reference: dataSourceRef,
-			}
+			vmDisk.DataSource = dataSource
 
 			if err := v4Disk.SetBackingInfo(*vmDisk); err != nil {
 				return nil, fmt.Errorf("error setting disk backing info: %s", err.Error())
@@ -525,16 +523,14 @@ func (d *NutanixDriver) CreateRequest(ctx context.Context, vmConfig VmConfig, st
 
 			vmDisk := vmmModels.NewVmDisk()
 			imageUUID := image.UUID()
-			// Assign image reference directly to avoid ReferenceItemDiscriminator_ API rejection
+			// Use NewDataSource() and SetReference() to properly initialize all fields
 			imageRef := vmmModels.NewImageReference()
 			imageRef.ImageExtId = &imageUUID
-			dataSourceRef := vmmModels.NewOneOfDataSourceReference()
-			if err := dataSourceRef.SetValue(*imageRef); err != nil {
+			dataSource := vmmModels.NewDataSource()
+			if err := dataSource.SetReference(*imageRef); err != nil {
 				return nil, fmt.Errorf("error setting data source reference: %s", err.Error())
 			}
-			vmDisk.DataSource = &vmmModels.DataSource{
-				Reference: dataSourceRef,
-			}
+			vmDisk.DataSource = dataSource
 
 			if err := v4Disk.SetBackingInfo(*vmDisk); err != nil {
 				return nil, fmt.Errorf("error setting disk backing info: %s", err.Error())
