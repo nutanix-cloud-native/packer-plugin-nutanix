@@ -95,9 +95,15 @@ jobs:
           curl -sk -u "$AUTH" "$BASE/api/networking/v4.0/config/subnets?\$filter=name%20eq%20'${PKR_VAR_nutanix_subnet}'" | jq -r '.data[] | {name, extId, subnetType}' 2>/dev/null || echo "Subnet not found or jq error"
           
           echo ""
-          echo "=== Checking categories ==="
-          curl -sk -u "$AUTH" "$BASE/api/prism/v4.0/config/categories?\$filter=key%20eq%20'TemplateType'" | jq -r '.data[] | {key, type}' 2>/dev/null || echo "Category check failed"
-          curl -sk -u "$AUTH" "$BASE/api/prism/v4.0/config/categories?\$filter=key%20eq%20'Environment'" | jq -r '.data[] | {key, type}' 2>/dev/null || echo "Category check failed"
+          echo "=== Checking subnet cluster association ==="
+          curl -sk -u "$AUTH" "$BASE/api/networking/v4.0/config/subnets?\$filter=name%20eq%20'${PKR_VAR_nutanix_subnet}'" | jq -r '.data[] | {name, extId, clusterReference}' 2>/dev/null || echo "Subnet cluster check failed"
+          
+          echo ""
+          echo "=== Checking category VALUES (not just keys) ==="
+          echo "Looking for TemplateType=Vm..."
+          curl -sk -u "$AUTH" "$BASE/api/prism/v4.0/config/categories?\$filter=key%20eq%20'TemplateType'%20and%20value%20eq%20'Vm'" | jq -r '.data[] | {key, value}' 2>/dev/null || echo "TemplateType=Vm not found"
+          echo "Looking for Environment=Testing..."
+          curl -sk -u "$AUTH" "$BASE/api/prism/v4.0/config/categories?\$filter=key%20eq%20'Environment'%20and%20value%20eq%20'Testing'" | jq -r '.data[] | {key, value}' 2>/dev/null || echo "Environment=Testing not found"
           
           echo ""
           echo "=== Listing available images (first 5) ==="
