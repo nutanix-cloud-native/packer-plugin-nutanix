@@ -600,9 +600,12 @@ func (d *NutanixDriver) CreateRequest(ctx context.Context, vmConfig VmConfig, st
 			if err := cloudInit.CloudInitScript.SetValue(*userDataScript); err != nil {
 				return nil, fmt.Errorf("error setting cloud-init script: %s", err.Error())
 			}
-			if err := v4vm.GuestCustomization.SetConfig(*cloudInit); err != nil {
+			// Directly assign Config to avoid $configItemDiscriminator in JSON
+			guestConfig := vmmModels.NewOneOfGuestCustomizationParamsConfig()
+			if err := guestConfig.SetValue(*cloudInit); err != nil {
 				return nil, fmt.Errorf("error setting guest customization config: %s", err.Error())
 			}
+			v4vm.GuestCustomization.Config = guestConfig
 		} else if vmConfig.OSType == "Windows" {
 			sysprep := vmmModels.NewSysprep()
 			unattendXml := vmmModels.NewUnattendxml()
@@ -611,9 +614,12 @@ func (d *NutanixDriver) CreateRequest(ctx context.Context, vmConfig VmConfig, st
 			if err := sysprep.SysprepScript.SetValue(*unattendXml); err != nil {
 				return nil, fmt.Errorf("error setting sysprep script: %s", err.Error())
 			}
-			if err := v4vm.GuestCustomization.SetConfig(*sysprep); err != nil {
+			// Directly assign Config to avoid $configItemDiscriminator in JSON
+			guestConfig := vmmModels.NewOneOfGuestCustomizationParamsConfig()
+			if err := guestConfig.SetValue(*sysprep); err != nil {
 				return nil, fmt.Errorf("error setting guest customization config: %s", err.Error())
 			}
+			v4vm.GuestCustomization.Config = guestConfig
 		}
 	}
 
