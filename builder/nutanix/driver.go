@@ -454,9 +454,12 @@ func (d *NutanixDriver) CreateRequest(ctx context.Context, vmConfig VmConfig, st
 			dataSource.Reference = dataSourceRef
 			vmDisk.DataSource = dataSource
 
-			if err := v4Disk.SetBackingInfo(*vmDisk); err != nil {
+			// Directly assign BackingInfo to avoid $backingInfoItemDiscriminator in JSON
+			backingInfo := vmmModels.NewOneOfDiskBackingInfo()
+			if err := backingInfo.SetValue(*vmDisk); err != nil {
 				return nil, fmt.Errorf("error setting disk backing info: %s", err.Error())
 			}
+			v4Disk.BackingInfo = backingInfo
 			v4vm.Disks = append(v4vm.Disks, *v4Disk)
 			SCSIindex++
 		}
@@ -478,9 +481,12 @@ func (d *NutanixDriver) CreateRequest(ctx context.Context, vmConfig VmConfig, st
 				vmDisk.StorageContainer.ExtId = &disk.StorageContainerUUID
 			}
 
-			if err := v4Disk.SetBackingInfo(*vmDisk); err != nil {
+			// Directly assign BackingInfo to avoid $backingInfoItemDiscriminator in JSON
+			backingInfo := vmmModels.NewOneOfDiskBackingInfo()
+			if err := backingInfo.SetValue(*vmDisk); err != nil {
 				return nil, fmt.Errorf("error setting disk backing info: %s", err.Error())
 			}
+			v4Disk.BackingInfo = backingInfo
 			v4vm.Disks = append(v4vm.Disks, *v4Disk)
 			SCSIindex++
 		}
@@ -537,9 +543,12 @@ func (d *NutanixDriver) CreateRequest(ctx context.Context, vmConfig VmConfig, st
 			dataSource.Reference = dataSourceRef
 			vmDisk.DataSource = dataSource
 
-			if err := v4Disk.SetBackingInfo(*vmDisk); err != nil {
+			// Directly assign BackingInfo to avoid $backingInfoItemDiscriminator in JSON
+			backingInfo := vmmModels.NewOneOfDiskBackingInfo()
+			if err := backingInfo.SetValue(*vmDisk); err != nil {
 				return nil, fmt.Errorf("error setting disk backing info: %s", err.Error())
 			}
+			v4Disk.BackingInfo = backingInfo
 			v4vm.Disks = append(v4vm.Disks, *v4Disk)
 			SATAindex++
 		}
@@ -566,9 +575,12 @@ func (d *NutanixDriver) CreateRequest(ctx context.Context, vmConfig VmConfig, st
 		nicNetworkInfo := vmmModels.NewVirtualEthernetNicNetworkInfo()
 		nicNetworkInfo.Subnet = vmmModels.NewSubnetReference()
 		nicNetworkInfo.Subnet.ExtId = &subnetUUID
-		if err := v4Nic.SetNicNetworkInfo(*nicNetworkInfo); err != nil {
+		// Directly assign NicNetworkInfo to avoid $nicNetworkInfoItemDiscriminator in JSON
+		nicNetworkInfoWrapper := vmmModels.NewOneOfNicNicNetworkInfo()
+		if err := nicNetworkInfoWrapper.SetValue(*nicNetworkInfo); err != nil {
 			return nil, fmt.Errorf("error setting NIC network info: %s", err.Error())
 		}
+		v4Nic.NicNetworkInfo = nicNetworkInfoWrapper
 
 		v4vm.Nics = append(v4vm.Nics, *v4Nic)
 	}
