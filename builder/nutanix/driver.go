@@ -195,6 +195,61 @@ func (d *NutanixDriver) getConfigCreds() client.Credentials {
 	}
 }
 
+// logDetailedTaskError attempts to extract the task UUID from an error and fetch full error details
+func (d *NutanixDriver) logDetailedTaskError(ctx context.Context, v4Client *convergedv4.Client, err error) {
+	// Try to extract task UUID from error message (format: "task <uuid> failed: ...")
+	errStr := err.Error()
+	if !strings.Contains(errStr, "task ") {
+		return
+	}
+
+	// Extract UUID from "task <uuid> failed" pattern
+	parts := strings.Split(errStr, " ")
+	for i, part := range parts {
+		if part == "task" && i+1 < len(parts) {
+			taskUUID := strings.TrimSuffix(parts[i+1], ":")
+			taskUUID = strings.TrimSpace(taskUUID)
+			if taskUUID == "" || taskUUID == "failed" {
+				continue
+			}
+
+			log.Printf("DEBUG: Fetching full error details for task: %s", taskUUID)
+			task, taskErr := v4Client.Tasks.Get(ctx, taskUUID)
+			if taskErr != nil {
+				log.Printf("DEBUG: Failed to fetch task details: %s", taskErr.Error())
+				return
+			}
+
+			if task.ErrorMessages != nil {
+				log.Printf("DEBUG: === FULL TASK ERROR DETAILS ===")
+				for i, msg := range task.ErrorMessages {
+					log.Printf("DEBUG: Error[%d]:", i)
+					if msg.Code != nil {
+						log.Printf("DEBUG:   Code: %s", *msg.Code)
+					}
+					if msg.ErrorGroup != nil {
+						log.Printf("DEBUG:   ErrorGroup: %s", *msg.ErrorGroup)
+					}
+					if msg.Message != nil {
+						log.Printf("DEBUG:   Message: %s", *msg.Message)
+					}
+					if msg.Severity != nil {
+						log.Printf("DEBUG:   Severity: %s", msg.Severity.GetName())
+					}
+					if len(msg.ArgumentsMap) > 0 {
+						log.Printf("DEBUG:   ArgumentsMap:")
+						for k, v := range msg.ArgumentsMap {
+							log.Printf("DEBUG:     %s = %s", k, v)
+						}
+					}
+				}
+				log.Printf("DEBUG: === END TASK ERROR DETAILS ===")
+			}
+			return
+		}
+	}
+}
+
 // getV4Client returns the V4 converged client, creating it if needed
 func (d *NutanixDriver) getV4Client() (*convergedv4.Client, error) {
 	if d.v4Client != nil {
@@ -390,7 +445,9 @@ func (d *NutanixDriver) CreateRequest(ctx context.Context, vmConfig VmConfig, st
 		}
 	}
 
-	// Power state must be set via separate API call after creation in V4
+	// V4 API does NOT allow PowerState during creation - must use separate power-on call
+	// Error: "Cannot specify power state as ON during VM creation. Please use the VM power action endpoints instead."
+
 	var imageToDelete []string
 	SATAindex := 0
 	SCSIindex := 0
@@ -571,10 +628,14 @@ func (d *NutanixDriver) CreateRequest(ctx context.Context, vmConfig VmConfig, st
 		}
 
 		v4Nic := vmmModels.NewNic()
-		// Use VirtualEthernetNicNetworkInfo for standard VM NICs
+
+		// Use VirtualEthernetNicNetworkInfo for standard VM NICs (v4.1+ API)
+		// Note: BackingInfo and IsConnected are deprecated - use NicNetworkInfo instead
+		// In v4.1+, NICs are connected by default when NicNetworkInfo is properly configured
 		nicNetworkInfo := vmmModels.NewVirtualEthernetNicNetworkInfo()
 		nicNetworkInfo.Subnet = vmmModels.NewSubnetReference()
 		nicNetworkInfo.Subnet.ExtId = &subnetUUID
+
 		// Directly assign NicNetworkInfo to avoid $nicNetworkInfoItemDiscriminator in JSON
 		nicNetworkInfoWrapper := vmmModels.NewOneOfNicNicNetworkInfo()
 		if err := nicNetworkInfoWrapper.SetValue(*nicNetworkInfo); err != nil {
@@ -701,15 +762,30 @@ func (d *NutanixDriver) Create(ctx context.Context, v4vm *vmmModels.Vm) (*nutani
 		log.Printf("DEBUG: Failed to marshal VM to JSON: %s", err.Error())
 	}
 
-	createdVM, err := v4Client.VMs.Create(ctx, v4vm)
+	// Use CreateAsync to get the operation for better error handling
+	operation, err := v4Client.VMs.CreateAsync(ctx, v4vm)
 	if err != nil {
-		log.Printf("ERROR: VM creation failed: %s", err.Error())
-		log.Printf("DEBUG: Full error details: %+v", err)
+		log.Printf("ERROR: VM creation request failed: %s", err.Error())
 		return nil, err
 	}
 
+	// Wait for operation to complete
+	result, err := operation.Wait(ctx)
+	if err != nil {
+		log.Printf("ERROR: VM creation failed: %s", err.Error())
+		// Try to extract task UUID from error message and fetch full error details
+		d.logDetailedTaskError(ctx, v4Client, err)
+		return nil, err
+	}
+
+	if len(result) == 0 {
+		return nil, fmt.Errorf("VM creation completed but no VM returned")
+	}
+
+	createdVM := result[0]
 	vmUUID := *createdVM.ExtId
 
+	// V4 API requires separate power-on operation (cannot set PowerState during creation)
 	log.Printf("powering on vm %s...", vmUUID)
 	powerOnOp, err := v4Client.VMs.PowerOnVM(vmUUID)
 	if err != nil {
@@ -739,7 +815,8 @@ func (d *NutanixDriver) Create(ctx context.Context, v4vm *vmmModels.Vm) (*nutani
 	return &nutanixInstance{vm: v4VMResult}, nil
 }
 
-// WaitForIP waits for the virtual machine to obtain an IP address.
+// WaitForIP waits for the virtual machine to obtain an IP address from guest agent.
+// Similar to V3 behavior: waits for LearnedIpAddresses (guest agent) only, no fallback.
 func (d *NutanixDriver) WaitForIP(ctx context.Context, vmUUID string, ipNet *net.IPNet) (string, error) {
 	v4Client, err := d.getV4Client()
 	if err != nil {
@@ -756,26 +833,40 @@ func (d *NutanixDriver) WaitForIP(ctx context.Context, vmUUID string, ipNet *net
 		}
 
 		// Check for IP address in NICs
+		// V4 separates IPs into LearnedIpAddresses (guest agent) and Ipv4Config (IPAM)
+		// V3 had both in IpEndpointList, so we check both to restore V3 parity
 		if len(vm.Nics) > 0 {
-			for _, nic := range vm.Nics {
-				if nicInfo := nic.GetNicNetworkInfo(); nicInfo != nil {
-					// Handle VirtualEthernetNicNetworkInfo (standard VM NICs)
-					if netInfo, ok := nicInfo.(vmmModels.VirtualEthernetNicNetworkInfo); ok {
-						if netInfo.Ipv4Info != nil && len(netInfo.Ipv4Info.LearnedIpAddresses) > 0 {
-							if netInfo.Ipv4Info.LearnedIpAddresses[0].Value != nil &&
-								*netInfo.Ipv4Info.LearnedIpAddresses[0].Value != "" {
-								IPAddress = *netInfo.Ipv4Info.LearnedIpAddresses[0].Value
-								break
-							}
-						}
+			nic := vm.Nics[0]
+			nicInfo := nic.GetNicNetworkInfo()
+
+			if nicInfo != nil {
+				// Handle VirtualEthernetNicNetworkInfo (standard VM NICs)
+				if netInfo, ok := nicInfo.(vmmModels.VirtualEthernetNicNetworkInfo); ok {
+					// Priority 1: Check LearnedIpAddresses (from guest agent)
+					// This is the "high quality" IP that guest tools report
+					if netInfo.Ipv4Info != nil &&
+						len(netInfo.Ipv4Info.LearnedIpAddresses) > 0 &&
+						netInfo.Ipv4Info.LearnedIpAddresses[0].Value != nil &&
+						*netInfo.Ipv4Info.LearnedIpAddresses[0].Value != "" {
+						IPAddress = *netInfo.Ipv4Info.LearnedIpAddresses[0].Value
+						log.Printf("DEBUG: Found learned IP from guest agent: %s", IPAddress)
+						break
+					}
+
+					// Priority 2: Fallback to Ipv4Config (from IPAM)
+					// This restores V3 parity - allows ISO builds to proceed before guest agent is installed
+					if netInfo.Ipv4Config != nil &&
+						netInfo.Ipv4Config.IpAddress != nil &&
+						netInfo.Ipv4Config.IpAddress.Value != nil &&
+						*netInfo.Ipv4Config.IpAddress.Value != "" {
+						IPAddress = *netInfo.Ipv4Config.IpAddress.Value
+						log.Printf("DEBUG: Found configured IP from IPAM: %s", IPAddress)
+						break
 					}
 				}
 			}
 		}
 
-		if IPAddress != "" {
-			break
-		}
 		time.Sleep(5 * time.Second)
 	}
 
@@ -888,6 +979,32 @@ func (d *NutanixDriver) CreateImageURL(ctx context.Context, disk VmDisk, vm VmCo
 
 	log.Printf("image successfully created")
 
+	// Verify image is fully ready before returning
+	// The V4 API task may complete before the image is fully usable for VM disk cloning
+	// Using 5-second intervals to match V3 API's checkTask polling behavior
+	imageUUID := *createdImage.ExtId
+	log.Printf("DEBUG: Verifying image %s is ready for use...", imageUUID)
+
+	maxRetries := 12 // 12 retries * 5 seconds = 60 seconds max wait
+	for i := 0; i < maxRetries; i++ {
+		verifiedImage, verifyErr := v4Client.Images.Get(ctx, imageUUID)
+		if verifyErr != nil {
+			log.Printf("DEBUG: Error verifying image (attempt %d/%d): %s", i+1, maxRetries, verifyErr.Error())
+			time.Sleep(5 * time.Second)
+			continue
+		}
+
+		// Check if SizeBytes is set - indicates image data is available
+		if verifiedImage.SizeBytes != nil && *verifiedImage.SizeBytes > 0 {
+			log.Printf("DEBUG: Image %s is ready (size: %d bytes)", imageUUID, *verifiedImage.SizeBytes)
+			return &nutanixImage{image: verifiedImage}, nil
+		}
+
+		log.Printf("DEBUG: Image %s not ready yet (SizeBytes is nil or 0), waiting... (attempt %d/%d)", imageUUID, i+1, maxRetries)
+		time.Sleep(5 * time.Second)
+	}
+
+	log.Printf("WARNING: Image %s readiness check timed out, proceeding anyway...", imageUUID)
 	return &nutanixImage{image: createdImage}, nil
 }
 
