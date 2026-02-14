@@ -14,7 +14,9 @@ import (
 	client "github.com/nutanix-cloud-native/prism-go-client"
 	"github.com/nutanix-cloud-native/prism-go-client/converged"
 	convergedv4 "github.com/nutanix-cloud-native/prism-go-client/converged/v4"
+	"github.com/nutanix-cloud-native/prism-go-client/environment/types"
 	v3 "github.com/nutanix-cloud-native/prism-go-client/v3"
+	v4 "github.com/nutanix-cloud-native/prism-go-client/v4"
 	clusterModels "github.com/nutanix/ntnx-api-golang-clients/clustermgmt-go-client/v4/models/clustermgmt/v4/config"
 	vmmModels "github.com/nutanix/ntnx-api-golang-clients/vmm-go-client/v4/models/vmm/v4/ahv/config"
 	imageModels "github.com/nutanix/ntnx-api-golang-clients/vmm-go-client/v4/models/vmm/v4/content"
@@ -183,13 +185,12 @@ func (n *nutanixImage) SizeBytes() int64 {
 // getConfigCreds returns the credentials for connecting to Prism Central
 func (d *NutanixDriver) getConfigCreds() client.Credentials {
 	return client.Credentials{
-		URL:                fmt.Sprintf("%s:%d", d.ClusterConfig.Endpoint, d.ClusterConfig.Port),
-		Endpoint:           d.ClusterConfig.Endpoint,
-		Username:           d.ClusterConfig.Username,
-		Password:           d.ClusterConfig.Password,
-		Port:               string(d.ClusterConfig.Port),
-		Insecure:           d.ClusterConfig.Insecure,
-		ReadTimeoutMinutes: d.ClusterConfig.ReadTimeout,
+		URL:      fmt.Sprintf("%s:%d", d.ClusterConfig.Endpoint, d.ClusterConfig.Port),
+		Endpoint: d.ClusterConfig.Endpoint,
+		Username: d.ClusterConfig.Username,
+		Password: d.ClusterConfig.Password,
+		Port:     string(d.ClusterConfig.Port),
+		Insecure: d.ClusterConfig.Insecure,
 	}
 }
 
@@ -199,7 +200,12 @@ func (d *NutanixDriver) getV4Client() (*convergedv4.Client, error) {
 		return d.v4Client, nil
 	}
 
-	v4Client, err := convergedv4.NewClient(d.getConfigCreds())
+	opts := []types.ClientOption[v4.Client]{}
+	if d.ClusterConfig.ReadTimeout > 0 {
+		opts = append(opts, v4.WithReadTimeout(d.ClusterConfig.ReadTimeout))
+	}
+
+	v4Client, err := convergedv4.NewClient(d.getConfigCreds(), opts...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create V4 client: %s", err.Error())
 	}
