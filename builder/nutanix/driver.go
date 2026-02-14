@@ -2,7 +2,6 @@ package nutanix
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log"
 	"net"
@@ -19,6 +18,7 @@ import (
 	v3 "github.com/nutanix-cloud-native/prism-go-client/v3"
 	v4 "github.com/nutanix-cloud-native/prism-go-client/v4"
 	clusterModels "github.com/nutanix/ntnx-api-golang-clients/clustermgmt-go-client/v4/models/clustermgmt/v4/config"
+	vmmPrismConfig "github.com/nutanix/ntnx-api-golang-clients/vmm-go-client/v4/models/prism/v4/config"
 	vmmModels "github.com/nutanix/ntnx-api-golang-clients/vmm-go-client/v4/models/vmm/v4/ahv/config"
 	imageModels "github.com/nutanix/ntnx-api-golang-clients/vmm-go-client/v4/models/vmm/v4/content"
 )
@@ -54,7 +54,8 @@ type Driver interface {
 	ExportImage(context.Context, string) (string, error)
 	SaveVMDisk(context.Context, string, int, []Category) (*nutanixImage, error)
 	WaitForShutdown(string, <-chan struct{}) bool
-	CleanCD(context.Context, *vmmModels.Vm)
+	CleanCD(context.Context, string) error
+	PowerOn(context.Context, string) error
 }
 
 // Verify that NutanixDriver implements the Driver interface
@@ -66,6 +67,7 @@ type NutanixDriver struct {
 	ClusterConfig ClusterConfig
 	vmEndCh       <-chan int
 	v4Client      *convergedv4.Client
+	v4SDKClient   *v4.Client
 }
 
 type nutanixInstance struct {
@@ -245,38 +247,86 @@ func findProjectByName(ctx context.Context, conn *v3.Client, name string) (*v3.P
 	return found[0], nil
 }
 
-// sourceImageExists checks if an image with the given name and source URI exists using V4 API
-func sourceImageExists(ctx context.Context, v4Client *convergedv4.Client, name string, uri string) (*imageModels.Image, error) {
+// sourceImageExists checks if an image with the given name exists using V4 API.
+// It verifies images are ready (SizeBytes > 0) and optionally validates the checksum
+// to detect corrupt/partial images. Matching priority: name+URL > name+checksum > name-only.
+func sourceImageExists(ctx context.Context, v4Client *convergedv4.Client, name, uri, expectedChecksum string) (*imageModels.Image, error) {
 	images, err := v4Client.Images.List(ctx, converged.WithFilter(fmt.Sprintf("name eq '%s'", name)))
 	if err != nil {
 		return nil, err
 	}
 
-	found := make([]*imageModels.Image, 0)
+	var urlMatched []*imageModels.Image
+	var nameMatched []*imageModels.Image
+
 	for i := range images {
 		img := &images[i]
-		if img.Name != nil && strings.EqualFold(*img.Name, name) {
-			if img.Source != nil {
-				if sourceValue := img.Source.GetValue(); sourceValue != nil {
-					if urlSource, ok := sourceValue.(imageModels.UrlSource); ok && urlSource.Url != nil {
-						if strings.EqualFold(*urlSource.Url, uri) {
-							found = append(found, img)
-						}
+		if img.Name == nil || !strings.EqualFold(*img.Name, name) {
+			continue
+		}
+
+		// Only consider images that are ready (SizeBytes > 0)
+		if img.SizeBytes == nil || *img.SizeBytes <= 0 {
+			extId := ""
+			if img.ExtId != nil {
+				extId = *img.ExtId
+			}
+			log.Printf("skipping image '%s' (extId: %s) - not ready (SizeBytes: %v)", name, extId, img.SizeBytes)
+			continue
+		}
+
+		// Verify checksum if both expected and actual are available
+		if expectedChecksum != "" && img.Checksum != nil {
+			if checksumValue := img.Checksum.GetValue(); checksumValue != nil {
+				actualDigest := ""
+				switch cs := checksumValue.(type) {
+				case imageModels.ImageSha256Checksum:
+					if cs.HexDigest != nil {
+						actualDigest = *cs.HexDigest
+					}
+				case imageModels.ImageSha1Checksum:
+					if cs.HexDigest != nil {
+						actualDigest = *cs.HexDigest
+					}
+				}
+				if actualDigest != "" && !strings.EqualFold(actualDigest, expectedChecksum) {
+					log.Printf("skipping image '%s' (extId: %s) - checksum mismatch (expected: %s, actual: %s)",
+						name, *img.ExtId, expectedChecksum, actualDigest)
+					continue
+				}
+			}
+		}
+
+		nameMatched = append(nameMatched, img)
+		if img.Source != nil {
+			if sourceValue := img.Source.GetValue(); sourceValue != nil {
+				if urlSource, ok := sourceValue.(imageModels.UrlSource); ok && urlSource.Url != nil {
+					if strings.EqualFold(*urlSource.Url, uri) {
+						urlMatched = append(urlMatched, img)
 					}
 				}
 			}
 		}
 	}
 
-	if len(found) > 1 {
+	// Prefer exact URL match
+	if len(urlMatched) == 1 {
+		return urlMatched[0], nil
+	}
+	if len(urlMatched) > 1 {
 		return nil, fmt.Errorf("your query returned more than one result with same Name/URI")
 	}
 
-	if len(found) == 0 {
-		return nil, nil
+	// Fall back to name-only match (V4 API may not return Source for downloaded images)
+	if len(nameMatched) == 1 {
+		log.Printf("image '%s' found by name (source URL not available in API response)", name)
+		return nameMatched[0], nil
+	}
+	if len(nameMatched) > 1 {
+		return nil, fmt.Errorf("your query returned more than one result with name '%s'", name)
 	}
 
-	return found[0], nil
+	return nil, nil
 }
 
 // findImageByUUID finds an image by UUID using V4 API
@@ -346,18 +396,48 @@ func (d *NutanixDriver) CreateRequest(ctx context.Context, vmConfig VmConfig, st
 	v4vm.NumCoresPerSocket = &numCoresPerSocket
 	v4vm.MemorySizeBytes = &memorySizeBytes
 
-	// Configure boot type and boot order
+	// Check if we have CdRoms (ISO_IMAGE) to set boot order accordingly.
+	hasCdRoms := false
+	for _, disk := range vmConfig.VmDisks {
+		if disk.ImageType == "ISO_IMAGE" {
+			hasCdRoms = true
+			break
+		}
+	}
+
+	// Build boot order based on CdRom presence and boot_priority.
+	// CdRoms are added post-creation but BEFORE power-on, so including CDROM in
+	// boot order during creation is safe when CdRoms will be attached.
+	// Only include CDROM in boot order when CdRom devices exist - some Nutanix
+	// versions return INTERNAL_ERROR when CDROM is in boot order without CdRom devices.
 	var bootOrder []vmmModels.BootDeviceType
-	if vmConfig.BootPriority == NutanixIdentifierBootPriorityCDROM {
+	if hasCdRoms {
+		if vmConfig.BootPriority == NutanixIdentifierBootPriorityCDROM || vmConfig.BootPriority == "" {
+			// ISO installation: boot from CdRom first (default when CdRoms exist)
+			bootOrder = []vmmModels.BootDeviceType{
+				vmmModels.BOOTDEVICETYPE_CDROM,
+				vmmModels.BOOTDEVICETYPE_DISK,
+				vmmModels.BOOTDEVICETYPE_NETWORK,
+			}
+		} else {
+			// User explicitly chose disk boot priority even with CdRoms
+			bootOrder = []vmmModels.BootDeviceType{
+				vmmModels.BOOTDEVICETYPE_DISK,
+				vmmModels.BOOTDEVICETYPE_CDROM,
+				vmmModels.BOOTDEVICETYPE_NETWORK,
+			}
+		}
+	} else if vmConfig.BootPriority == NutanixIdentifierBootPriorityCDROM {
+		// No CdRoms but user explicitly requested cdrom boot priority - use DISK first
+		// since there are no CdRom devices to boot from.
+		log.Printf("WARNING: boot_priority is 'cdrom' but no CdRom devices configured, using DISK boot order")
 		bootOrder = []vmmModels.BootDeviceType{
-			vmmModels.BOOTDEVICETYPE_CDROM,
 			vmmModels.BOOTDEVICETYPE_DISK,
 			vmmModels.BOOTDEVICETYPE_NETWORK,
 		}
 	} else {
 		bootOrder = []vmmModels.BootDeviceType{
 			vmmModels.BOOTDEVICETYPE_DISK,
-			vmmModels.BOOTDEVICETYPE_CDROM,
 			vmmModels.BOOTDEVICETYPE_NETWORK,
 		}
 	}
@@ -390,7 +470,9 @@ func (d *NutanixDriver) CreateRequest(ctx context.Context, vmConfig VmConfig, st
 		}
 	}
 
-	// Power state must be set via separate API call after creation in V4
+	// V4 API does NOT allow PowerState during creation - must use separate power-on call
+	// Error: "Cannot specify power state as ON during VM creation. Please use the VM power action endpoints instead."
+
 	var imageToDelete []string
 	SATAindex := 0
 	SCSIindex := 0
@@ -523,16 +605,9 @@ func (d *NutanixDriver) CreateRequest(ctx context.Context, vmConfig VmConfig, st
 				}
 			}
 
-			v4Disk := vmmModels.NewDisk()
-			v4Disk.DiskAddress = vmmModels.NewDiskAddress()
-			v4Disk.DiskAddress.BusType = vmmModels.DISKBUSTYPE_SATA.Ref()
-			// Create a copy of index to avoid pointer aliasing issue
-			sataIdx := SATAindex
-			v4Disk.DiskAddress.Index = &sataIdx
-
+			v4CdRom := vmmModels.NewCdRom()
 			vmDisk := vmmModels.NewVmDisk()
 			imageUUID := image.UUID()
-			// Use NewDataSource() for proper initialization, set Reference directly to avoid discriminator
 			imageRef := vmmModels.NewImageReference()
 			imageRef.ImageExtId = &imageUUID
 			dataSourceRef := vmmModels.NewOneOfDataSourceReference()
@@ -542,14 +617,17 @@ func (d *NutanixDriver) CreateRequest(ctx context.Context, vmConfig VmConfig, st
 			dataSource := vmmModels.NewDataSource()
 			dataSource.Reference = dataSourceRef
 			vmDisk.DataSource = dataSource
+			v4CdRom.BackingInfo = vmDisk
 
-			// Directly assign BackingInfo to avoid $backingInfoItemDiscriminator in JSON
-			backingInfo := vmmModels.NewOneOfDiskBackingInfo()
-			if err := backingInfo.SetValue(*vmDisk); err != nil {
-				return nil, fmt.Errorf("error setting disk backing info: %s", err.Error())
-			}
-			v4Disk.BackingInfo = backingInfo
-			v4vm.Disks = append(v4vm.Disks, *v4Disk)
+			// Set explicit DiskAddress to avoid "disk bus already in use" when
+			// multiple CdRoms are created inline (e.g. ISO + kickstart CD).
+			cdromAddr := vmmModels.NewCdRomAddress()
+			cdromAddr.BusType = vmmModels.CDROMBUSTYPE_SATA.Ref()
+			cdromAddr.Index = new(int)
+			*cdromAddr.Index = SATAindex
+			v4CdRom.DiskAddress = cdromAddr
+
+			v4vm.CdRoms = append(v4vm.CdRoms, *v4CdRom)
 			SATAindex++
 		}
 	}
@@ -571,10 +649,14 @@ func (d *NutanixDriver) CreateRequest(ctx context.Context, vmConfig VmConfig, st
 		}
 
 		v4Nic := vmmModels.NewNic()
-		// Use VirtualEthernetNicNetworkInfo for standard VM NICs
+
+		// Use VirtualEthernetNicNetworkInfo for standard VM NICs (v4.1+ API)
+		// Note: BackingInfo and IsConnected are deprecated - use NicNetworkInfo instead
+		// In v4.1+, NICs are connected by default when NicNetworkInfo is properly configured
 		nicNetworkInfo := vmmModels.NewVirtualEthernetNicNetworkInfo()
 		nicNetworkInfo.Subnet = vmmModels.NewSubnetReference()
 		nicNetworkInfo.Subnet.ExtId = &subnetUUID
+
 		// Directly assign NicNetworkInfo to avoid $nicNetworkInfoItemDiscriminator in JSON
 		nicNetworkInfoWrapper := vmmModels.NewOneOfNicNicNetworkInfo()
 		if err := nicNetworkInfoWrapper.SetValue(*nicNetworkInfo); err != nil {
@@ -603,7 +685,7 @@ func (d *NutanixDriver) CreateRequest(ctx context.Context, vmConfig VmConfig, st
 	}
 
 	if vmConfig.UserData != "" {
-		log.Printf("DEBUG: Setting up GuestCustomization for OS type: %s", vmConfig.OSType)
+		log.Printf("Setting up GuestCustomization for OS type: %s", vmConfig.OSType)
 		v4vm.GuestCustomization = vmmModels.NewGuestCustomizationParams()
 
 		if vmConfig.OSType == "Linux" {
@@ -620,7 +702,7 @@ func (d *NutanixDriver) CreateRequest(ctx context.Context, vmConfig VmConfig, st
 				return nil, fmt.Errorf("error setting guest customization config: %s", err.Error())
 			}
 			v4vm.GuestCustomization.Config = guestConfig
-			log.Printf("DEBUG: CloudInit configured for Linux VM")
+			log.Printf("CloudInit configured for Linux VM")
 		} else if vmConfig.OSType == "Windows" {
 			sysprep := vmmModels.NewSysprep()
 			unattendXml := vmmModels.NewUnattendxml()
@@ -635,7 +717,7 @@ func (d *NutanixDriver) CreateRequest(ctx context.Context, vmConfig VmConfig, st
 				return nil, fmt.Errorf("error setting guest customization config: %s", err.Error())
 			}
 			v4vm.GuestCustomization.Config = guestConfig
-			log.Printf("DEBUG: Sysprep configured for Windows VM")
+			log.Printf("Sysprep configured for Windows VM")
 		}
 	}
 
@@ -687,59 +769,74 @@ func (d *NutanixDriver) Create(ctx context.Context, v4vm *vmmModels.Vm) (*nutani
 	}
 
 	log.Printf("creating vm %s...", d.Config.VMName)
-	log.Printf("DEBUG: VM config - Name: %s, Cluster: %s, NumSockets: %d, MemorySizeBytes: %d",
-		*v4vm.Name, *v4vm.Cluster.ExtId, *v4vm.NumSockets, *v4vm.MemorySizeBytes)
-	log.Printf("DEBUG: VM has %d disks, %d NICs", len(v4vm.Disks), len(v4vm.Nics))
-	if len(v4vm.Categories) > 0 {
-		log.Printf("DEBUG: VM has %d categories", len(v4vm.Categories))
-	}
 
-	// Debug: dump full VM JSON payload
-	if vmJSON, err := json.MarshalIndent(v4vm, "", "  "); err == nil {
-		log.Printf("DEBUG: Full VM JSON payload:\n%s", string(vmJSON))
-	} else {
-		log.Printf("DEBUG: Failed to marshal VM to JSON: %s", err.Error())
-	}
-
-	createdVM, err := v4Client.VMs.Create(ctx, v4vm)
+	operation, err := v4Client.VMs.CreateAsync(ctx, v4vm)
 	if err != nil {
-		log.Printf("ERROR: VM creation failed: %s", err.Error())
-		log.Printf("DEBUG: Full error details: %+v", err)
+		return nil, fmt.Errorf("error creating VM: %s", err.Error())
+	}
+
+	result, err := operation.Wait(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("error waiting for VM creation: %s", err.Error())
+	}
+
+	if len(result) == 0 {
+		return nil, fmt.Errorf("VM creation completed but no VM returned")
+	}
+
+	createdVM := result[0]
+	vmUUID := *createdVM.ExtId
+
+	v4VMResult, err := v4Client.VMs.Get(ctx, vmUUID)
+	if err != nil {
+		log.Printf("error getting vm after creation: %s", err.Error())
 		return nil, err
 	}
 
-	vmUUID := *createdVM.ExtId
+	log.Printf("vm %s created successfully (powered off)", vmUUID)
+	return &nutanixInstance{vm: v4VMResult}, nil
+}
+
+// PowerOn powers on a VM. Called after CdRoms are attached so the OS installer can see them.
+func (d *NutanixDriver) PowerOn(ctx context.Context, vmUUID string) error {
+	v4Client, err := d.getV4Client()
+	if err != nil {
+		return fmt.Errorf("error creating V4 client for PowerOn: %s", err.Error())
+	}
 
 	log.Printf("powering on vm %s...", vmUUID)
 	powerOnOp, err := v4Client.VMs.PowerOnVM(vmUUID)
 	if err != nil {
 		log.Printf("error initiating power on for vm: %s", err.Error())
-		return nil, fmt.Errorf("failed to power on VM: %s", err.Error())
+		return fmt.Errorf("failed to power on VM: %s", err.Error())
 	}
 
 	_, err = powerOnOp.Wait(ctx)
 	if err != nil {
 		log.Printf("error waiting for power on completion: %s", err.Error())
-		return nil, fmt.Errorf("failed waiting for VM power on: %s", err.Error())
+		return fmt.Errorf("failed waiting for VM power on: %s", err.Error())
 	}
 	log.Printf("vm %s powered on successfully", vmUUID)
-
-	v4VMResult, err := v4Client.VMs.Get(ctx, vmUUID)
-	if err != nil {
-		log.Printf("error getting vm: %s", err.Error())
-		return nil, err
-	}
-
-	hostName := "unknown"
-	if v4VMResult.Host != nil && v4VMResult.Host.ExtId != nil {
-		hostName = *v4VMResult.Host.ExtId
-	}
-	log.Printf("vm successfully created on host %s", hostName)
-
-	return &nutanixInstance{vm: v4VMResult}, nil
+	return nil
 }
 
-// WaitForIP waits for the virtual machine to obtain an IP address.
+// getV4SDKClient returns the V4 SDK client (for DeleteCdRomById API), creating it if needed.
+func (d *NutanixDriver) getV4SDKClient() (*v4.Client, error) {
+	if d.v4SDKClient != nil {
+		return d.v4SDKClient, nil
+	}
+	opts := []types.ClientOption[v4.Client]{}
+	if d.ClusterConfig.ReadTimeout > 0 {
+		opts = append(opts, v4.WithReadTimeout(d.ClusterConfig.ReadTimeout))
+	}
+	sdkClient, err := v4.NewV4Client(d.getConfigCreds(), opts...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create V4 SDK client: %s", err.Error())
+	}
+	d.v4SDKClient = sdkClient
+	return d.v4SDKClient, nil
+}
+
 func (d *NutanixDriver) WaitForIP(ctx context.Context, vmUUID string, ipNet *net.IPNet) (string, error) {
 	v4Client, err := d.getV4Client()
 	if err != nil {
@@ -756,26 +853,40 @@ func (d *NutanixDriver) WaitForIP(ctx context.Context, vmUUID string, ipNet *net
 		}
 
 		// Check for IP address in NICs
+		// V4 separates IPs into LearnedIpAddresses (guest agent) and Ipv4Config (IPAM)
+		// V3 had both in IpEndpointList, so we check both to restore V3 parity
 		if len(vm.Nics) > 0 {
-			for _, nic := range vm.Nics {
-				if nicInfo := nic.GetNicNetworkInfo(); nicInfo != nil {
-					// Handle VirtualEthernetNicNetworkInfo (standard VM NICs)
-					if netInfo, ok := nicInfo.(vmmModels.VirtualEthernetNicNetworkInfo); ok {
-						if netInfo.Ipv4Info != nil && len(netInfo.Ipv4Info.LearnedIpAddresses) > 0 {
-							if netInfo.Ipv4Info.LearnedIpAddresses[0].Value != nil &&
-								*netInfo.Ipv4Info.LearnedIpAddresses[0].Value != "" {
-								IPAddress = *netInfo.Ipv4Info.LearnedIpAddresses[0].Value
-								break
-							}
-						}
+			nic := vm.Nics[0]
+			nicInfo := nic.GetNicNetworkInfo()
+
+			if nicInfo != nil {
+				// Handle VirtualEthernetNicNetworkInfo (standard VM NICs)
+				if netInfo, ok := nicInfo.(vmmModels.VirtualEthernetNicNetworkInfo); ok {
+					// Priority 1: Check LearnedIpAddresses (from guest agent)
+					// This is the "high quality" IP that guest tools report
+					if netInfo.Ipv4Info != nil &&
+						len(netInfo.Ipv4Info.LearnedIpAddresses) > 0 &&
+						netInfo.Ipv4Info.LearnedIpAddresses[0].Value != nil &&
+						*netInfo.Ipv4Info.LearnedIpAddresses[0].Value != "" {
+						IPAddress = *netInfo.Ipv4Info.LearnedIpAddresses[0].Value
+						log.Printf("Found learned IP from guest agent: %s", IPAddress)
+						break
+					}
+
+					// Priority 2: Fallback to Ipv4Config (from IPAM)
+					// This restores V3 parity - allows ISO builds to proceed before guest agent is installed
+					if netInfo.Ipv4Config != nil &&
+						netInfo.Ipv4Config.IpAddress != nil &&
+						netInfo.Ipv4Config.IpAddress.Value != nil &&
+						*netInfo.Ipv4Config.IpAddress.Value != "" {
+						IPAddress = *netInfo.Ipv4Config.IpAddress.Value
+						log.Printf("Found configured IP from IPAM: %s", IPAddress)
+						break
 					}
 				}
 			}
 		}
 
-		if IPAddress != "" {
-			break
-		}
 		time.Sleep(5 * time.Second)
 	}
 
@@ -820,7 +931,7 @@ func (d *NutanixDriver) CreateImageURL(ctx context.Context, disk VmDisk, vm VmCo
 		return nil, fmt.Errorf("error while getting cluster: %s", err.Error())
 	}
 
-	existingImage, err := sourceImageExists(ctx, v4Client, file, disk.SourceImageURI)
+	existingImage, err := sourceImageExists(ctx, v4Client, file, disk.SourceImageURI, disk.SourceImageChecksum)
 	if err != nil {
 		return nil, fmt.Errorf("error while checking if image exists, %s", err.Error())
 	}
@@ -877,17 +988,43 @@ func (d *NutanixDriver) CreateImageURL(ctx context.Context, disk VmDisk, vm VmCo
 
 	v4Image.ClusterLocationExtIds = []string{clusterUUID}
 
-	log.Printf("DEBUG: Creating image - Name: %s, Type: %s, Cluster: %s", *v4Image.Name, v4Image.Type.GetName(), clusterUUID)
+	log.Printf("Creating image - Name: %s, Type: %s, Cluster: %s", *v4Image.Name, v4Image.Type.GetName(), clusterUUID)
 
 	createdImage, err := v4Client.Images.Create(ctx, v4Image)
 	if err != nil {
 		log.Printf("ERROR: Image creation failed: %s", err.Error())
-		log.Printf("DEBUG: Full error details: %+v", err)
+		log.Printf("Full error details: %+v", err)
 		return nil, fmt.Errorf("error while creating image: %s", err.Error())
 	}
 
 	log.Printf("image successfully created")
 
+	// Verify image is fully ready before returning
+	// The V4 API task may complete before the image is fully usable for VM disk cloning
+	// Using 5-second intervals to match V3 API's checkTask polling behavior
+	imageUUID := *createdImage.ExtId
+	log.Printf("Verifying image %s is ready for use...", imageUUID)
+
+	maxRetries := 12 // 12 retries * 5 seconds = 60 seconds max wait
+	for i := 0; i < maxRetries; i++ {
+		verifiedImage, verifyErr := v4Client.Images.Get(ctx, imageUUID)
+		if verifyErr != nil {
+			log.Printf("Error verifying image (attempt %d/%d): %s", i+1, maxRetries, verifyErr.Error())
+			time.Sleep(5 * time.Second)
+			continue
+		}
+
+		// Check if SizeBytes is set - indicates image data is available
+		if verifiedImage.SizeBytes != nil && *verifiedImage.SizeBytes > 0 {
+			log.Printf("Image %s is ready (size: %d bytes)", imageUUID, *verifiedImage.SizeBytes)
+			return &nutanixImage{image: verifiedImage}, nil
+		}
+
+		log.Printf("Image %s not ready yet (SizeBytes is nil or 0), waiting... (attempt %d/%d)", imageUUID, i+1, maxRetries)
+		time.Sleep(5 * time.Second)
+	}
+
+	log.Printf("WARNING: Image %s readiness check timed out, proceeding anyway...", imageUUID)
 	return &nutanixImage{image: createdImage}, nil
 }
 
@@ -1262,27 +1399,67 @@ func (d *NutanixDriver) UpdateVM(ctx context.Context, vmUUID string, v4vm *vmmMo
 	return &nutanixInstance{vm: updatedVM}, nil
 }
 
-// CleanCD removes CDROM disks (SATA bus) from VM, keeping only SCSI disks.
-func (d *NutanixDriver) CleanCD(ctx context.Context, vm *vmmModels.Vm) {
-	if vm.Disks == nil {
-		return
+// CleanCD removes all CD-ROM devices from a VM via the V4 DeleteCdRomById sub-resource API.
+// The V4 API does not allow changing disk/CdRom count via UpdateVM, so each CdRom must be
+// deleted individually. The VM must be powered off.
+func (d *NutanixDriver) CleanCD(ctx context.Context, vmUUID string) error {
+	sdkClient, err := d.getV4SDKClient()
+	if err != nil {
+		return fmt.Errorf("failed to get V4 SDK client: %s", err.Error())
 	}
 
-	cleanedDisks := make([]vmmModels.Disk, 0, len(vm.Disks))
+	v4Client, err := d.getV4Client()
+	if err != nil {
+		return fmt.Errorf("failed to get V4 client: %s", err.Error())
+	}
 
-	for _, disk := range vm.Disks {
-		if disk.DiskAddress != nil && disk.DiskAddress.BusType != nil {
-			if disk.DiskAddress.BusType.GetName() == vmmModels.DISKBUSTYPE_SATA.GetName() {
-				if disk.DiskAddress.Index != nil {
-					log.Printf("cleaning CDROM (SATA:%d) in VM", *disk.DiskAddress.Index)
-				} else {
-					log.Printf("cleaning CDROM (SATA) in VM")
-				}
-				continue // Skip this disk (don't add to cleanedDisks)
-			}
+	vm, err := v4Client.VMs.Get(ctx, vmUUID)
+	if err != nil {
+		return fmt.Errorf("failed to get VM for CdRom cleanup: %s", err.Error())
+	}
+
+	if len(vm.CdRoms) == 0 {
+		log.Println("No CdRoms to clean")
+		return nil
+	}
+
+	log.Printf("Cleaning %d CdRom(s) from VM %s", len(vm.CdRoms), vmUUID)
+	for i, cdrom := range vm.CdRoms {
+		if cdrom.ExtId == nil {
+			log.Printf("CdRom %d has no ExtId, skipping", i+1)
+			continue
 		}
-		cleanedDisks = append(cleanedDisks, disk)
-	}
+		cdromID := *cdrom.ExtId
 
-	vm.Disks = cleanedDisks
+		_, etagArgs, err := convergedv4.GetEntityAndEtag(v4Client.VMs.Get(ctx, vmUUID))
+		if err != nil {
+			return fmt.Errorf("failed to get VM ETag before deleting CdRom %d: %s", i+1, err.Error())
+		}
+
+		taskRef, err := convergedv4.CallAPI[*vmmModels.DeleteCdRomApiResponse, vmmPrismConfig.TaskReference](
+			sdkClient.VmApiInstance.DeleteCdRomById(&vmUUID, &cdromID, etagArgs),
+		)
+		if err != nil {
+			return fmt.Errorf("failed to delete CdRom %d (%s): %s", i+1, cdromID, err.Error())
+		}
+		if taskRef.ExtId == nil {
+			return fmt.Errorf("task reference ExtId is nil for CdRom %d deletion", i+1)
+		}
+		taskID := *taskRef.ExtId
+		log.Printf("CdRom %d: delete task started: %s", i+1, taskID)
+
+		waiter := convergedv4.NewOperation[converged.NoEntity](
+			taskID,
+			sdkClient,
+			func(ctx context.Context, uuid string) (*converged.NoEntity, error) {
+				return converged.NoEntityGetter(ctx, uuid)
+			},
+		)
+		_, err = waiter.Wait(ctx)
+		if err != nil {
+			return fmt.Errorf("CdRom %d deletion task failed: %s", i+1, err.Error())
+		}
+		log.Printf("CdRom %d (%s) deleted successfully", i+1, cdromID)
+	}
+	return nil
 }

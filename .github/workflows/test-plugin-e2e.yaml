@@ -78,49 +78,6 @@ jobs:
         run: |
           packer plugins install --path /tmp/packer-plugin-nutanix "github.com/nutanix-cloud-native/nutanix"
 
-      - name: Debug V4 API and resources
-        run: |
-          BASE="https://${PKR_VAR_nutanix_endpoint}:${PKR_VAR_nutanix_port}"
-          AUTH="${PKR_VAR_nutanix_username}:${PKR_VAR_nutanix_password}"
-          
-          echo "=== Testing API Version Negotiation ==="
-          curl -sk -u "$AUTH" "$BASE/api/clustermgmt/unversioned/info" | jq -r '.supportedVersions' 2>/dev/null || echo "Version info failed"
-          
-          echo ""
-          echo "=== Checking cluster: ${PKR_VAR_nutanix_cluster} ==="
-          CLUSTER_RESULT=$(curl -sk -u "$AUTH" "$BASE/api/clustermgmt/v4.0/config/clusters?\$filter=name%20eq%20'${PKR_VAR_nutanix_cluster}'" 2>/dev/null)
-          echo "$CLUSTER_RESULT" | jq -r '.data[] | {name, extId}' 2>/dev/null || echo "Cluster not found"
-          CLUSTER_UUID=$(echo "$CLUSTER_RESULT" | jq -r '.data[0].extId' 2>/dev/null)
-          echo "Cluster UUID: $CLUSTER_UUID"
-          
-          echo ""
-          echo "=== Checking subnet: ${PKR_VAR_nutanix_subnet} ==="
-          SUBNET_RESULT=$(curl -sk -u "$AUTH" "$BASE/api/networking/v4.0/config/subnets?\$filter=name%20eq%20'${PKR_VAR_nutanix_subnet}'" 2>/dev/null)
-          echo "$SUBNET_RESULT" | jq -r '.data[] | {name, extId, subnetType, clusterReference}' 2>/dev/null || echo "Subnet not found"
-          
-          echo ""
-          echo "=== Test external URL connectivity from PC ==="
-          echo "Checking if PC can reach cloud.centos.org..."
-          curl -sk -u "$AUTH" -X POST "$BASE/api/vmm/v4.0/content/images" \
-            -H "Content-Type: application/json" \
-            -d '{"name":"connectivity-test-delete-me","type":"DISK_IMAGE","source":{"$objectType":"vmm.v4.content.UrlSource","url":"https://cloud.centos.org/centos/7/images/CentOS-7-x86_64-GenericCloud-2111.qcow2"}}' \
-            | jq -r '{taskExtId: .data.extId, message: .error.message}' 2>/dev/null || echo "Image creation test failed"
-          
-          echo ""
-          echo "=== Checking category VALUES ==="
-          echo "TemplateType=Vm:"
-          curl -sk -u "$AUTH" "$BASE/api/prism/v4.0/config/categories?\$filter=key%20eq%20'TemplateType'%20and%20value%20eq%20'Vm'" | jq -r '.data[] | {key, value, extId}' 2>/dev/null || echo "Not found"
-          echo "Environment=Testing:"
-          curl -sk -u "$AUTH" "$BASE/api/prism/v4.0/config/categories?\$filter=key%20eq%20'Environment'%20and%20value%20eq%20'Testing'" | jq -r '.data[] | {key, value, extId}' 2>/dev/null || echo "Not found"
-          
-          echo ""
-          echo "=== Recent failed tasks (last 5) ==="
-          curl -sk -u "$AUTH" "$BASE/api/prism/v4.0/config/tasks?\$filter=status%20eq%20'FAILED'&\$top=5&\$orderby=completedTime%20desc" | jq -r '.data[] | {extId, operation: .operation, errorMessages: .errorMessages}' 2>/dev/null || echo "Task query failed"
-          
-          echo ""
-          echo "=== Check existing CentOS images ==="
-          curl -sk -u "$AUTH" "$BASE/api/vmm/v4.0/content/images?\$filter=contains(name,'CentOS')" | jq -r '.data[] | {name, extId, sizeBytes}' 2>/dev/null || echo "Image query failed"
-
       - name: Run `packer init`
         id: init
         run: |
@@ -130,13 +87,13 @@ jobs:
         id: validate
         run: packer validate -var "test=${{ matrix.test}}" .
         env:
-          PACKER_LOG: 1
+          PACKER_LOG: ${{ github.event.inputs.logs }}
 
       - name: Run `packer build`
         id: build
         run: packer build -var "test=${{ matrix.test}}" .
         env:
-          PACKER_LOG: 1
+          PACKER_LOG: ${{ github.event.inputs.logs }}
 
   results:
     if: ${{ always() }}

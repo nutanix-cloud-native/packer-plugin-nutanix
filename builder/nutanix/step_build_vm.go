@@ -79,13 +79,19 @@ func (s *stepBuildVM) Run(ctx context.Context, state multistep.StateBag) multist
 
 	// Create VM
 	vmInstance, err := d.Create(ctx, vmRequest)
-
 	if err != nil {
 		ui.Error("Unable to create virtual machine: " + err.Error())
 		state.Put("error", err)
 		return multistep.ActionHalt
 	}
 	log.Printf("Nutanix VM UUID: %s", vmInstance.UUID())
+
+	// Power on the VM after creation (CdRoms are attached inline via CreateRequest)
+	if err := d.PowerOn(ctx, vmInstance.UUID()); err != nil {
+		ui.Error("Unable to power on virtual machine: " + err.Error())
+		state.Put("error", err)
+		return multistep.ActionHalt
+	}
 	ui.Say(fmt.Sprintf("Virtual machine %s created", config.VMName))
 	state.Put("destroy_vm", true)
 	state.Put("vm_uuid", vmInstance.UUID())
