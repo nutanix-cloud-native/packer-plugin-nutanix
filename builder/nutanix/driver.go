@@ -386,7 +386,9 @@ func (d *NutanixDriver) CreateRequest(ctx context.Context, vmConfig VmConfig, st
 			v4Disk := vmmModels.NewDisk()
 			v4Disk.DiskAddress = vmmModels.NewDiskAddress()
 			v4Disk.DiskAddress.BusType = vmmModels.DISKBUSTYPE_SCSI.Ref()
-			v4Disk.DiskAddress.Index = &SCSIindex
+			// Create a copy of index to avoid pointer aliasing issue
+			scsiIdx := SCSIindex
+			v4Disk.DiskAddress.Index = &scsiIdx
 
 			vmDisk := vmmModels.NewVmDisk()
 			diskSizeBytes := disk.DiskSizeGB * bytesPerGB
@@ -418,7 +420,9 @@ func (d *NutanixDriver) CreateRequest(ctx context.Context, vmConfig VmConfig, st
 			v4Disk := vmmModels.NewDisk()
 			v4Disk.DiskAddress = vmmModels.NewDiskAddress()
 			v4Disk.DiskAddress.BusType = vmmModels.DISKBUSTYPE_SCSI.Ref()
-			v4Disk.DiskAddress.Index = &SCSIindex
+			// Create a copy of index to avoid pointer aliasing issue
+			scsiIdx := SCSIindex
+			v4Disk.DiskAddress.Index = &scsiIdx
 
 			vmDisk := vmmModels.NewVmDisk()
 			diskSizeBytes := disk.DiskSizeGB * bytesPerGB
@@ -471,7 +475,9 @@ func (d *NutanixDriver) CreateRequest(ctx context.Context, vmConfig VmConfig, st
 			v4Disk := vmmModels.NewDisk()
 			v4Disk.DiskAddress = vmmModels.NewDiskAddress()
 			v4Disk.DiskAddress.BusType = vmmModels.DISKBUSTYPE_SATA.Ref()
-			v4Disk.DiskAddress.Index = &SATAindex
+			// Create a copy of index to avoid pointer aliasing issue
+			sataIdx := SATAindex
+			v4Disk.DiskAddress.Index = &sataIdx
 
 			vmDisk := vmmModels.NewVmDisk()
 			imageUUID := image.UUID()
