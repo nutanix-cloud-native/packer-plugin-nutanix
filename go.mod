@@ -7,9 +7,9 @@ require (
 	github.com/hashicorp/hcl/v2 v2.24.0
 	github.com/hashicorp/packer-plugin-sdk v0.6.3
 	github.com/mitchellh/go-vnc v0.0.0-20150629162542-723ed9867aed
-	github.com/nutanix-cloud-native/prism-go-client v0.5.5
+	github.com/nutanix-cloud-native/prism-go-client v0.6.2
 	github.com/zclconf/go-cty v1.16.3
-	golang.org/x/net v0.44.0
+	golang.org/x/net v0.49.0
 )
 
 require (
@@ -102,17 +102,17 @@ require (
 	go.opencensus.io v0.24.0 // indirect
 	go.uber.org/multierr v1.10.0 // indirect
 	go.uber.org/zap v1.27.0 // indirect
-	golang.org/x/crypto v0.42.0 // indirect
+	golang.org/x/crypto v0.47.0 // indirect
 	golang.org/x/exp v0.0.0-20230321023759-10a507213a29 // indirect
 	golang.org/x/mobile v0.0.0-20210901025245-1fde1d6c3ca1 // indirect
-	golang.org/x/mod v0.27.0 // indirect
+	golang.org/x/mod v0.31.0 // indirect
 	golang.org/x/oauth2 v0.30.0 // indirect
-	golang.org/x/sync v0.17.0 // indirect
-	golang.org/x/sys v0.36.0 // indirect
-	golang.org/x/term v0.35.0 // indirect
-	golang.org/x/text v0.29.0 // indirect
+	golang.org/x/sync v0.19.0 // indirect
+	golang.org/x/sys v0.40.0 // indirect
+	golang.org/x/term v0.39.0 // indirect
+	golang.org/x/text v0.33.0 // indirect
 	golang.org/x/time v0.11.0 // indirect
-	golang.org/x/tools v0.36.0 // indirect
+	golang.org/x/tools v0.40.0 // indirect
 	golang.org/x/xerrors v0.0.0-20220907171357-04be3eba64a2 // indirect
 	google.golang.org/api v0.150.0 // indirect
 	google.golang.org/genproto v0.0.0-20231016165738-49dd2c1f3d0b // indirect
@@ -121,6 +121,7 @@ require (
 	google.golang.org/grpc v1.59.0 // indirect
 	google.golang.org/protobuf v1.33.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
+	k8s.io/utils v0.0.0-20230726121419-3b25d923346b // indirect
 )
 
 replace (
