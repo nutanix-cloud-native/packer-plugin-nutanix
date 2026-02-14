@@ -441,14 +441,16 @@ func (d *NutanixDriver) CreateRequest(ctx context.Context, vmConfig VmConfig, st
 			}
 			vmDisk.DiskSizeBytes = &diskSizeBytes
 
-			// Use NewDataSource() and SetReference() to properly initialize all fields
+			// Use NewDataSource() for proper initialization, set Reference directly to avoid discriminator
 			imageUUID := image.UUID()
 			imageRef := vmmModels.NewImageReference()
 			imageRef.ImageExtId = &imageUUID
-			dataSource := vmmModels.NewDataSource()
-			if err := dataSource.SetReference(*imageRef); err != nil {
+			dataSourceRef := vmmModels.NewOneOfDataSourceReference()
+			if err := dataSourceRef.SetValue(*imageRef); err != nil {
 				return nil, fmt.Errorf("error setting data source reference: %s", err.Error())
 			}
+			dataSource := vmmModels.NewDataSource()
+			dataSource.Reference = dataSourceRef
 			vmDisk.DataSource = dataSource
 
 			if err := v4Disk.SetBackingInfo(*vmDisk); err != nil {
@@ -523,13 +525,15 @@ func (d *NutanixDriver) CreateRequest(ctx context.Context, vmConfig VmConfig, st
 
 			vmDisk := vmmModels.NewVmDisk()
 			imageUUID := image.UUID()
-			// Use NewDataSource() and SetReference() to properly initialize all fields
+			// Use NewDataSource() for proper initialization, set Reference directly to avoid discriminator
 			imageRef := vmmModels.NewImageReference()
 			imageRef.ImageExtId = &imageUUID
-			dataSource := vmmModels.NewDataSource()
-			if err := dataSource.SetReference(*imageRef); err != nil {
+			dataSourceRef := vmmModels.NewOneOfDataSourceReference()
+			if err := dataSourceRef.SetValue(*imageRef); err != nil {
 				return nil, fmt.Errorf("error setting data source reference: %s", err.Error())
 			}
+			dataSource := vmmModels.NewDataSource()
+			dataSource.Reference = dataSourceRef
 			vmDisk.DataSource = dataSource
 
 			if err := v4Disk.SetBackingInfo(*vmDisk); err != nil {
