@@ -82,11 +82,12 @@ type Category struct {
 }
 
 type ClusterConfig struct {
-	Username string `mapstructure:"nutanix_username" required:"false"`
-	Password string `mapstructure:"nutanix_password" required:"false"`
-	Insecure bool   `mapstructure:"nutanix_insecure" required:"false"`
-	Endpoint string `mapstructure:"nutanix_endpoint" required:"true"`
-	Port     int32  `mapstructure:"nutanix_port" required:"false"`
+	Username    string `mapstructure:"nutanix_username" required:"false"`
+	Password    string `mapstructure:"nutanix_password" required:"false"`
+	Insecure    bool   `mapstructure:"nutanix_insecure" required:"false"`
+	Endpoint    string `mapstructure:"nutanix_endpoint" required:"true"`
+	Port        int32  `mapstructure:"nutanix_port" required:"false"`
+	ReadTimeout int    `mapstructure:"read_timeout_minutes" required:"false"`
 }
 
 type VmDisk struct {
