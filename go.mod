@@ -3,13 +3,14 @@ module github.com/nutanix-cloud-native/packer-plugin-nutanix
 go 1.25.0
 
 require (
+	github.com/google/uuid v1.6.0
 	github.com/hashicorp/hcl/v2 v2.24.0
 	github.com/hashicorp/packer-plugin-sdk v0.6.3
 	github.com/mitchellh/go-vnc v0.0.0-20150629162542-723ed9867aed
-	github.com/nutanix-cloud-native/prism-go-client v0.6.3
-	github.com/nutanix/ntnx-api-golang-clients/clustermgmt-go-client/v4 v4.1.1
-	github.com/nutanix/ntnx-api-golang-clients/networking-go-client/v4 v4.1.1
-	github.com/nutanix/ntnx-api-golang-clients/vmm-go-client/v4 v4.1.1
+	github.com/nutanix-cloud-native/prism-go-client v0.7.0
+	github.com/nutanix/ntnx-api-golang-clients/clustermgmt-go-client/v4 v4.2.1
+	github.com/nutanix/ntnx-api-golang-clients/networking-go-client/v4 v4.2.1
+	github.com/nutanix/ntnx-api-golang-clients/vmm-go-client/v4 v4.2.1
 	github.com/zclconf/go-cty v1.16.3
 	golang.org/x/net v0.47.0
 )
@@ -70,7 +71,6 @@ require (
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/google/s2a-go v0.1.7 // indirect
-	github.com/google/uuid v1.6.0 // indirect
 	github.com/googleapis/enterprise-certificate-proxy v0.3.2 // indirect
 	github.com/googleapis/gax-go/v2 v2.12.0 // indirect
 	github.com/hashicorp/consul/api v1.25.1 // indirect
@@ -113,8 +113,8 @@ require (
 	github.com/mitchellh/reflectwalk v1.0.2 // indirect
 	github.com/nu7hatch/gouuid v0.0.0-20131221200532-179d4d0c4d8d // indirect
 	github.com/nutanix/ntnx-api-golang-clients/iam-go-client/v4 v4.0.1 // indirect
-	github.com/nutanix/ntnx-api-golang-clients/prism-go-client/v4 v4.1.1 // indirect
-	github.com/nutanix/ntnx-api-golang-clients/volumes-go-client/v4 v4.1.1 // indirect
+	github.com/nutanix/ntnx-api-golang-clients/prism-go-client/v4 v4.2.1 // indirect
+	github.com/nutanix/ntnx-api-golang-clients/volumes-go-client/v4 v4.2.1 // indirect
 	github.com/oklog/ulid v1.3.1 // indirect
 	github.com/packer-community/winrmcp v0.0.0-20180921211025-c76d91c1e7db // indirect
 	github.com/pkg/sftp v1.13.2 // indirect

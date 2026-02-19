@@ -18,9 +18,11 @@ import (
 	v3 "github.com/nutanix-cloud-native/prism-go-client/v3"
 	v4 "github.com/nutanix-cloud-native/prism-go-client/v4"
 	clusterModels "github.com/nutanix/ntnx-api-golang-clients/clustermgmt-go-client/v4/models/clustermgmt/v4/config"
+	prismConfig "github.com/nutanix/ntnx-api-golang-clients/prism-go-client/v4/models/prism/v4/config"
 	vmmPrismConfig "github.com/nutanix/ntnx-api-golang-clients/vmm-go-client/v4/models/prism/v4/config"
 	vmmModels "github.com/nutanix/ntnx-api-golang-clients/vmm-go-client/v4/models/vmm/v4/ahv/config"
 	imageModels "github.com/nutanix/ntnx-api-golang-clients/vmm-go-client/v4/models/vmm/v4/content"
+	vmmError "github.com/nutanix/ntnx-api-golang-clients/vmm-go-client/v4/models/vmm/v4/error"
 )
 
 const (
@@ -56,6 +58,7 @@ type Driver interface {
 	WaitForShutdown(string, <-chan struct{}) bool
 	CleanCD(context.Context, string) error
 	PowerOn(context.Context, string) error
+	GenerateConsoleToken(context.Context, string) (token, wsUri string, err error)
 }
 
 // Verify that NutanixDriver implements the Driver interface
@@ -1448,7 +1451,7 @@ func (d *NutanixDriver) CleanCD(ctx context.Context, vmUUID string) error {
 		taskID := *taskRef.ExtId
 		log.Printf("CdRom %d: delete task started: %s", i+1, taskID)
 
-		waiter := convergedv4.NewOperation[converged.NoEntity](
+		waiter := convergedv4.NewOperation(
 			taskID,
 			sdkClient,
 			func(ctx context.Context, uuid string) (*converged.NoEntity, error) {
@@ -1462,4 +1465,98 @@ func (d *NutanixDriver) CleanCD(ctx context.Context, vmUUID string) error {
 		log.Printf("CdRom %d (%s) deleted successfully", i+1, cdromID)
 	}
 	return nil
+}
+
+// GenerateConsoleToken obtains a JWT token and WebSocket URI for VNC console access.
+// It calls the V4 generate-console-token API (async 202), polls the task until SUCCEEDED
+// via NewOperation+Wait, then extracts VmConsoleToken and WsUri from task CompletionDetails.
+// Used by stepVNCConnect for boot commands over VNC during ISO-based builds.
+//
+// Parameters:
+//   - ctx: context for cancellation
+//   - vmExtId: VM external ID (UUID)
+//
+// Returns: token (JWT), wsUri (path e.g. /console/launch/{vmId}), or error.
+func (d *NutanixDriver) GenerateConsoleToken(ctx context.Context, vmExtId string) (token, wsUri string, err error) {
+	sdkClient, err := d.getV4SDKClient()
+	if err != nil {
+		return "", "", fmt.Errorf("failed to get V4 SDK client: %s", err.Error())
+	}
+
+	resp, err := sdkClient.VmApiInstance.GenerateConsoleTokenById(&vmExtId)
+	if err != nil {
+		return "", "", fmt.Errorf("generate-console-token request failed: %w", err)
+	}
+	if resp == nil || resp.Data == nil {
+		return "", "", fmt.Errorf("generate-console-token returned empty response")
+	}
+
+	dataVal := resp.Data.GetValue()
+	if dataVal == nil {
+		return "", "", fmt.Errorf("generate-console-token response data is nil")
+	}
+
+	taskRef, ok := dataVal.(vmmPrismConfig.TaskReference)
+	if !ok {
+		if errResp, ok := dataVal.(vmmError.ErrorResponse); ok {
+			return "", "", fmt.Errorf("generate-console-token failed: %v", errResp)
+		}
+		return "", "", fmt.Errorf("generate-console-token returned unexpected type: %T", dataVal)
+	}
+	if taskRef.ExtId == nil {
+		return "", "", fmt.Errorf("task reference ExtId is nil")
+	}
+	taskID := *taskRef.ExtId
+	log.Printf("console token task started: %s", taskID)
+
+	// Poll until SUCCEEDED (same pattern as CleanCD). Result is in CompletionDetails, not EntitiesAffected.
+	waiter := convergedv4.NewOperation(
+		taskID,
+		sdkClient,
+		func(ctx context.Context, uuid string) (*converged.NoEntity, error) {
+			return converged.NoEntityGetter(ctx, uuid)
+		},
+	)
+	_, err = waiter.Wait(ctx)
+	if err != nil {
+		return "", "", fmt.Errorf("console token task: %w", err)
+	}
+
+	// Get completed task; token and wsUri are in CompletionDetails KVPairs.
+	taskResp, err := convergedv4.CallAPI[*prismConfig.GetTaskApiResponse, prismConfig.Task](
+		sdkClient.TasksApiInstance.GetTaskById(&taskID, nil),
+	)
+	if err != nil {
+		return "", "", fmt.Errorf("failed to get completed task: %w", err)
+	}
+
+	var tokenVal, wsUriVal string
+	for _, kv := range taskResp.CompletionDetails {
+		if kv.Name == nil {
+			continue
+		}
+		switch *kv.Name {
+		case "VmConsoleToken":
+			if kv.Value != nil {
+				if v := kv.Value.GetValue(); v != nil {
+					if s, ok := v.(string); ok {
+						tokenVal = s
+					}
+				}
+			}
+		case "WsUri":
+			if kv.Value != nil {
+				if v := kv.Value.GetValue(); v != nil {
+					if s, ok := v.(string); ok {
+						wsUriVal = s
+					}
+				}
+			}
+		}
+	}
+	if tokenVal == "" || wsUriVal == "" {
+		return "", "", fmt.Errorf("task completionDetails missing VmConsoleToken or WsUri")
+	}
+	log.Printf("console token generated, wsUri=%s", wsUriVal)
+	return tokenVal, wsUriVal, nil
 }
