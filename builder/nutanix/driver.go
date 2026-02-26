@@ -69,8 +69,6 @@ type NutanixDriver struct {
 	Config        Config
 	ClusterConfig ClusterConfig
 	vmEndCh       <-chan int
-	v4Client      *convergedv4.Client
-	v4SDKClient   *v4.Client
 }
 
 type nutanixInstance struct {
@@ -200,24 +198,26 @@ func (d *NutanixDriver) getConfigCreds() client.Credentials {
 	}
 }
 
-// getV4Client returns the V4 converged client, creating it if needed
+// getV4Client returns the V4 converged client from the shared cache (creating it if needed).
 func (d *NutanixDriver) getV4Client() (*convergedv4.Client, error) {
-	if d.v4Client != nil {
-		return d.v4Client, nil
-	}
-
 	opts := []types.ClientOption[v4.Client]{}
 	if d.ClusterConfig.ReadTimeout > 0 {
 		opts = append(opts, v4.WithReadTimeout(d.ClusterConfig.ReadTimeout))
 	}
 
-	v4Client, err := convergedv4.NewClient(d.getConfigCreds(), opts...)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create V4 client: %s", err.Error())
+	cacheParams := &v4CacheParams{
+		endpoint: d.ClusterConfig.Endpoint,
+		port:     d.ClusterConfig.Port,
+		username: d.ClusterConfig.Username,
+		password: d.ClusterConfig.Password,
+		insecure: d.ClusterConfig.Insecure,
 	}
 
-	d.v4Client = v4Client
-	return d.v4Client, nil
+	v4Client, err := convergedV4ClientCache.GetOrCreate(cacheParams, opts...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get or create V4 client: %w", err)
+	}
+	return v4Client, nil
 }
 
 func findProjectByName(ctx context.Context, conn *v3.Client, name string) (*v3.Project, error) {
@@ -823,21 +823,24 @@ func (d *NutanixDriver) PowerOn(ctx context.Context, vmUUID string) error {
 	return nil
 }
 
-// getV4SDKClient returns the V4 SDK client (for DeleteCdRomById API), creating it if needed.
+// getV4SDKClient returns the V4 SDK client from the shared cache (for DeleteCdRomById API, etc.).
 func (d *NutanixDriver) getV4SDKClient() (*v4.Client, error) {
-	if d.v4SDKClient != nil {
-		return d.v4SDKClient, nil
-	}
 	opts := []types.ClientOption[v4.Client]{}
 	if d.ClusterConfig.ReadTimeout > 0 {
 		opts = append(opts, v4.WithReadTimeout(d.ClusterConfig.ReadTimeout))
 	}
-	sdkClient, err := v4.NewV4Client(d.getConfigCreds(), opts...)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create V4 SDK client: %s", err.Error())
+	cacheParams := &v4CacheParams{
+		endpoint: d.ClusterConfig.Endpoint,
+		port:     d.ClusterConfig.Port,
+		username: d.ClusterConfig.Username,
+		password: d.ClusterConfig.Password,
+		insecure: d.ClusterConfig.Insecure,
 	}
-	d.v4SDKClient = sdkClient
-	return d.v4SDKClient, nil
+	sdkClient, err := v4SDKClientCache.GetOrCreate(cacheParams, opts...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get or create V4 SDK client: %w", err)
+	}
+	return sdkClient, nil
 }
 
 func (d *NutanixDriver) WaitForIP(ctx context.Context, vmUUID string, ipNet *net.IPNet) (string, error) {
