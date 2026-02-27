@@ -33,11 +33,11 @@ func (s *stepBuildVM) Run(ctx context.Context, state multistep.StateBag) multist
 			state.Put("error", err)
 			return multistep.ActionHalt
 		}
-		ui.Sayf("CD disk uploaded %s", *cdfilesImage.image.Spec.Name)
-		state.Put("cd_uuid", *cdfilesImage.image.Metadata.UUID)
+		ui.Sayf("CD disk uploaded %s", cdfilesImage.Name())
+		state.Put("cd_uuid", cdfilesImage.UUID())
 		temp_cd := VmDisk{
 			ImageType:       "ISO_IMAGE",
-			SourceImageUUID: *cdfilesImage.image.Metadata.UUID,
+			SourceImageUUID: cdfilesImage.UUID(),
 		}
 		config.VmConfig.VmDisks = append(config.VmConfig.VmDisks, temp_cd)
 	} else {
@@ -59,9 +59,9 @@ func (s *stepBuildVM) Run(ctx context.Context, state multistep.StateBag) multist
 				state.Put("error", err)
 				return multistep.ActionHalt
 			}
-			ui.Say(fmt.Sprintf("Disk %d uploaded: %s", i, *uploadedImage.image.Spec.Name))
-			state.Put(fmt.Sprintf("disk_%d_uuid", i), *uploadedImage.image.Metadata.UUID)
-			config.VmConfig.VmDisks[i].SourceImageUUID = *uploadedImage.image.Metadata.UUID
+			ui.Say(fmt.Sprintf("Disk %d uploaded: %s", i, uploadedImage.Name()))
+			state.Put(fmt.Sprintf("disk_%d_uuid", i), uploadedImage.UUID())
+			config.VmConfig.VmDisks[i].SourceImageUUID = uploadedImage.UUID()
 		} else {
 			log.Printf("Disk %d has no source image path, skipping upload.", i)
 		}
@@ -79,17 +79,23 @@ func (s *stepBuildVM) Run(ctx context.Context, state multistep.StateBag) multist
 
 	// Create VM
 	vmInstance, err := d.Create(ctx, vmRequest)
-
 	if err != nil {
 		ui.Error("Unable to create virtual machine: " + err.Error())
 		state.Put("error", err)
 		return multistep.ActionHalt
 	}
-	log.Printf("Nutanix VM UUID: %s", *vmInstance.nutanix.Metadata.UUID)
+	log.Printf("Nutanix VM UUID: %s", vmInstance.UUID())
+
+	// Power on the VM after creation (CdRoms are attached inline via CreateRequest)
+	if err := d.PowerOn(ctx, vmInstance.UUID()); err != nil {
+		ui.Error("Unable to power on virtual machine: " + err.Error())
+		state.Put("error", err)
+		return multistep.ActionHalt
+	}
 	ui.Say(fmt.Sprintf("Virtual machine %s created", config.VMName))
 	state.Put("destroy_vm", true)
-	state.Put("vm_uuid", *vmInstance.nutanix.Metadata.UUID)
-	state.Put("cluster_uuid", *vmInstance.nutanix.Spec.ClusterReference.UUID)
+	state.Put("vm_uuid", vmInstance.UUID())
+	state.Put("cluster_uuid", vmInstance.ClusterUUID())
 
 	return multistep.ActionContinue
 }

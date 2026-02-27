@@ -3,10 +3,7 @@ package nutanix
 import (
 	"context"
 	"fmt"
-	"io"
 	"os"
-	"os/signal"
-	"syscall"
 
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	"github.com/hashicorp/packer-plugin-sdk/packer"
@@ -20,60 +17,27 @@ type StepExportOVA struct {
 func (s *StepExportOVA) Run(ctx context.Context, state multistep.StateBag) multistep.StepAction {
 	ui := state.Get("ui").(packer.Ui)
 	d := state.Get("driver").(Driver)
-	vmUUID := state.Get("vm_uuid")
 
 	ui.Say(fmt.Sprintf("Exporting OVA for virtual machine %s...", s.VMName))
 
-	// Create a channel to receive signals
-	sigChan := make(chan os.Signal, 1)
-	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
-
-	file, err := d.ExportOVA(ctx, s.OvaConfig.Name)
+	// ExportOVA now returns the path to the downloaded file
+	downloadedFilePath, err := d.ExportOVA(ctx, s.OvaConfig.Name)
 	if err != nil {
-		ui.Error("Image export failed: " + err.Error())
+		ui.Error("OVA export failed: " + err.Error())
 		state.Put("error", err)
 		return multistep.ActionHalt
 	}
-	defer file.Close()
 
-	toRead := ui.TrackProgress(s.VMName, 0, 0, file)
-
-	tempDestinationPath := vmUUID.(string) + ".tmp"
-
-	f, err := os.OpenFile(tempDestinationPath, os.O_CREATE|os.O_WRONLY, 0644)
+	// Rename the downloaded file to the final OVA name
+	finalName := s.OvaConfig.Name + ".ova"
+	err = os.Rename(downloadedFilePath, finalName)
 	if err != nil {
+		ui.Error("Failed to rename OVA file: " + err.Error())
+		state.Put("error", err)
 		return multistep.ActionHalt
 	}
 
-	copyDone := make(chan bool)
-	go func() {
-		io.Copy(f, toRead)
-		copyDone <- true
-	}()
-
-	select {
-	case <-copyDone:
-		toRead.Close()
-		f.Close()
-
-		name := s.OvaConfig.Name + ".ova"
-		err = os.Rename(tempDestinationPath, name)
-		if err != nil {
-			ui.Error("Failed to rename temporary file: " + err.Error())
-			state.Put("error", err)
-			return multistep.ActionHalt
-		}
-
-		ui.Say(fmt.Sprintf("Image exported as \"%s\"", name))
-
-	case <-sigChan:
-		toRead.Close()
-		f.Close()
-		os.Remove(tempDestinationPath)
-		ui.Say("image export cancelled")
-		return multistep.ActionHalt
-	}
-
+	ui.Say(fmt.Sprintf("OVA exported as \"%s\"", finalName))
 	return multistep.ActionContinue
 }
 

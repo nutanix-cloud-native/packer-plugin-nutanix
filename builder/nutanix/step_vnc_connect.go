@@ -3,13 +3,12 @@ package nutanix
 import (
 	"context"
 	"crypto/tls"
+	"encoding/base64"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
-	"net/http/cookiejar"
 	"net/url"
-	"strings"
 	"time"
 
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
@@ -37,11 +36,8 @@ func (s *stepVNCConnect) Run(ctx context.Context, state multistep.StateBag) mult
 		return multistep.ActionContinue
 	}
 
-	var c *vnc.ClientConn
-	var err error
-
 	ui.Say("Connecting to VNC over websocket...")
-	c, err = s.ConnectVNCOverWebsocketClient(state)
+	c, err := s.ConnectVNCOverWebsocketClient(ctx, state)
 	if err != nil {
 		err = fmt.Errorf("error connecting to VNC: %s", err)
 		state.Put("error", err)
@@ -51,135 +47,106 @@ func (s *stepVNCConnect) Run(ctx context.Context, state multistep.StateBag) mult
 
 	state.Put("vnc_conn", c)
 	return multistep.ActionContinue
-
 }
 
-func (s *stepVNCConnect) ConnectVNCOverWebsocketClient(state multistep.StateBag) (*vnc.ClientConn, error) {
+func (s *stepVNCConnect) ConnectVNCOverWebsocketClient(ctx context.Context, state multistep.StateBag) (*vnc.ClientConn, error) {
+	vmUUID := state.Get("vm_uuid").(string)
+	driver := state.Get("driver").(Driver)
 
-	log.Printf("retrieving auth cookie for VNC connection...")
-	cookie, err := s.getAuthCookie(state)
+	log.Printf("generating VNC console token for VM %s via V4 API...", vmUUID)
+	token, wsUri, err := driver.GenerateConsoleToken(ctx, vmUUID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get auth cookie: %v", err)
+		return nil, fmt.Errorf("failed to generate console token: %v", err)
 	}
 
-	vmUUID := state.Get("vm_uuid").(string)
-	clusterUUID := state.Get("cluster_uuid").(string)
+	wsURL := fmt.Sprintf("wss://%s:%d%s?VmConsoleToken=%s",
+		s.Config.ClusterConfig.Endpoint, s.Config.ClusterConfig.Port, wsUri, url.QueryEscape(token))
+	log.Printf("VNC websocket target: wss://%s:%d%s?VmConsoleToken=<redacted>",
+		s.Config.ClusterConfig.Endpoint, s.Config.ClusterConfig.Port, wsUri)
 
-	wsURL := fmt.Sprintf("wss://%s:%d/vnc/vm/%s/proxy?proxyClusterUuid=%s", s.Config.ClusterConfig.Endpoint, s.Config.ClusterConfig.Port, vmUUID, clusterUUID)
-
-	// Parse the URL
 	u, err := url.Parse(wsURL)
 	if err != nil {
-		err = fmt.Errorf("error parsing websocket url: %s", err)
-		return nil, err
+		return nil, fmt.Errorf("error parsing websocket url: %s", err)
 	}
 
-	// Configure websocket
+	// Origin must match Prism Central URL - server validates this for console access
+	originURL := &url.URL{
+		Scheme: "https",
+		Host:   fmt.Sprintf("%s:%d", s.Config.ClusterConfig.Endpoint, s.Config.ClusterConfig.Port),
+	}
+	header := http.Header{}
+	// Include Basic Auth when not using API key - some IAM-enabled PCs require it for console
+	if s.Config.ClusterConfig.Username != "X-ntnx-api-key" {
+		header.Set("Authorization", "Basic "+basicAuth(s.Config.ClusterConfig.Username, s.Config.ClusterConfig.Password))
+	} else {
+		header.Set(ntnxAPIKeyHeaderKey, s.Config.ClusterConfig.Password)
+	}
 	wsConfig := websocket.Config{
 		Location: u,
-		Origin:   &url.URL{Scheme: "http", Host: "localhost"},
+		Origin:   originURL,
 		Version:  websocket.ProtocolVersionHybi13,
-		Header:   http.Header{},
+		Header:   header,
+		TlsConfig: &tls.Config{
+			InsecureSkipVerify: s.Config.ClusterConfig.Insecure,
+		},
 	}
 
-	// Add cookies to the WebSocket configuration headers
-	var cookieHeader []string
-	for _, c := range cookie {
-		cookieHeader = append(cookieHeader, fmt.Sprintf("%s=%s", c.Name, c.Value))
-	}
-	wsConfig.Header.Set("Cookie", strings.Join(cookieHeader, "; "))
-
-	wsConfig.TlsConfig = &tls.Config{
-		InsecureSkipVerify: s.Config.ClusterConfig.Insecure,
-	}
-
-	// Connect to the WebSocket server
-	log.Printf("connecting to %s\n", wsURL)
+	log.Printf("connecting to VNC websocket (Origin: %s)...", originURL.String())
 	ws, err := websocket.DialConfig(&wsConfig)
 	if err != nil {
-		log.Printf("websocket connection failed: %v", err)
+		// Probe to capture HTTP status when handshake fails (helps debug 401/403 etc)
+		if probeBody, _ := s.probeWebsocketHandshake(wsURL, originURL.String()); probeBody != "" {
+			log.Printf("websocket handshake failed - probe response: %s", probeBody)
+			return nil, fmt.Errorf("websocket connection failed: %v (probe: %s)", err, probeBody)
+		}
 		return nil, fmt.Errorf("websocket connection failed: %v", err)
 	}
 
-	// Set up the VNC connection over the websocket.
-	ccconfig := &vnc.ClientConfig{
+	c, err := vnc.Client(ws, &vnc.ClientConfig{
 		Auth:      []vnc.ClientAuth{new(vnc.ClientAuthNone)},
 		Exclusive: false,
-	}
-	c, err := vnc.Client(ws, ccconfig)
+	})
 	if err != nil {
-		err = fmt.Errorf("error setting the VNC over websocket client: %s", err)
-
-		return nil, err
+		return nil, fmt.Errorf("error setting the VNC over websocket client: %s", err)
 	}
 
 	return c, nil
 }
 
-func (s *stepVNCConnect) getAuthCookie(state multistep.StateBag) ([]*http.Cookie, error) {
-
-	loginURL := fmt.Sprintf("https://%s:%d/api/nutanix/v3/users/me", s.Config.ClusterConfig.Endpoint, s.Config.ClusterConfig.Port)
-
-	req, err := http.NewRequest("GET", loginURL, nil)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %v", err)
-	}
-	req.Header.Add("Content-Type", "application/json")
-
-	// Implement transparent authentication for service accounts by using statically defined username
-	if s.Config.ClusterConfig.Username == "X-ntnx-api-key" {
-		// Use API key authentication
-		req.Header.Add(ntnxAPIKeyHeaderKey, s.Config.ClusterConfig.Password)
-	} else {
-		// Use basic auth for username/password
-		req.SetBasicAuth(s.Config.ClusterConfig.Username, s.Config.ClusterConfig.Password)
-	}
-
-	// Create a custom HTTP client that skips SSL verification
-	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: s.Config.ClusterConfig.Insecure},
-	}
-
-	// Create a cookie jar
-	jar, err := cookiejar.New(nil)
-	if err != nil {
-		return nil, fmt.Errorf("error creating cookie jar: %v", err)
-	}
-
-	client := &http.Client{
-		Transport: tr,
-		Timeout:   10 * time.Second,
-		Jar:       jar,
-	}
-
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("request failed: %v", err)
-	}
-	defer resp.Body.Close()
-
-	// Read and log response body for debugging
-	bodyBytes, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read response body: %s", string(bodyBytes))
-	}
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("authentication failed: status %d", resp.StatusCode)
-	}
-
-	cookies := jar.Cookies(req.URL)
-
-	for _, cookie := range cookies {
-		if cookie.Name == "NTNX_MERCURY_IAM_SESSION" {
-			log.Printf("auth cookie retrieved successfully")
-			return cookies, nil
-		}
-	}
-
-	return nil, fmt.Errorf("no session cookie found")
+func basicAuth(username, password string) string {
+	auth := username + ":" + password
+	return base64.StdEncoding.EncodeToString([]byte(auth))
 }
 
 func (s *stepVNCConnect) Cleanup(state multistep.StateBag) {
 	// No cleanup needed
+}
+
+// probeWebsocketHandshake sends an HTTP request mimicking a websocket upgrade to capture
+// the server's response status and body. Used for debugging when the real websocket
+// handshake fails (e.g. 401, 403, 302).
+func (s *stepVNCConnect) probeWebsocketHandshake(wsURL, origin string) (string, error) {
+	req, err := http.NewRequest("GET", wsURL, nil)
+	if err != nil {
+		return "", err
+	}
+	req.Header.Set("Upgrade", "websocket")
+	req.Header.Set("Connection", "Upgrade")
+	req.Header.Set("Origin", origin)
+	req.Header.Set("Sec-WebSocket-Version", "13")
+	req.Header.Set("Sec-WebSocket-Key", "dGhlIHNhbXBsZSBub25jZQ==")
+
+	client := &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: s.Config.ClusterConfig.Insecure},
+		},
+		Timeout: 10 * time.Second,
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+	body, _ := io.ReadAll(resp.Body)
+	return fmt.Sprintf("status=%d body=%s", resp.StatusCode, string(body)), nil
 }
