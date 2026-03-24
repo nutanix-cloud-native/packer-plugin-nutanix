@@ -18,11 +18,8 @@ import (
 	v3 "github.com/nutanix-cloud-native/prism-go-client/v3"
 	v4 "github.com/nutanix-cloud-native/prism-go-client/v4"
 	clusterModels "github.com/nutanix/ntnx-api-golang-clients/clustermgmt-go-client/v4/models/clustermgmt/v4/config"
-	prismConfig "github.com/nutanix/ntnx-api-golang-clients/prism-go-client/v4/models/prism/v4/config"
-	vmmPrismConfig "github.com/nutanix/ntnx-api-golang-clients/vmm-go-client/v4/models/prism/v4/config"
 	vmmModels "github.com/nutanix/ntnx-api-golang-clients/vmm-go-client/v4/models/vmm/v4/ahv/config"
 	imageModels "github.com/nutanix/ntnx-api-golang-clients/vmm-go-client/v4/models/vmm/v4/content"
-	vmmError "github.com/nutanix/ntnx-api-golang-clients/vmm-go-client/v4/models/vmm/v4/error"
 )
 
 const (
@@ -823,26 +820,6 @@ func (d *NutanixDriver) PowerOn(ctx context.Context, vmUUID string) error {
 	return nil
 }
 
-// getV4SDKClient returns the V4 SDK client from the shared cache (for DeleteCdRomById API, etc.).
-func (d *NutanixDriver) getV4SDKClient() (*v4.Client, error) {
-	opts := []types.ClientOption[v4.Client]{}
-	if d.ClusterConfig.ReadTimeout > 0 {
-		opts = append(opts, v4.WithReadTimeout(d.ClusterConfig.ReadTimeout))
-	}
-	cacheParams := &v4CacheParams{
-		endpoint: d.ClusterConfig.Endpoint,
-		port:     d.ClusterConfig.Port,
-		username: d.ClusterConfig.Username,
-		password: d.ClusterConfig.Password,
-		insecure: d.ClusterConfig.Insecure,
-	}
-	sdkClient, err := v4SDKClientCache.GetOrCreate(cacheParams, opts...)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get or create V4 SDK client: %w", err)
-	}
-	return sdkClient, nil
-}
-
 func (d *NutanixDriver) WaitForIP(ctx context.Context, vmUUID string, ipNet *net.IPNet) (string, error) {
 	v4Client, err := d.getV4Client()
 	if err != nil {
@@ -1405,15 +1382,10 @@ func (d *NutanixDriver) UpdateVM(ctx context.Context, vmUUID string, v4vm *vmmMo
 	return &nutanixInstance{vm: updatedVM}, nil
 }
 
-// CleanCD removes all CD-ROM devices from a VM via the V4 DeleteCdRomById sub-resource API.
+// CleanCD removes all CD-ROM devices from a VM via the prism-go-client VMs.DeleteCdRom API.
 // The V4 API does not allow changing disk/CdRom count via UpdateVM, so each CdRom must be
 // deleted individually. The VM must be powered off.
 func (d *NutanixDriver) CleanCD(ctx context.Context, vmUUID string) error {
-	sdkClient, err := d.getV4SDKClient()
-	if err != nil {
-		return fmt.Errorf("failed to get V4 SDK client: %s", err.Error())
-	}
-
 	v4Client, err := d.getV4Client()
 	if err != nil {
 		return fmt.Errorf("failed to get V4 client: %s", err.Error())
@@ -1436,34 +1408,8 @@ func (d *NutanixDriver) CleanCD(ctx context.Context, vmUUID string) error {
 			continue
 		}
 		cdromID := *cdrom.ExtId
-
-		_, etagArgs, err := convergedv4.GetEntityAndEtag(v4Client.VMs.Get(ctx, vmUUID))
-		if err != nil {
-			return fmt.Errorf("failed to get VM ETag before deleting CdRom %d: %s", i+1, err.Error())
-		}
-
-		taskRef, err := convergedv4.CallAPI[*vmmModels.DeleteCdRomApiResponse, vmmPrismConfig.TaskReference](
-			sdkClient.VmApiInstance.DeleteCdRomById(&vmUUID, &cdromID, etagArgs),
-		)
-		if err != nil {
+		if err := v4Client.VMs.DeleteCdRom(ctx, vmUUID, cdromID); err != nil {
 			return fmt.Errorf("failed to delete CdRom %d (%s): %s", i+1, cdromID, err.Error())
-		}
-		if taskRef.ExtId == nil {
-			return fmt.Errorf("task reference ExtId is nil for CdRom %d deletion", i+1)
-		}
-		taskID := *taskRef.ExtId
-		log.Printf("CdRom %d: delete task started: %s", i+1, taskID)
-
-		waiter := convergedv4.NewOperation(
-			taskID,
-			sdkClient,
-			func(ctx context.Context, uuid string) (*converged.NoEntity, error) {
-				return converged.NoEntityGetter(ctx, uuid)
-			},
-		)
-		_, err = waiter.Wait(ctx)
-		if err != nil {
-			return fmt.Errorf("CdRom %d deletion task failed: %s", i+1, err.Error())
 		}
 		log.Printf("CdRom %d (%s) deleted successfully", i+1, cdromID)
 	}
@@ -1471,95 +1417,18 @@ func (d *NutanixDriver) CleanCD(ctx context.Context, vmUUID string) error {
 }
 
 // GenerateConsoleToken obtains a JWT token and WebSocket URI for VNC console access.
-// It calls the V4 generate-console-token API (async 202), polls the task until SUCCEEDED
-// via NewOperation+Wait, then extracts VmConsoleToken and WsUri from task CompletionDetails.
-// Used by stepVNCConnect for boot commands over VNC during ISO-based builds.
-//
-// Parameters:
-//   - ctx: context for cancellation
-//   - vmExtId: VM external ID (UUID)
-//
-// Returns: token (JWT), wsUri (path e.g. /console/launch/{vmId}), or error.
+// Uses prism-go-client VMs.GenerateConsoleToken. Used by stepVNCConnect for boot
+// commands over VNC during ISO-based builds.
 func (d *NutanixDriver) GenerateConsoleToken(ctx context.Context, vmExtId string) (token, wsUri string, err error) {
-	sdkClient, err := d.getV4SDKClient()
+	v4Client, err := d.getV4Client()
 	if err != nil {
-		return "", "", fmt.Errorf("failed to get V4 SDK client: %s", err.Error())
+		return "", "", fmt.Errorf("failed to get V4 client: %s", err.Error())
 	}
 
-	resp, err := sdkClient.VmApiInstance.GenerateConsoleTokenById(&vmExtId)
+	ct, err := v4Client.VMs.GenerateConsoleToken(ctx, vmExtId)
 	if err != nil {
-		return "", "", fmt.Errorf("generate-console-token request failed: %w", err)
+		return "", "", fmt.Errorf("generate-console-token failed: %w", err)
 	}
-	if resp == nil || resp.Data == nil {
-		return "", "", fmt.Errorf("generate-console-token returned empty response")
-	}
-
-	dataVal := resp.Data.GetValue()
-	if dataVal == nil {
-		return "", "", fmt.Errorf("generate-console-token response data is nil")
-	}
-
-	taskRef, ok := dataVal.(vmmPrismConfig.TaskReference)
-	if !ok {
-		if errResp, ok := dataVal.(vmmError.ErrorResponse); ok {
-			return "", "", fmt.Errorf("generate-console-token failed: %v", errResp)
-		}
-		return "", "", fmt.Errorf("generate-console-token returned unexpected type: %T", dataVal)
-	}
-	if taskRef.ExtId == nil {
-		return "", "", fmt.Errorf("task reference ExtId is nil")
-	}
-	taskID := *taskRef.ExtId
-	log.Printf("console token task started: %s", taskID)
-
-	// Poll until SUCCEEDED (same pattern as CleanCD). Result is in CompletionDetails, not EntitiesAffected.
-	waiter := convergedv4.NewOperation(
-		taskID,
-		sdkClient,
-		func(ctx context.Context, uuid string) (*converged.NoEntity, error) {
-			return converged.NoEntityGetter(ctx, uuid)
-		},
-	)
-	_, err = waiter.Wait(ctx)
-	if err != nil {
-		return "", "", fmt.Errorf("console token task: %w", err)
-	}
-
-	// Get completed task; token and wsUri are in CompletionDetails KVPairs.
-	taskResp, err := convergedv4.CallAPI[*prismConfig.GetTaskApiResponse, prismConfig.Task](
-		sdkClient.TasksApiInstance.GetTaskById(&taskID, nil),
-	)
-	if err != nil {
-		return "", "", fmt.Errorf("failed to get completed task: %w", err)
-	}
-
-	var tokenVal, wsUriVal string
-	for _, kv := range taskResp.CompletionDetails {
-		if kv.Name == nil {
-			continue
-		}
-		switch *kv.Name {
-		case "VmConsoleToken":
-			if kv.Value != nil {
-				if v := kv.Value.GetValue(); v != nil {
-					if s, ok := v.(string); ok {
-						tokenVal = s
-					}
-				}
-			}
-		case "WsUri":
-			if kv.Value != nil {
-				if v := kv.Value.GetValue(); v != nil {
-					if s, ok := v.(string); ok {
-						wsUriVal = s
-					}
-				}
-			}
-		}
-	}
-	if tokenVal == "" || wsUriVal == "" {
-		return "", "", fmt.Errorf("task completionDetails missing VmConsoleToken or WsUri")
-	}
-	log.Printf("console token generated, wsUri=%s", wsUriVal)
-	return tokenVal, wsUriVal, nil
+	log.Printf("console token generated, wsUri=%s", ct.WsUri)
+	return ct.Token, ct.WsUri, nil
 }
