@@ -9,7 +9,6 @@ require (
 	github.com/nutanix-cloud-native/prism-go-client v0.7.1
 	github.com/nutanix/ntnx-api-golang-clients/clustermgmt-go-client/v4 v4.2.1
 	github.com/nutanix/ntnx-api-golang-clients/networking-go-client/v4 v4.2.1
-	github.com/nutanix/ntnx-api-golang-clients/prism-go-client/v4 v4.2.1
 	github.com/nutanix/ntnx-api-golang-clients/vmm-go-client/v4 v4.2.1
 	github.com/zclconf/go-cty v1.16.3
 	golang.org/x/net v0.52.0
@@ -145,6 +144,7 @@ require (
 	github.com/mitchellh/reflectwalk v1.0.2 // indirect
 	github.com/nu7hatch/gouuid v0.0.0-20131221200532-179d4d0c4d8d // indirect
 	github.com/nutanix/ntnx-api-golang-clients/iam-go-client/v4 v4.0.1 // indirect
+	github.com/nutanix/ntnx-api-golang-clients/prism-go-client/v4 v4.2.1 // indirect
 	github.com/nutanix/ntnx-api-golang-clients/volumes-go-client/v4 v4.2.1 // indirect
 	github.com/oklog/ulid/v2 v2.1.1 // indirect
 	github.com/packer-community/winrmcp v0.0.0-20221126162354-6e900dd2c68f // indirect
