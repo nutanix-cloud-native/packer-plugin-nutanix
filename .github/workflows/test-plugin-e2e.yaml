@@ -10,9 +10,9 @@ on:
   workflow_dispatch:
     inputs:
       logs:
-        description: "Packer PACKER_LOG — default on; set 0 to disable verbose logs"
+        description: "Set 1 to activate full logs"
         required: false
-        default: "1"
+        default: "0"
 
 jobs:
   check_approvals:
@@ -87,8 +87,6 @@ jobs:
       PKR_VAR_nutanix_subnet: ${{ secrets.PKR_VAR_NUTANIX_SUBNET }}
       PKR_VAR_nutanix_port: "9440"
       PKR_VAR_nutanix_insecure: "true"
-      # Verbose Packer logs by default; workflow_dispatch input logs=0 turns off.
-      PACKER_LOG: ${{ github.event.inputs.logs == '0' && '0' || '1' }}
 
     steps:
       - name: Checkout Repository
@@ -116,45 +114,6 @@ jobs:
         run: |
           packer plugins install --path /tmp/packer-plugin-nutanix "github.com/nutanix-cloud-native/nutanix"
 
-      - name: Prism Central connectivity (debug)
-        shell: bash
-        run: |
-          set -euo pipefail
-          EP="${PKR_VAR_nutanix_endpoint}"
-          PORT="${PKR_VAR_nutanix_port:-9440}"
-          BASE="https://${EP}:${PORT}"
-          echo "=== Prism Central connectivity (from runner to PC) ==="
-          echo "Host: ${EP}  Port: ${PORT}"
-          echo "--- Unauthenticated probe (TLS + routing; status often 401/302) ---"
-          set +e
-          OUT1=$(curl -skS --connect-timeout 25 -o /dev/null -w "%{http_code}" "${BASE}/" 2>/tmp/pc-curl-root.txt)
-          RC1=$?
-          set -e
-          if [[ "${RC1}" -ne 0 ]]; then
-            echo "::error::Cannot reach ${BASE}/ (curl exit ${RC1}). DNS, firewall, VPN, or wrong host."
-            cat /tmp/pc-curl-root.txt || true
-            exit 1
-          fi
-          echo "GET ${BASE}/ -> HTTP ${OUT1}"
-          echo "--- Authenticated v3 /users/me (expect HTTP 200 if credentials OK) ---"
-          HTTP=$(curl -skS --connect-timeout 25 -u "${PKR_VAR_nutanix_username}:${PKR_VAR_nutanix_password}" \
-            -o /tmp/pc-users-me.json -w "%{http_code}" \
-            "${BASE}/api/nutanix/v3/users/me" 2>/tmp/pc-curl-err.txt) || true
-          if [[ -s /tmp/pc-curl-err.txt ]]; then
-            echo "curl stderr:" && cat /tmp/pc-curl-err.txt
-          fi
-          echo "HTTP status: ${HTTP}"
-          if [[ -s /tmp/pc-users-me.json ]]; then
-            echo "Response (first 400 chars):"
-            head -c 400 /tmp/pc-users-me.json || true
-            echo
-          fi
-          if [[ "${HTTP}" != "200" ]]; then
-            echo "::error::Prism API /users/me returned HTTP ${HTTP} (not 200). Check PC URL, user/password, TLS, and that this account can use the API."
-            exit 1
-          fi
-          echo "=== Prism Central connectivity OK ==="
-
       - name: Run `packer init`
         id: init
         run: |
@@ -163,10 +122,14 @@ jobs:
       - name: Run `packer validate`
         id: validate
         run: packer validate -var "test=${{ matrix.test}}" .
+        env:
+          PACKER_LOG: ${{ github.event.inputs.logs }}
 
       - name: Run `packer build`
         id: build
         run: packer build -var "test=${{ matrix.test}}" .
+        env:
+          PACKER_LOG: ${{ github.event.inputs.logs }}
 
   results:
     if: ${{ always() }}
