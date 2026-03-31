@@ -12,10 +12,7 @@ import (
 // convergedV4ClientCache is the shared cache for V4 converged clients (session auth enabled).
 var convergedV4ClientCache = convergedv4.NewClientCache(v4.WithSessionAuth(true))
 
-// v4SDKClientCache is the shared cache for raw V4 SDK clients (session auth enabled).
-var v4SDKClientCache = v4.NewClientCache(v4.WithSessionAuth(true))
-
-// v4CacheParams implements types.CachedClientParams for use with both the converged V4 and raw V4 SDK client caches.
+// v4CacheParams implements types.CachedClientParams for the converged V4 client cache.
 type v4CacheParams struct {
 	endpoint string
 	port     int32
