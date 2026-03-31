@@ -38,7 +38,7 @@ jobs:
   plugin-build:
     needs: check_approvals
     if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && needs.check_approvals.outputs.external_pr == 'false') || (github.event_name == 'pull_request_target' && needs.check_approvals.outputs.external_pr == 'true' && needs.check_approvals.outputs.check_approvals == 'true') }}
-    runs-on: self-hosted-ncn-docker-small
+    runs-on: self-hosted-ncn-docker-medium
     outputs:
       test-list: ${{ steps.test-list.outputs.list}}
 
@@ -74,7 +74,7 @@ jobs:
       matrix:
         test: ${{fromJSON(needs.plugin-build.outputs.test-list)}}
 
-    runs-on: self-hosted-ncn-docker-small
+    runs-on: self-hosted-ncn-docker-medium
     defaults:
       run:
         working-directory: test/e2e/${{ matrix.test}}
