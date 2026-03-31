@@ -2,6 +2,11 @@ name: E2E tests
 
 on:
   pull_request:
+    types: [opened, synchronize, reopened, labeled]
+  pull_request_target:
+    types: [opened, synchronize, reopened, labeled]
+    branches:
+      - main
   workflow_dispatch:
     inputs:
       logs:
@@ -10,7 +15,29 @@ on:
         default: "0"
 
 jobs:
+  check_approvals:
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'workflow_dispatch' || (contains(github.event.pull_request.labels.*.name, 'integration-test') &&
+      (( github.event_name == 'pull_request' && github.event.pull_request.base.repo.clone_url == github.event.pull_request.head.repo.clone_url) ||
+      (github.event_name == 'pull_request_target' && github.event.pull_request.base.repo.clone_url != github.event.pull_request.head.repo.clone_url ))) }}
+    outputs:
+      check_approvals: ${{ github.event_name == 'workflow_dispatch' && 'true' || (github.event_name == 'pull_request_target' && steps.check_approvals.outputs.check_approvals || 'true') }}
+      external_pr: ${{ github.event.pull_request != null && github.event.pull_request.base.repo.clone_url != github.event.pull_request.head.repo.clone_url }}
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - name: Manual workflow (no approval gate)
+        if: ${{ github.event_name == 'workflow_dispatch' }}
+        run: echo "workflow_dispatch — skipping approval action."
+      - name: Check integration test allowance status
+        if: ${{ github.event_name == 'pull_request_target' }}
+        id: check_approvals
+        uses: nutanix-cloud-native/action-check-approvals@v1
+
   plugin-build:
+    needs: check_approvals
+    if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && needs.check_approvals.outputs.external_pr == 'false') || (github.event_name == 'pull_request_target' && needs.check_approvals.outputs.external_pr == 'true' && needs.check_approvals.outputs.check_approvals == 'true') }}
     runs-on: [self-hosted, nxlab, packer]
     outputs:
       test-list: ${{ steps.test-list.outputs.list}}
@@ -99,9 +126,17 @@ jobs:
     if: ${{ always() }}
     runs-on: [self-hosted, nxlab, packer]
     name: Final E2E results
-    needs: [e2e]
+    needs: [check_approvals, plugin-build, e2e]
     steps:
       - run: |
+          if [[ "${{ needs.check_approvals.result }}" == "skipped" ]]; then
+            echo "E2E not run: add the integration-test label (and for forks, required approvals) to run E2E on this PR."
+            exit 0
+          fi
+          if [[ "${{ needs.plugin-build.result }}" == "skipped" ]] || [[ "${{ needs.e2e.result }}" == "skipped" ]]; then
+            echo "plugin-build or e2e was skipped."
+            exit 0
+          fi
           result="${{ needs.e2e.result }}"
           if [[ $result == "success" || $result == "skipped" ]]; then
             exit 0
