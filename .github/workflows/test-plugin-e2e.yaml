@@ -38,7 +38,7 @@ jobs:
   plugin-build:
     needs: check_approvals
     if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && needs.check_approvals.outputs.external_pr == 'false') || (github.event_name == 'pull_request_target' && needs.check_approvals.outputs.external_pr == 'true' && needs.check_approvals.outputs.check_approvals == 'true') }}
-    runs-on: [self-hosted, nxlab, packer]
+    runs-on: self-hosted-ncn-docker-medium
     outputs:
       test-list: ${{ steps.test-list.outputs.list}}
 
@@ -74,10 +74,19 @@ jobs:
       matrix:
         test: ${{fromJSON(needs.plugin-build.outputs.test-list)}}
 
-    runs-on: [self-hosted, nxlab, packer]
+    runs-on: self-hosted-ncn-docker-medium
     defaults:
       run:
         working-directory: test/e2e/${{ matrix.test}}
+
+    env:
+      PKR_VAR_nutanix_endpoint: ${{ vars.PRISM_CENTRAL_CI }}
+      PKR_VAR_nutanix_username: ${{ vars.PRISM_CENTRAL_CI_USERNAME }}
+      PKR_VAR_nutanix_password: ${{ secrets.PRISM_CENTRAL_CI_PASSWORD }}
+      PKR_VAR_nutanix_cluster: ${{ vars.PRISM_ELEMENT_CI_WORKLOADS }}
+      PKR_VAR_nutanix_subnet: ${{ vars.PRISM_ELEMENT_CI_WORKLOADS_SUBNET }}
+      PKR_VAR_nutanix_port: "9440"
+      PKR_VAR_nutanix_insecure: "true"
 
     steps:
       - name: Checkout Repository
@@ -124,7 +133,7 @@ jobs:
 
   results:
     if: ${{ always() }}
-    runs-on: [self-hosted, nxlab, packer]
+    runs-on: ubuntu-latest
     name: Final E2E results
     needs: [check_approvals, plugin-build, e2e]
     steps:
