@@ -6,6 +6,7 @@ import (
 	//"errors"
 	"fmt"
 	"log"
+	"net"
 	"time"
 
 	"github.com/hashicorp/packer-plugin-sdk/bootcommand"
@@ -105,9 +106,12 @@ type VmDisk struct {
 }
 
 type VmNIC struct {
-	SubnetName string `mapstructure:"subnet_name" json:"subnet_name" required:"false"`
-	SubnetUUID string `mapstructure:"subnet_uuid" json:"subnet_uuid" required:"false"`
-	MacAddress string `mapstructure:"mac_address" json:"mac_address" required:"false"`
+	SubnetName       string `mapstructure:"subnet_name" json:"subnet_name" required:"false"`
+	SubnetUUID       string `mapstructure:"subnet_uuid" json:"subnet_uuid" required:"false"`
+	MacAddress       string `mapstructure:"mac_address" json:"mac_address" required:"false"`
+	IPAddress        string `mapstructure:"ip_address" json:"ip_address" required:"false"`
+	IPPrefixLength   int    `mapstructure:"ip_prefix_length" json:"ip_prefix_length" required:"false"`
+	SkipIPAssignment bool   `mapstructure:"skip_ip_assignment" json:"skip_ip_assignment" required:"false"`
 }
 type VmConfig struct {
 	VMName                 string     `mapstructure:"vm_name" json:"vm_name" required:"false"`
@@ -283,6 +287,25 @@ func (c *Config) Prepare(raws ...interface{}) ([]string, error) {
 		if nic.MacAddress != "" && !isValidMACAddress(nic.MacAddress) {
 			log.Printf("Mac address is invalid for nic %d", i+1)
 			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("mac address is invalid in vm_nics %d", i+1))
+		}
+
+		if nic.SkipIPAssignment && nic.IPAddress != "" {
+			log.Printf("skip_ip_assignment and ip_address cannot both be set for nic %d", i+1)
+			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("vm_nics %d: skip_ip_assignment and ip_address are mutually exclusive", i+1))
+		}
+
+		if nic.IPAddress != "" {
+			if parsed := net.ParseIP(nic.IPAddress); parsed == nil || parsed.To4() == nil {
+				log.Printf("ip_address must be a valid IPv4 address for nic %d", i+1)
+				errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("vm_nics %d: ip_address must be a valid IPv4 address", i+1))
+			}
+			if nic.IPPrefixLength < 1 || nic.IPPrefixLength > 32 {
+				log.Printf("ip_prefix_length must be between 1 and 32 when ip_address is set (nic %d)", i+1)
+				errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("vm_nics %d: ip_prefix_length must be between 1 and 32 when ip_address is set", i+1))
+			}
+		} else if nic.IPPrefixLength != 0 {
+			log.Printf("ip_prefix_length is set without ip_address for nic %d", i+1)
+			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("vm_nics %d: ip_prefix_length requires ip_address", i+1))
 		}
 	}
 

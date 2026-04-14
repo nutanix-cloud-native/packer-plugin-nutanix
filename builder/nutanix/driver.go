@@ -18,6 +18,7 @@ import (
 	v3 "github.com/nutanix-cloud-native/prism-go-client/v3"
 	v4 "github.com/nutanix-cloud-native/prism-go-client/v4"
 	clusterModels "github.com/nutanix/ntnx-api-golang-clients/clustermgmt-go-client/v4/models/clustermgmt/v4/config"
+	commonv1 "github.com/nutanix/ntnx-api-golang-clients/vmm-go-client/v4/models/common/v1/config"
 	vmmModels "github.com/nutanix/ntnx-api-golang-clients/vmm-go-client/v4/models/vmm/v4/ahv/config"
 	imageModels "github.com/nutanix/ntnx-api-golang-clients/vmm-go-client/v4/models/vmm/v4/content"
 )
@@ -656,6 +657,23 @@ func (d *NutanixDriver) CreateRequest(ctx context.Context, vmConfig VmConfig, st
 		nicNetworkInfo := vmmModels.NewVirtualEthernetNicNetworkInfo()
 		nicNetworkInfo.Subnet = vmmModels.NewSubnetReference()
 		nicNetworkInfo.Subnet.ExtId = &subnetUUID
+
+		if nic.SkipIPAssignment {
+			ipv4Cfg := vmmModels.NewIpv4Config()
+			assign := false
+			ipv4Cfg.ShouldAssignIp = &assign
+			nicNetworkInfo.Ipv4Config = ipv4Cfg
+		}
+		if nic.IPAddress != "" && !nic.SkipIPAssignment {
+			ipv4Cfg := vmmModels.NewIpv4Config()
+			ipAddr := commonv1.NewIPv4Address()
+			ipVal := nic.IPAddress
+			ipAddr.Value = &ipVal
+			pl := nic.IPPrefixLength
+			ipAddr.PrefixLength = &pl
+			ipv4Cfg.IpAddress = ipAddr
+			nicNetworkInfo.Ipv4Config = ipv4Cfg
+		}
 
 		// Directly assign NicNetworkInfo to avoid $nicNetworkInfoItemDiscriminator in JSON
 		nicNetworkInfoWrapper := vmmModels.NewOneOfNicNicNetworkInfo()
