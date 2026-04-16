@@ -168,20 +168,23 @@ func subnetBelongsToCluster(subnet *subnetModels.Subnet, clusterUUID string) boo
 	return false
 }
 
-// getSubnetUUID gets subnet UUID by name or UUID using V4 API
-func getSubnetUUID(ctx context.Context, client *convergedv4.Client, subnetName, subnetUUID, clusterUUID string) (string, error) {
+// getSubnet resolves a subnet by name or UUID and returns the full object.
+func getSubnet(ctx context.Context, client *convergedv4.Client, subnetName, subnetUUID, clusterUUID string) (*subnetModels.Subnet, error) {
 	if subnetUUID != "" {
 		subnet, err := client.Subnets.Get(ctx, subnetUUID)
 		if err != nil {
-			return "", fmt.Errorf("failed to find subnet with UUID %s: %s", subnetUUID, err.Error())
+			return nil, fmt.Errorf("failed to find subnet with UUID %s: %s", subnetUUID, err.Error())
 		}
-		return *subnet.ExtId, nil
+		if subnet.ExtId == nil {
+			return nil, fmt.Errorf("subnet with UUID %s has no ExtId", subnetUUID)
+		}
+		return subnet, nil
 	}
 
 	if subnetName != "" {
 		subnets, err := client.Subnets.List(ctx, converged.WithFilter(fmt.Sprintf("name eq '%s'", subnetName)))
 		if err != nil {
-			return "", err
+			return nil, err
 		}
 
 		found := make([]subnetModels.Subnet, 0)
@@ -201,19 +204,48 @@ func getSubnetUUID(ctx context.Context, client *convergedv4.Client, subnetName, 
 		}
 
 		if len(found) == 0 {
-			return "", fmt.Errorf("subnet %s not found", subnetName)
+			return nil, fmt.Errorf("subnet %s not found", subnetName)
 		}
 		if len(found) > 1 {
-			return "", fmt.Errorf("found more than one subnet with name %s", subnetName)
+			return nil, fmt.Errorf("found more than one subnet with name %s", subnetName)
 		}
 
 		if found[0].ExtId == nil {
-			return "", fmt.Errorf("subnet %s has no ExtId", subnetName)
+			return nil, fmt.Errorf("subnet %s has no ExtId", subnetName)
 		}
-		return *found[0].ExtId, nil
+		return &found[0], nil
 	}
 
-	return "", fmt.Errorf("subnet name or UUID must be provided")
+	return nil, fmt.Errorf("subnet name or UUID must be provided")
+}
+
+// subnetHasIPv4IPAM returns true when the subnet has an IPv4 IPAM
+// configuration — specifically an IPv4Config with a non-nil IpSubnet,
+// which Prism only populates when IPAM is enabled on the subnet.
+func subnetHasIPv4IPAM(subnet *subnetModels.Subnet) bool {
+	if subnet == nil || len(subnet.IpConfig) == 0 {
+		return false
+	}
+	for _, cfg := range subnet.IpConfig {
+		if cfg.Ipv4 != nil && cfg.Ipv4.IpSubnet != nil {
+			return true
+		}
+	}
+	return false
+}
+
+// subnetDisplayName returns a human-readable identifier for error messages.
+func subnetDisplayName(subnet *subnetModels.Subnet) string {
+	if subnet == nil {
+		return "(unknown)"
+	}
+	if subnet.Name != nil {
+		return *subnet.Name
+	}
+	if subnet.ExtId != nil {
+		return *subnet.ExtId
+	}
+	return "(unknown)"
 }
 
 // GPU helpers

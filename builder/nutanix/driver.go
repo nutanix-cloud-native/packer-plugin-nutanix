@@ -18,6 +18,7 @@ import (
 	v3 "github.com/nutanix-cloud-native/prism-go-client/v3"
 	v4 "github.com/nutanix-cloud-native/prism-go-client/v4"
 	clusterModels "github.com/nutanix/ntnx-api-golang-clients/clustermgmt-go-client/v4/models/clustermgmt/v4/config"
+	subnetModels "github.com/nutanix/ntnx-api-golang-clients/networking-go-client/v4/models/networking/v4/config"
 	commonv1 "github.com/nutanix/ntnx-api-golang-clients/vmm-go-client/v4/models/common/v1/config"
 	vmmModels "github.com/nutanix/ntnx-api-golang-clients/vmm-go-client/v4/models/vmm/v4/ahv/config"
 	imageModels "github.com/nutanix/ntnx-api-golang-clients/vmm-go-client/v4/models/vmm/v4/content"
@@ -635,25 +636,33 @@ func (d *NutanixDriver) CreateRequest(ctx context.Context, vmConfig VmConfig, st
 
 	state.Put("image_to_delete", imageToDelete)
 
-	for _, nic := range vmConfig.VmNICs {
-		var subnetUUID string
+	for i, nic := range vmConfig.VmNICs {
+		var subnet *subnetModels.Subnet
 		if nic.SubnetUUID != "" {
-			subnetUUID, err = getSubnetUUID(ctx, v4Client, "", nic.SubnetUUID, clusterUUID)
+			subnet, err = getSubnet(ctx, v4Client, "", nic.SubnetUUID, clusterUUID)
 			if err != nil {
-				return nil, fmt.Errorf("error while findSubnetByUUID, %s", err.Error())
+				return nil, fmt.Errorf("error resolving subnet by UUID for vm_nics %d: %s", i+1, err.Error())
 			}
 		} else if nic.SubnetName != "" {
-			subnetUUID, err = getSubnetUUID(ctx, v4Client, nic.SubnetName, "", clusterUUID)
+			subnet, err = getSubnet(ctx, v4Client, nic.SubnetName, "", clusterUUID)
 			if err != nil {
-				return nil, fmt.Errorf("error while findSubnetByName, %s", err.Error())
+				return nil, fmt.Errorf("error resolving subnet by name for vm_nics %d: %s", i+1, err.Error())
 			}
+		}
+
+		if subnet == nil || subnet.ExtId == nil {
+			return nil, fmt.Errorf("vm_nics %d: could not resolve subnet (no name or UUID provided)", i+1)
+		}
+
+		subnetUUID := *subnet.ExtId
+
+		if nic.IPAddress != "" && !subnetHasIPv4IPAM(subnet) {
+			return nil, fmt.Errorf("vm_nics %d: ip_address requires a subnet with IPAM enabled, "+
+				"but subnet %q has no IPv4 IPAM configuration", i+1, subnetDisplayName(subnet))
 		}
 
 		v4Nic := vmmModels.NewNic()
 
-		// Use VirtualEthernetNicNetworkInfo for standard VM NICs (v4.1+ API)
-		// Note: BackingInfo and IsConnected are deprecated - use NicNetworkInfo instead
-		// In v4.1+, NICs are connected by default when NicNetworkInfo is properly configured
 		nicNetworkInfo := vmmModels.NewVirtualEthernetNicNetworkInfo()
 		nicNetworkInfo.Subnet = vmmModels.NewSubnetReference()
 		nicNetworkInfo.Subnet.ExtId = &subnetUUID
@@ -669,13 +678,10 @@ func (d *NutanixDriver) CreateRequest(ctx context.Context, vmConfig VmConfig, st
 			ipAddr := commonv1.NewIPv4Address()
 			ipVal := nic.IPAddress
 			ipAddr.Value = &ipVal
-			pl := nic.IPPrefixLength
-			ipAddr.PrefixLength = &pl
 			ipv4Cfg.IpAddress = ipAddr
 			nicNetworkInfo.Ipv4Config = ipv4Cfg
 		}
 
-		// Directly assign NicNetworkInfo to avoid $nicNetworkInfoItemDiscriminator in JSON
 		nicNetworkInfoWrapper := vmmModels.NewOneOfNicNicNetworkInfo()
 		if err := nicNetworkInfoWrapper.SetValue(*nicNetworkInfo); err != nil {
 			return nil, fmt.Errorf("error setting NIC network info: %s", err.Error())

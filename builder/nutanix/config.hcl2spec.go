@@ -540,7 +540,6 @@ type FlatVmNIC struct {
 	SubnetUUID       *string `mapstructure:"subnet_uuid" json:"subnet_uuid" required:"false" cty:"subnet_uuid" hcl:"subnet_uuid"`
 	MacAddress       *string `mapstructure:"mac_address" json:"mac_address" required:"false" cty:"mac_address" hcl:"mac_address"`
 	IPAddress        *string `mapstructure:"ip_address" json:"ip_address" required:"false" cty:"ip_address" hcl:"ip_address"`
-	IPPrefixLength   *int    `mapstructure:"ip_prefix_length" json:"ip_prefix_length" required:"false" cty:"ip_prefix_length" hcl:"ip_prefix_length"`
 	SkipIPAssignment *bool   `mapstructure:"skip_ip_assignment" json:"skip_ip_assignment" required:"false" cty:"skip_ip_assignment" hcl:"skip_ip_assignment"`
 }
 
@@ -560,7 +559,6 @@ func (*FlatVmNIC) HCL2Spec() map[string]hcldec.Spec {
 		"subnet_uuid":        &hcldec.AttrSpec{Name: "subnet_uuid", Type: cty.String, Required: false},
 		"mac_address":        &hcldec.AttrSpec{Name: "mac_address", Type: cty.String, Required: false},
 		"ip_address":         &hcldec.AttrSpec{Name: "ip_address", Type: cty.String, Required: false},
-		"ip_prefix_length":   &hcldec.AttrSpec{Name: "ip_prefix_length", Type: cty.Number, Required: false},
 		"skip_ip_assignment": &hcldec.AttrSpec{Name: "skip_ip_assignment", Type: cty.Bool, Required: false},
 	}
 	return s
