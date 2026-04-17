@@ -209,10 +209,27 @@ In this section, you have to define network you will to connect with one of this
 - `subnet_uuid` (string) - UUID of the cluster subnet to use.
 - `mac_address` (string) - The network card MAC address. If not specified, a random MAC address will be generated.
 
-Sample
+### Static IPv4 on the NIC (optional)
+
+For builds where the temporary VM must use a **fixed IPv4** on AHV (for example, to match IP-based firewall rules or to align with a static-network guest config), the following fields are available:
+
+- `ip_address` (string) - IPv4 address assigned to the NIC at VM create time via the Prism V4 API. The subnet prefix length is handled automatically by the SDK.
+- `skip_ip_assignment` (bool) - When `true`, sets `ShouldAssignIp` to false for that NIC so no IP is allocated (mutually exclusive with `ip_address`).
+
+Sample (DHCP / default IPAM):
+
 ```hcl
   vm_nics {
     subnet_name = "<mySubnet>"
+  }
+```
+
+Sample (static IPv4):
+
+```hcl
+  vm_nics {
+    subnet_name = "<mySubnet>"
+    ip_address  = "10.0.1.50"
   }
 ```
 
