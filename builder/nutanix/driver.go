@@ -6,6 +6,7 @@ import (
 	"log"
 	"net"
 	"path"
+	"path/filepath"
 	"sort"
 	"strings"
 	"time"
@@ -1042,7 +1043,7 @@ func (d *NutanixDriver) CreateImageFile(ctx context.Context, filePath string, vm
 		return nil, fmt.Errorf("error creating V4 client: %s", err.Error())
 	}
 
-	_, file := path.Split(filePath)
+	_, file := filepath.Split(filePath)
 
 	log.Printf("creating and uploading image: %s", file)
 
