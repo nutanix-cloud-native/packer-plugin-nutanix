@@ -12,6 +12,11 @@ import (
 	"net"
 	"net/http"
 	"path"
+<<<<<<< HEAD
+=======
+	"path/filepath"
+	"sort"
+>>>>>>> 6313e87 (use filepath.Split when uploading local image files, path.Split only splits on "/" so paths generated in windows, which use "\" will not split properly (#355))
 	"strings"
 	"time"
 
@@ -918,7 +923,7 @@ func (d *NutanixDriver) CreateImageFile(ctx context.Context, filePath string, vm
 		return nil, err
 	}
 
-	_, file := path.Split(filePath)
+	_, file := filepath.Split(filePath)
 
 	cluster := &v3.ClusterIntentResponse{}
 	if vm.ClusterUUID != "" {
