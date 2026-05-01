@@ -186,13 +186,16 @@ func (n *nutanixImage) SizeBytes() int64 {
 	return 0
 }
 
-// getConfigCreds returns the credentials for connecting to Prism Central
+// getConfigCreds returns the credentials for connecting to Prism Central.
+// APIKey takes precedence over username/password — prism-go-client's V3 client
+// emits the X-ntnx-api-key header when Credentials.APIKey is set.
 func (d *NutanixDriver) getConfigCreds() client.Credentials {
 	return client.Credentials{
 		URL:      fmt.Sprintf("%s:%d", d.ClusterConfig.Endpoint, d.ClusterConfig.Port),
 		Endpoint: d.ClusterConfig.Endpoint,
 		Username: d.ClusterConfig.Username,
 		Password: d.ClusterConfig.Password,
+		APIKey:   d.ClusterConfig.APIKey,
 		Port:     string(d.ClusterConfig.Port),
 		Insecure: d.ClusterConfig.Insecure,
 	}
@@ -206,18 +209,16 @@ func (d *NutanixDriver) getV4Client() (*convergedv4.Client, error) {
 	}
 
 	cacheParams := &v4CacheParams{
-		endpoint: d.ClusterConfig.Endpoint,
-		port:     d.ClusterConfig.Port,
-		username: d.ClusterConfig.Username,
-		password: d.ClusterConfig.Password,
-		insecure: d.ClusterConfig.Insecure,
+		endpoint:      d.ClusterConfig.Endpoint,
+		port:          d.ClusterConfig.Port,
+		username:      d.ClusterConfig.Username,
+		password:      d.ClusterConfig.Password,
+		apiKey:        d.ClusterConfig.APIKey,
+		customHeaders: d.ClusterConfig.CustomHeaders,
+		insecure:      d.ClusterConfig.Insecure,
 	}
 
-	v4Client, err := convergedV4ClientCache.GetOrCreate(cacheParams, opts...)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get or create V4 client: %w", err)
-	}
-	return v4Client, nil
+	return getV4ConvergedClient(cacheParams, opts...)
 }
 
 func findProjectByName(ctx context.Context, conn *v3.Client, name string) (*v3.Project, error) {

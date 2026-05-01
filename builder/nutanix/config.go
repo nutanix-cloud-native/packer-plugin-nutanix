@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"os"
+	"strings"
 	"time"
 
 	"github.com/hashicorp/packer-plugin-sdk/bootcommand"
@@ -19,6 +21,10 @@ import (
 	"github.com/hashicorp/packer-plugin-sdk/template/config"
 	"github.com/hashicorp/packer-plugin-sdk/template/interpolate"
 )
+
+// nutanixHeaderEnvPrefix is the prefix used to discover custom HTTP headers
+// from environment variables (e.g. NUTANIX_HEADER_CF_ACCESS_CLIENT_ID).
+const nutanixHeaderEnvPrefix = "NUTANIX_HEADER_"
 
 const (
 	// NutanixIdentifierBootTypeLegacy is a resource identifier identifying the legacy boot type for virtual machines.
@@ -83,12 +89,14 @@ type Category struct {
 }
 
 type ClusterConfig struct {
-	Username    string `mapstructure:"nutanix_username" required:"false"`
-	Password    string `mapstructure:"nutanix_password" required:"false"`
-	Insecure    bool   `mapstructure:"nutanix_insecure" required:"false"`
-	Endpoint    string `mapstructure:"nutanix_endpoint" required:"true"`
-	Port        int32  `mapstructure:"nutanix_port" required:"false"`
-	ReadTimeout int    `mapstructure:"read_timeout_minutes" required:"false"`
+	Username      string            `mapstructure:"nutanix_username" required:"false"`
+	Password      string            `mapstructure:"nutanix_password" required:"false"`
+	APIKey        string            `mapstructure:"nutanix_api_key" required:"false"`
+	CustomHeaders map[string]string `mapstructure:"nutanix_custom_headers" required:"false"`
+	Insecure      bool              `mapstructure:"nutanix_insecure" required:"false"`
+	Endpoint      string            `mapstructure:"nutanix_endpoint" required:"true"`
+	Port          int32             `mapstructure:"nutanix_port" required:"false"`
+	ReadTimeout   int               `mapstructure:"read_timeout_minutes" required:"false"`
 }
 
 type VmDisk struct {
@@ -301,16 +309,24 @@ func (c *Config) Prepare(raws ...interface{}) ([]string, error) {
 		}
 	}
 
-	// Validate Cluster Username
-	if c.ClusterConfig.Username == "" {
-		log.Println("Nutanix Username missing from configuration")
-		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("missing nutanix_username"))
+	// Allow API key from NUTANIX_API_KEY env var when not set in config
+	if c.ClusterConfig.APIKey == "" {
+		c.ClusterConfig.APIKey = os.Getenv("NUTANIX_API_KEY")
 	}
 
-	// Validate Cluster Password
-	if c.ClusterConfig.Password == "" {
-		log.Println("Nutanix Password missing from configuration")
-		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("missing nutanix_password"))
+	// Merge custom headers from NUTANIX_HEADER_* env vars (config wins)
+	c.ClusterConfig.CustomHeaders = mergeCustomHeaders(c.ClusterConfig.CustomHeaders)
+
+	// Validate authentication: need either API key or username+password
+	hasAPIKey := c.ClusterConfig.APIKey != ""
+	hasBasicAuth := c.ClusterConfig.Username != "" && c.ClusterConfig.Password != ""
+	if !hasAPIKey && !hasBasicAuth {
+		log.Println("Nutanix authentication missing from configuration")
+		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("authentication required: provide either nutanix_api_key or both nutanix_username and nutanix_password"))
+	}
+	if hasAPIKey && (c.ClusterConfig.Username != "" || c.ClusterConfig.Password != "") {
+		log.Println("Both nutanix_api_key and nutanix_username/nutanix_password are set; nutanix_api_key takes precedence")
+		warnings = append(warnings, "Both nutanix_api_key and nutanix_username/nutanix_password are set; nutanix_api_key takes precedence")
 	}
 
 	if c.VmConfig.VMName == "" {
@@ -433,4 +449,48 @@ func (c *Config) Prepare(raws ...interface{}) ([]string, error) {
 	}
 
 	return warnings, nil
+}
+
+// mergeCustomHeaders builds the effective custom-header map by combining
+// NUTANIX_HEADER_* environment variables with the config-provided map.
+// Env-var names are converted to header names by stripping the prefix,
+// replacing underscores with dashes, and title-casing each segment
+// (e.g. NUTANIX_HEADER_CF_ACCESS_CLIENT_ID -> Cf-Access-Client-Id).
+// Config values take precedence over environment variables.
+func mergeCustomHeaders(configHeaders map[string]string) map[string]string {
+	merged := map[string]string{}
+	for _, env := range os.Environ() {
+		eq := strings.IndexByte(env, '=')
+		if eq < 0 {
+			continue
+		}
+		name, value := env[:eq], env[eq+1:]
+		if !strings.HasPrefix(name, nutanixHeaderEnvPrefix) {
+			continue
+		}
+		header := envSuffixToHeader(name[len(nutanixHeaderEnvPrefix):])
+		if header != "" {
+			merged[header] = value
+		}
+	}
+	for k, v := range configHeaders {
+		merged[k] = v
+	}
+	if len(merged) == 0 {
+		return nil
+	}
+	return merged
+}
+
+// envSuffixToHeader converts an env-var suffix (e.g. CF_ACCESS_CLIENT_ID)
+// into a title-cased dash-separated header name (e.g. Cf-Access-Client-Id).
+func envSuffixToHeader(suffix string) string {
+	parts := strings.Split(suffix, "_")
+	for i, p := range parts {
+		if p == "" {
+			continue
+		}
+		parts[i] = strings.ToUpper(p[:1]) + strings.ToLower(p[1:])
+	}
+	return strings.Join(parts, "-")
 }
