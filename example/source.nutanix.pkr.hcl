@@ -50,13 +50,16 @@ source "nutanix" "ubuntu" {
   nutanix_endpoint = var.nutanix_endpoint
   nutanix_port     = var.nutanix_port
   nutanix_insecure = var.nutanix_insecure
+
+  # read_timeout_minutes = 30
+
   cluster_name     = var.nutanix_cluster
   os_type          = "Linux"
 
   vm_disks {
     image_type = "DISK_IMAGE"
     source_image_name = var.ubuntu_disk_image_name
-    disk_size_gb = 40
+    disk_size_gb = 5
   }
 
   vm_nics {
@@ -65,6 +68,7 @@ source "nutanix" "ubuntu" {
 
   image_name        = "ubuntu-packer-image"
   force_deregister  = true
+  image_export      = true
   user_data         = base64encode(file("scripts/cloud-init/cloud-config-ubuntu.yaml"))
 
   shutdown_command  = "echo 'packer' | sudo -S shutdown -P now"
