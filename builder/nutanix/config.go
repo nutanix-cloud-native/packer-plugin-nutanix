@@ -136,6 +136,7 @@ type VmConfig struct {
 	Core                   int64      `mapstructure:"core" json:"core" required:"false"`
 	MemoryMB               int64      `mapstructure:"memory_mb" json:"memory_mb" required:"false"`
 	UserData               string     `mapstructure:"user_data" json:"user_data" required:"false"`
+	WindowsInstallType     string     `mapstructure:"windows_install_type" json:"windows_install_type" required:"false"`
 	VMCategories           []Category `mapstructure:"vm_categories" required:"false"`
 	Project                string     `mapstructure:"project" required:"false"`
 	GPU                    []GPU      `mapstructure:"gpu" required:"false"`
