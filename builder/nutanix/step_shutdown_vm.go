@@ -65,10 +65,11 @@ func (s *StepShutdown) Run(ctx context.Context, state multistep.StateBag) multis
 		} else {
 			ui.Say("Halting the virtual machine...")
 			if err := driver.PowerOff(ctx, vmUUID); err != nil {
-				err := fmt.Errorf("error stopping VM: %s", err)
-				state.Put("error", err)
-				ui.Error(err.Error())
-				return multistep.ActionHalt
+				// PowerOff may fail if the VM is already off (e.g. sysprep
+				// /shutdown ran as the last provisioner). Log a warning and
+				// fall through to the polling loop.
+				log.Printf("PowerOff returned error (may be expected if VM already shut down): %s", err)
+				ui.Say("PowerOff returned error — checking if VM is already off...")
 			}
 		}
 	} else {
