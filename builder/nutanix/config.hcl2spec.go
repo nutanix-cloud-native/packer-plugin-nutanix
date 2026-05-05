@@ -35,12 +35,14 @@ func (*FlatCategory) HCL2Spec() map[string]hcldec.Spec {
 // FlatClusterConfig is an auto-generated flat version of ClusterConfig.
 // Where the contents of a field with a `mapstructure:,squash` tag are bubbled up.
 type FlatClusterConfig struct {
-	Username    *string `mapstructure:"nutanix_username" required:"false" cty:"nutanix_username" hcl:"nutanix_username"`
-	Password    *string `mapstructure:"nutanix_password" required:"false" cty:"nutanix_password" hcl:"nutanix_password"`
-	Insecure    *bool   `mapstructure:"nutanix_insecure" required:"false" cty:"nutanix_insecure" hcl:"nutanix_insecure"`
-	Endpoint    *string `mapstructure:"nutanix_endpoint" required:"true" cty:"nutanix_endpoint" hcl:"nutanix_endpoint"`
-	Port        *int32  `mapstructure:"nutanix_port" required:"false" cty:"nutanix_port" hcl:"nutanix_port"`
-	ReadTimeout *int    `mapstructure:"read_timeout_minutes" required:"false" cty:"read_timeout_minutes" hcl:"read_timeout_minutes"`
+	Username      *string           `mapstructure:"nutanix_username" required:"false" cty:"nutanix_username" hcl:"nutanix_username"`
+	Password      *string           `mapstructure:"nutanix_password" required:"false" cty:"nutanix_password" hcl:"nutanix_password"`
+	APIKey        *string           `mapstructure:"nutanix_api_key" required:"false" cty:"nutanix_api_key" hcl:"nutanix_api_key"`
+	CustomHeaders map[string]string `mapstructure:"nutanix_custom_headers" required:"false" cty:"nutanix_custom_headers" hcl:"nutanix_custom_headers"`
+	Insecure      *bool             `mapstructure:"nutanix_insecure" required:"false" cty:"nutanix_insecure" hcl:"nutanix_insecure"`
+	Endpoint      *string           `mapstructure:"nutanix_endpoint" required:"true" cty:"nutanix_endpoint" hcl:"nutanix_endpoint"`
+	Port          *int32            `mapstructure:"nutanix_port" required:"false" cty:"nutanix_port" hcl:"nutanix_port"`
+	ReadTimeout   *int              `mapstructure:"read_timeout_minutes" required:"false" cty:"read_timeout_minutes" hcl:"read_timeout_minutes"`
 }
 
 // FlatMapstructure returns a new FlatClusterConfig.
@@ -55,12 +57,14 @@ func (*ClusterConfig) FlatMapstructure() interface{ HCL2Spec() map[string]hcldec
 // The decoded values from this spec will then be applied to a FlatClusterConfig.
 func (*FlatClusterConfig) HCL2Spec() map[string]hcldec.Spec {
 	s := map[string]hcldec.Spec{
-		"nutanix_username":     &hcldec.AttrSpec{Name: "nutanix_username", Type: cty.String, Required: false},
-		"nutanix_password":     &hcldec.AttrSpec{Name: "nutanix_password", Type: cty.String, Required: false},
-		"nutanix_insecure":     &hcldec.AttrSpec{Name: "nutanix_insecure", Type: cty.Bool, Required: false},
-		"nutanix_endpoint":     &hcldec.AttrSpec{Name: "nutanix_endpoint", Type: cty.String, Required: false},
-		"nutanix_port":         &hcldec.AttrSpec{Name: "nutanix_port", Type: cty.Number, Required: false},
-		"read_timeout_minutes": &hcldec.AttrSpec{Name: "read_timeout_minutes", Type: cty.Number, Required: false},
+		"nutanix_username":       &hcldec.AttrSpec{Name: "nutanix_username", Type: cty.String, Required: false},
+		"nutanix_password":       &hcldec.AttrSpec{Name: "nutanix_password", Type: cty.String, Required: false},
+		"nutanix_api_key":        &hcldec.AttrSpec{Name: "nutanix_api_key", Type: cty.String, Required: false},
+		"nutanix_custom_headers": &hcldec.AttrSpec{Name: "nutanix_custom_headers", Type: cty.Map(cty.String), Required: false},
+		"nutanix_insecure":       &hcldec.AttrSpec{Name: "nutanix_insecure", Type: cty.Bool, Required: false},
+		"nutanix_endpoint":       &hcldec.AttrSpec{Name: "nutanix_endpoint", Type: cty.String, Required: false},
+		"nutanix_port":           &hcldec.AttrSpec{Name: "nutanix_port", Type: cty.Number, Required: false},
+		"read_timeout_minutes":   &hcldec.AttrSpec{Name: "read_timeout_minutes", Type: cty.Number, Required: false},
 	}
 	return s
 }
@@ -140,6 +144,8 @@ type FlatConfig struct {
 	ShutdownTimeout           *string             `mapstructure:"shutdown_timeout" required:"false" cty:"shutdown_timeout" hcl:"shutdown_timeout"`
 	Username                  *string             `mapstructure:"nutanix_username" required:"false" cty:"nutanix_username" hcl:"nutanix_username"`
 	Password                  *string             `mapstructure:"nutanix_password" required:"false" cty:"nutanix_password" hcl:"nutanix_password"`
+	APIKey                    *string             `mapstructure:"nutanix_api_key" required:"false" cty:"nutanix_api_key" hcl:"nutanix_api_key"`
+	CustomHeaders             map[string]string   `mapstructure:"nutanix_custom_headers" required:"false" cty:"nutanix_custom_headers" hcl:"nutanix_custom_headers"`
 	Insecure                  *bool               `mapstructure:"nutanix_insecure" required:"false" cty:"nutanix_insecure" hcl:"nutanix_insecure"`
 	Endpoint                  *string             `mapstructure:"nutanix_endpoint" required:"true" cty:"nutanix_endpoint" hcl:"nutanix_endpoint"`
 	Port                      *int32              `mapstructure:"nutanix_port" required:"false" cty:"nutanix_port" hcl:"nutanix_port"`
@@ -159,6 +165,7 @@ type FlatConfig struct {
 	Core                      *int64              `mapstructure:"core" json:"core" required:"false" cty:"core" hcl:"core"`
 	MemoryMB                  *int64              `mapstructure:"memory_mb" json:"memory_mb" required:"false" cty:"memory_mb" hcl:"memory_mb"`
 	UserData                  *string             `mapstructure:"user_data" json:"user_data" required:"false" cty:"user_data" hcl:"user_data"`
+	WindowsInstallType        *string             `mapstructure:"windows_install_type" json:"windows_install_type" required:"false" cty:"windows_install_type" hcl:"windows_install_type"`
 	VMCategories              []FlatCategory      `mapstructure:"vm_categories" required:"false" cty:"vm_categories" hcl:"vm_categories"`
 	Project                   *string             `mapstructure:"project" required:"false" cty:"project" hcl:"project"`
 	GPU                       []FlatGPU           `mapstructure:"gpu" required:"false" cty:"gpu" hcl:"gpu"`
@@ -263,6 +270,8 @@ func (*FlatConfig) HCL2Spec() map[string]hcldec.Spec {
 		"shutdown_timeout":             &hcldec.AttrSpec{Name: "shutdown_timeout", Type: cty.String, Required: false},
 		"nutanix_username":             &hcldec.AttrSpec{Name: "nutanix_username", Type: cty.String, Required: false},
 		"nutanix_password":             &hcldec.AttrSpec{Name: "nutanix_password", Type: cty.String, Required: false},
+		"nutanix_api_key":              &hcldec.AttrSpec{Name: "nutanix_api_key", Type: cty.String, Required: false},
+		"nutanix_custom_headers":       &hcldec.AttrSpec{Name: "nutanix_custom_headers", Type: cty.Map(cty.String), Required: false},
 		"nutanix_insecure":             &hcldec.AttrSpec{Name: "nutanix_insecure", Type: cty.Bool, Required: false},
 		"nutanix_endpoint":             &hcldec.AttrSpec{Name: "nutanix_endpoint", Type: cty.String, Required: false},
 		"nutanix_port":                 &hcldec.AttrSpec{Name: "nutanix_port", Type: cty.Number, Required: false},
@@ -282,6 +291,7 @@ func (*FlatConfig) HCL2Spec() map[string]hcldec.Spec {
 		"core":                         &hcldec.AttrSpec{Name: "core", Type: cty.Number, Required: false},
 		"memory_mb":                    &hcldec.AttrSpec{Name: "memory_mb", Type: cty.Number, Required: false},
 		"user_data":                    &hcldec.AttrSpec{Name: "user_data", Type: cty.String, Required: false},
+		"windows_install_type":         &hcldec.AttrSpec{Name: "windows_install_type", Type: cty.String, Required: false},
 		"vm_categories":                &hcldec.BlockListSpec{TypeName: "vm_categories", Nested: hcldec.ObjectSpec((*FlatCategory)(nil).HCL2Spec())},
 		"project":                      &hcldec.AttrSpec{Name: "project", Type: cty.String, Required: false},
 		"gpu":                          &hcldec.BlockListSpec{TypeName: "gpu", Nested: hcldec.ObjectSpec((*FlatGPU)(nil).HCL2Spec())},
@@ -447,6 +457,7 @@ type FlatVmConfig struct {
 	Core                   *int64         `mapstructure:"core" json:"core" required:"false" cty:"core" hcl:"core"`
 	MemoryMB               *int64         `mapstructure:"memory_mb" json:"memory_mb" required:"false" cty:"memory_mb" hcl:"memory_mb"`
 	UserData               *string        `mapstructure:"user_data" json:"user_data" required:"false" cty:"user_data" hcl:"user_data"`
+	WindowsInstallType     *string        `mapstructure:"windows_install_type" json:"windows_install_type" required:"false" cty:"windows_install_type" hcl:"windows_install_type"`
 	VMCategories           []FlatCategory `mapstructure:"vm_categories" required:"false" cty:"vm_categories" hcl:"vm_categories"`
 	Project                *string        `mapstructure:"project" required:"false" cty:"project" hcl:"project"`
 	GPU                    []FlatGPU      `mapstructure:"gpu" required:"false" cty:"gpu" hcl:"gpu"`
@@ -481,6 +492,7 @@ func (*FlatVmConfig) HCL2Spec() map[string]hcldec.Spec {
 		"core":                    &hcldec.AttrSpec{Name: "core", Type: cty.Number, Required: false},
 		"memory_mb":               &hcldec.AttrSpec{Name: "memory_mb", Type: cty.Number, Required: false},
 		"user_data":               &hcldec.AttrSpec{Name: "user_data", Type: cty.String, Required: false},
+		"windows_install_type":    &hcldec.AttrSpec{Name: "windows_install_type", Type: cty.String, Required: false},
 		"vm_categories":           &hcldec.BlockListSpec{TypeName: "vm_categories", Nested: hcldec.ObjectSpec((*FlatCategory)(nil).HCL2Spec())},
 		"project":                 &hcldec.AttrSpec{Name: "project", Type: cty.String, Required: false},
 		"gpu":                     &hcldec.BlockListSpec{TypeName: "gpu", Nested: hcldec.ObjectSpec((*FlatGPU)(nil).HCL2Spec())},

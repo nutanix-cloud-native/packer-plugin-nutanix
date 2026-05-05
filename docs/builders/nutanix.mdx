@@ -16,15 +16,19 @@ The Nutanix plugin will create a temporary VM as foundation of your Packer image
 These parameters allow to define information about platform and temporary VM used to create the image.
 
 ### Required
-  - `nutanix_username` (string) - User used for Prism Central login.
-  - `nutanix_password` (string) - Password of this user for Prism Central login.
   - `nutanix_endpoint` (string) - Prism Central FQDN or IP.
   - `cluster_name` or `cluster_uuid` (string) - Nutanix cluster name or uuid used to create and store image.
   - `os_type` (string) - OS Type ("Linux" or "Windows").
 
-Starting `v1.1.4` the Nutanix Packer Plugin supports Prism Central Service Accounts. To use a Service Account, you need to provide `X-ntnx-api-key` as the `nutanix_username` and the corresponding API Key as the `nutanix_password`.
+Authentication requires either `nutanix_api_key` **or** both `nutanix_username` and `nutanix_password`. If both are provided, `nutanix_api_key` takes precedence.
+
+> **Note:** `source_image_path` and `cd_content`/`cd_files` upload images to Prism Central's Objects Lite S3 endpoint, which always validates using AWS V4 signing derived from `nutanix_username`/`nutanix_password`. Even when using `nutanix_api_key` for all other operations, valid Prism Central credentials are required for these upload paths. Use `source_image_name` or `source_image_uri` to avoid the Objects Lite path entirely.
 
 ### Optional
+  - `nutanix_username` (string) - User used for Prism Central login.
+  - `nutanix_password` (string) - Password of this user for Prism Central login.
+  - `nutanix_api_key` (string) - Prism Central API key. When set, the `X-ntnx-api-key` header is used instead of Basic auth. Falls back to the `NUTANIX_API_KEY` environment variable when unset. Use this for Prism Central Service Accounts (preferred over the legacy `nutanix_username = "X-ntnx-api-key"` form, which still works for backwards compatibility).
+  - `nutanix_custom_headers` (map of strings) - Additional HTTP headers attached to every request to Prism Central, including REST API calls, VNC console websocket connections (used by `boot_command`), and Objects Lite S3 image uploads (used by `source_image_path` and `cd_content`). Useful for environments that sit behind a reverse proxy that requires extra auth headers (e.g. Cloudflare Access service tokens). Headers can also be supplied via environment variables prefixed with `NUTANIX_HEADER_`: the prefix is stripped, underscores become dashes, and each segment is title-cased (e.g. `NUTANIX_HEADER_CF_ACCESS_CLIENT_ID` becomes `Cf-Access-Client-Id`). Values from `nutanix_custom_headers` take precedence over environment variables.
   - `nutanix_port` (number) - Port used for connection to Prism Central.
   - `nutanix_insecure` (bool) - Authorize connection to Prism Central without valid certificate.
   - `vm_name` (string) - Name of the temporary VM to create. If not specified a random `packer-*` name will be used.
@@ -77,7 +81,9 @@ These parameters allow to configure everything around image creation, from the t
 - `disable_stop_instance` (bool) - When `true`, prevents Packer from automatically stopping the build instance after provisioning completes. Your final provisioner must handle stopping the instance, or the build will timeout (default is false).
 
 ### Dedicated to Linux
-- `user_data` (string) - cloud-init content base64 encoded.
+- `user_data` (string) - Guest customization content, base64 encoded. Behaviour depends on `os_type`:
+  - **Linux** (`os_type = "Linux"`): treated as cloud-init user-data. AHV creates a ConfigDrive CD that cloud-init reads on first boot.
+  - **Windows** (`os_type = "Windows"`): treated as a Sysprep `unattend.xml`. AHV delivers it via Prism Central's guest customization mechanism, making it available to Windows Setup during both fresh installs (windowsPE phase) and post-sysprep OOBE.
 - `ssh_username` (string) - user for ssh connection initiated by Packer.
 - `ssh_password` (string) - password for the ssh user.
 

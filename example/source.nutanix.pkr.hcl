@@ -1,7 +1,9 @@
 source "nutanix" "centos" {
-  nutanix_username = var.nutanix_username
-  nutanix_password = var.nutanix_password
-  nutanix_endpoint = var.nutanix_endpoint
+  nutanix_username       = var.nutanix_username
+  nutanix_password       = var.nutanix_password
+  nutanix_api_key        = var.nutanix_api_key
+  nutanix_custom_headers = var.nutanix_custom_headers
+  nutanix_endpoint       = var.nutanix_endpoint
   nutanix_port     = var.nutanix_port
   nutanix_insecure = var.nutanix_insecure
   cluster_name     = var.nutanix_cluster
@@ -45,9 +47,11 @@ source "nutanix" "centos" {
 }
 
 source "nutanix" "ubuntu" {
-  nutanix_username = var.nutanix_username
-  nutanix_password = var.nutanix_password
-  nutanix_endpoint = var.nutanix_endpoint
+  nutanix_username       = var.nutanix_username
+  nutanix_password       = var.nutanix_password
+  nutanix_api_key        = var.nutanix_api_key
+  nutanix_custom_headers = var.nutanix_custom_headers
+  nutanix_endpoint       = var.nutanix_endpoint
   nutanix_port     = var.nutanix_port
   nutanix_insecure = var.nutanix_insecure
   cluster_name     = var.nutanix_cluster
@@ -74,9 +78,11 @@ source "nutanix" "ubuntu" {
 }
 
 source "nutanix" "centos-kickstart" {
-  nutanix_username = var.nutanix_username
-  nutanix_password = var.nutanix_password
-  nutanix_endpoint = var.nutanix_endpoint
+  nutanix_username       = var.nutanix_username
+  nutanix_password       = var.nutanix_password
+  nutanix_api_key        = var.nutanix_api_key
+  nutanix_custom_headers = var.nutanix_custom_headers
+  nutanix_endpoint       = var.nutanix_endpoint
   nutanix_port     = var.nutanix_port
   nutanix_insecure = var.nutanix_insecure
   cluster_name     = var.nutanix_cluster
@@ -110,9 +116,11 @@ source "nutanix" "centos-kickstart" {
 }
 
 source "nutanix" "ubuntu-autoinstall" {
-  nutanix_username = var.nutanix_username
-  nutanix_password = var.nutanix_password
-  nutanix_endpoint = var.nutanix_endpoint
+  nutanix_username       = var.nutanix_username
+  nutanix_password       = var.nutanix_password
+  nutanix_api_key        = var.nutanix_api_key
+  nutanix_custom_headers = var.nutanix_custom_headers
+  nutanix_endpoint       = var.nutanix_endpoint
   nutanix_port     = var.nutanix_port
   nutanix_insecure = var.nutanix_insecure
   cluster_name     = var.nutanix_cluster
@@ -153,9 +161,11 @@ source "nutanix" "ubuntu-autoinstall" {
 }
 
 source "nutanix" "windows" {
-  nutanix_username = var.nutanix_username
-  nutanix_password = var.nutanix_password
-  nutanix_endpoint = var.nutanix_endpoint
+  nutanix_username       = var.nutanix_username
+  nutanix_password       = var.nutanix_password
+  nutanix_api_key        = var.nutanix_api_key
+  nutanix_custom_headers = var.nutanix_custom_headers
+  nutanix_endpoint       = var.nutanix_endpoint
   nutanix_insecure = var.nutanix_insecure
   cluster_name     = var.nutanix_cluster
 
