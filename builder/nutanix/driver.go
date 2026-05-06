@@ -6,7 +6,6 @@ import (
 	"log"
 	"net"
 	"path"
-	"path/filepath"
 	"sort"
 	"strings"
 	"time"
@@ -932,7 +931,9 @@ func (d *NutanixDriver) CreateImageURL(ctx context.Context, disk VmDisk, vm VmCo
 		return nil, fmt.Errorf("error creating V4 client: %s", err.Error())
 	}
 
-	_, file := path.Split(disk.SourceImageURI)
+	// Normalize path separators to forward slashes so that path.Base works correctly
+	// regardless of the OS or URI format (e.g. Windows paths use backslashes).
+	file := path.Base(strings.ReplaceAll(disk.SourceImageURI, "\\", "/"))
 
 	clusterUUID, err := getClusterUUID(ctx, v4Client, vm.ClusterName, vm.ClusterUUID)
 	if err != nil {
@@ -1043,11 +1044,19 @@ func (d *NutanixDriver) CreateImageFile(ctx context.Context, filePath string, vm
 		return nil, fmt.Errorf("error creating V4 client: %s", err.Error())
 	}
 
-	_, file := filepath.Split(filePath)
+	// Normalize path separators: replace backslashes with forward slashes before
+	// passing to the SDK. The SDK's imageFromObjectsLite derives the image name via
+	// filepath.Base(sourcePath); on Linux/cross-compiled builds filepath.Base does
+	// not recognise '\' as a separator, so a Windows path like
+	// "C:\Users\...\image.iso" would be returned as-is (the full path). By
+	// normalising to forward slashes here we get the correct basename on all
+	// platforms. Windows accepts '/' in file paths, so os.Open still works.
+	normalizedPath := strings.ReplaceAll(filePath, "\\", "/")
+	file := path.Base(normalizedPath)
 
 	log.Printf("creating and uploading image: %s", file)
 
-	err = v4Client.Images.Upload(ctx, file, filePath)
+	err = v4Client.Images.Upload(ctx, file, normalizedPath)
 	if err != nil {
 		return nil, fmt.Errorf("error while uploading image: %s", err.Error())
 	}
