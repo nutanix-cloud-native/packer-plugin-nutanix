@@ -13,11 +13,12 @@ variable "nutanix_endpoint" {
 
 variable "nutanix_port" {
   type = number
+  default = 9440
 }
 
 variable "nutanix_insecure" {
   type = bool
-  default = true
+  default = false
 }
 
 variable "nutanix_subnet" {
@@ -30,24 +31,30 @@ variable "nutanix_cluster" {
 
 variable "centos_iso_image_name" {
   type = string
+  default = null
 }
 
 variable "centos_disk_image_name" {
   type = string
+  default = null
 }
 
 variable "ubuntu_disk_image_name" {
   type = string
+  default = null
 }
 
 variable "ubuntu_iso_image_name" {
   type = string
+  default = null
 }
 
 variable "windows_2016_iso_image_name" {
   type = string
+  default = null
 }
 
 variable "virtio_iso_image_name" {
   type = string
+  default = null
 }

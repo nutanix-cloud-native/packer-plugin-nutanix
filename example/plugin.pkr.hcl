@@ -1,7 +1,7 @@
 packer {
   required_plugins {
     nutanix = {
-      version = ">= 1.1.4"
+      version = ">= 1.1.6"
       source = "github.com/nutanix-cloud-native/nutanix"
     }
   }
