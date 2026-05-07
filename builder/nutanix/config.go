@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"log"
 	"net"
-	"os"
 	"strings"
 	"time"
 
@@ -21,10 +20,6 @@ import (
 	"github.com/hashicorp/packer-plugin-sdk/template/config"
 	"github.com/hashicorp/packer-plugin-sdk/template/interpolate"
 )
-
-// nutanixHeaderEnvPrefix is the prefix used to discover custom HTTP headers
-// from environment variables (e.g. NUTANIX_HEADER_CF_ACCESS_CLIENT_ID).
-const nutanixHeaderEnvPrefix = "NUTANIX_HEADER_"
 
 const (
 	// NutanixIdentifierBootTypeLegacy is a resource identifier identifying the legacy boot type for virtual machines.
@@ -309,14 +304,6 @@ func (c *Config) Prepare(raws ...interface{}) ([]string, error) {
 		}
 	}
 
-	// Allow API key from NUTANIX_API_KEY env var when not set in config
-	if c.ClusterConfig.APIKey == "" {
-		c.ClusterConfig.APIKey = os.Getenv("NUTANIX_API_KEY")
-	}
-
-	// Merge custom headers from NUTANIX_HEADER_* env vars (config wins)
-	c.ClusterConfig.CustomHeaders = mergeCustomHeaders(c.ClusterConfig.CustomHeaders)
-
 	// Validate authentication: need either API key or username+password
 	hasAPIKey := c.ClusterConfig.APIKey != ""
 	hasBasicAuth := c.ClusterConfig.Username != "" && c.ClusterConfig.Password != ""
@@ -451,46 +438,3 @@ func (c *Config) Prepare(raws ...interface{}) ([]string, error) {
 	return warnings, nil
 }
 
-// mergeCustomHeaders builds the effective custom-header map by combining
-// NUTANIX_HEADER_* environment variables with the config-provided map.
-// Env-var names are converted to header names by stripping the prefix,
-// replacing underscores with dashes, and title-casing each segment
-// (e.g. NUTANIX_HEADER_CF_ACCESS_CLIENT_ID -> Cf-Access-Client-Id).
-// Config values take precedence over environment variables.
-func mergeCustomHeaders(configHeaders map[string]string) map[string]string {
-	merged := map[string]string{}
-	for _, env := range os.Environ() {
-		eq := strings.IndexByte(env, '=')
-		if eq < 0 {
-			continue
-		}
-		name, value := env[:eq], env[eq+1:]
-		if !strings.HasPrefix(name, nutanixHeaderEnvPrefix) {
-			continue
-		}
-		header := envSuffixToHeader(name[len(nutanixHeaderEnvPrefix):])
-		if header != "" {
-			merged[header] = value
-		}
-	}
-	for k, v := range configHeaders {
-		merged[k] = v
-	}
-	if len(merged) == 0 {
-		return nil
-	}
-	return merged
-}
-
-// envSuffixToHeader converts an env-var suffix (e.g. CF_ACCESS_CLIENT_ID)
-// into a title-cased dash-separated header name (e.g. Cf-Access-Client-Id).
-func envSuffixToHeader(suffix string) string {
-	parts := strings.Split(suffix, "_")
-	for i, p := range parts {
-		if p == "" {
-			continue
-		}
-		parts[i] = strings.ToUpper(p[:1]) + strings.ToLower(p[1:])
-	}
-	return strings.Join(parts, "-")
-}

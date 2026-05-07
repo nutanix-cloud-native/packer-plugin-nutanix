@@ -24,11 +24,37 @@ Authentication requires either `nutanix_api_key` **or** both `nutanix_username` 
 
 > **Note:** `source_image_path` and `cd_content`/`cd_files` upload images to Prism Central's Objects Lite S3 endpoint, which always validates using AWS V4 signing derived from `nutanix_username`/`nutanix_password`. Even when using `nutanix_api_key` for all other operations, valid Prism Central credentials are required for these upload paths. Use `source_image_name` or `source_image_uri` to avoid the Objects Lite path entirely.
 
+Sample using API key and custom headers (e.g. Cloudflare Access):
+```hcl
+variable "nutanix_api_key" {
+  type      = string
+  sensitive = true
+}
+
+variable "nutanix_custom_headers" {
+  type      = map(string)
+  sensitive = true
+  default   = {}
+}
+
+source "nutanix" "example" {
+  nutanix_api_key        = var.nutanix_api_key
+  nutanix_custom_headers = var.nutanix_custom_headers
+  # ...
+}
+```
+
+Values can be supplied via `PKR_VAR_` environment variables:
+```bash
+export PKR_VAR_nutanix_api_key='your-api-key'
+export PKR_VAR_nutanix_custom_headers='{"Cf-Access-Client-Id":"your-client-id","Cf-Access-Client-Secret":"your-client-secret"}'
+```
+
 ### Optional
   - `nutanix_username` (string) - User used for Prism Central login.
   - `nutanix_password` (string) - Password of this user for Prism Central login.
-  - `nutanix_api_key` (string) - Prism Central API key. When set, the `X-ntnx-api-key` header is used instead of Basic auth. Falls back to the `NUTANIX_API_KEY` environment variable when unset. Use this for Prism Central Service Accounts (preferred over the legacy `nutanix_username = "X-ntnx-api-key"` form, which still works for backwards compatibility).
-  - `nutanix_custom_headers` (map of strings) - Additional HTTP headers attached to every request to Prism Central, including REST API calls, VNC console websocket connections (used by `boot_command`), and Objects Lite S3 image uploads (used by `source_image_path` and `cd_content`). Useful for environments that sit behind a reverse proxy that requires extra auth headers (e.g. Cloudflare Access service tokens). Headers can also be supplied via environment variables prefixed with `NUTANIX_HEADER_`: the prefix is stripped, underscores become dashes, and each segment is title-cased (e.g. `NUTANIX_HEADER_CF_ACCESS_CLIENT_ID` becomes `Cf-Access-Client-Id`). Values from `nutanix_custom_headers` take precedence over environment variables.
+  - `nutanix_api_key` (string) - Prism Central API key. When set, the `X-ntnx-api-key` header is used instead of Basic auth. Use this for Prism Central Service Accounts (preferred over the legacy `nutanix_username = "X-ntnx-api-key"` form, which still works for backwards compatibility).
+  - `nutanix_custom_headers` (map of strings) - Additional HTTP headers attached to every request to Prism Central, including REST API calls, VNC console websocket connections (used by `boot_command`), and Objects Lite S3 image uploads (used by `source_image_path` and `cd_content`). Useful for environments that sit behind a reverse proxy that requires extra auth headers (e.g. Cloudflare Access service tokens).
   - `nutanix_port` (number) - Port used for connection to Prism Central.
   - `nutanix_insecure` (bool) - Authorize connection to Prism Central without valid certificate.
   - `vm_name` (string) - Name of the temporary VM to create. If not specified a random `packer-*` name will be used.
