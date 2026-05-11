@@ -755,7 +755,7 @@ func (d *NutanixDriver) CreateRequest(ctx context.Context, vmConfig VmConfig, st
 			log.Printf("CloudInit configured for Linux VM")
 		} else if vmConfig.OSType == "Windows" {
 			sysprep := vmmModels.NewSysprep()
-			if vmConfig.WindowsInstallType == "FRESH" {
+			if strings.EqualFold(vmConfig.WindowsInstallType, "FRESH") {
 				sysprep.InstallType = vmmModels.INSTALLTYPE_FRESH.Ref()
 			} else {
 				sysprep.InstallType = vmmModels.INSTALLTYPE_PREPARED.Ref()
