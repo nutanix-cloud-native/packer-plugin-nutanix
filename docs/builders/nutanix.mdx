@@ -27,6 +27,7 @@ Starting `v1.1.4` the Nutanix Packer Plugin supports Prism Central Service Accou
 ### Optional
   - `nutanix_port` (number) - Port used for connection to Prism Central.
   - `nutanix_insecure` (bool) - Authorize connection to Prism Central without valid certificate.
+  - `nutanix_transfer_timeout` (number) - Transfer read timeout in minutes for upload/download operations (`source_image_path` upload, image export download). Default is `30` for transfer APIs. Set `0` to use the default.
   - `vm_name` (string) - Name of the temporary VM to create. If not specified a random `packer-*` name will be used.
   - `cpu` (number) - Number of vCPU for temporary VM (default is 1).
   - `core` (number) - Number of cores per vCPU for temporary VM (default is 1).

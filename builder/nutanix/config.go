@@ -83,12 +83,12 @@ type Category struct {
 }
 
 type ClusterConfig struct {
-	Username    string `mapstructure:"nutanix_username" required:"false"`
-	Password    string `mapstructure:"nutanix_password" required:"false"`
-	Insecure    bool   `mapstructure:"nutanix_insecure" required:"false"`
-	Endpoint    string `mapstructure:"nutanix_endpoint" required:"true"`
-	Port        int32  `mapstructure:"nutanix_port" required:"false"`
-	ReadTimeout int    `mapstructure:"read_timeout_minutes" required:"false"`
+	Username        string `mapstructure:"nutanix_username" required:"false"`
+	Password        string `mapstructure:"nutanix_password" required:"false"`
+	Insecure        bool   `mapstructure:"nutanix_insecure" required:"false"`
+	Endpoint        string `mapstructure:"nutanix_endpoint" required:"true"`
+	Port            int32  `mapstructure:"nutanix_port" required:"false"`
+	TransferTimeout int    `mapstructure:"nutanix_transfer_timeout" required:"false"`
 }
 
 type VmDisk struct {
@@ -199,6 +199,12 @@ func (c *Config) Prepare(raws ...interface{}) ([]string, error) {
 	if c.ClusterConfig.Port == 0 {
 		log.Println("No Nutanix Port configured, defaulting to '9440'")
 		c.ClusterConfig.Port = 9440
+	}
+
+	// Transfer timeout is used only for image upload/download.
+	if c.ClusterConfig.TransferTimeout < 0 {
+		log.Println("nutanix_transfer_timeout must be >= 0")
+		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("nutanix_transfer_timeout must be >= 0"))
 	}
 
 	// Validate Boot Type

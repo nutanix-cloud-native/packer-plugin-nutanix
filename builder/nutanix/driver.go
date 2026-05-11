@@ -2,9 +2,13 @@ package nutanix
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
+	"io"
 	"log"
 	"net"
+	"net/http"
+	"os"
 	"path"
 	"path/filepath"
 	"sort"
@@ -29,6 +33,7 @@ const (
 	defaultImageBuiltDescription = "built by Packer"
 	defaultImageDLDescription    = "added by Packer"
 	vmDescription                = "Packer vm building image %s"
+	ntnxAPIKeyHeaderName         = "X-ntnx-api-key"
 )
 
 const (
@@ -53,7 +58,7 @@ type Driver interface {
 	CreateTemplate(context.Context, string, TemplateConfig) error
 	CreateOVA(context.Context, string, string, string) error
 	ExportOVA(context.Context, string) (string, error)
-	ExportImage(context.Context, string) (string, error)
+	ExportImage(context.Context, string) (io.ReadCloser, error)
 	SaveVMDisk(context.Context, string, int, []Category) (*nutanixImage, error)
 	WaitForShutdown(string, <-chan struct{}) bool
 	CleanCD(context.Context, string) error
@@ -200,10 +205,30 @@ func (d *NutanixDriver) getConfigCreds() client.Credentials {
 
 // getV4Client returns the V4 converged client from the shared cache (creating it if needed).
 func (d *NutanixDriver) getV4Client() (*convergedv4.Client, error) {
-	opts := []types.ClientOption[v4.Client]{}
-	if d.ClusterConfig.ReadTimeout > 0 {
-		opts = append(opts, v4.WithReadTimeout(d.ClusterConfig.ReadTimeout))
+	cacheParams := &v4CacheParams{
+		endpoint: d.ClusterConfig.Endpoint,
+		port:     d.ClusterConfig.Port,
+		username: d.ClusterConfig.Username,
+		password: d.ClusterConfig.Password,
+		insecure: d.ClusterConfig.Insecure,
 	}
+
+	v4Client, err := convergedV4ClientCache.GetOrCreate(cacheParams)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get or create V4 client: %w", err)
+	}
+	return v4Client, nil
+}
+
+// getV4TransferClient returns a V4 client for upload/download operations.
+// If nutanix_transfer_timeout is not configured, default transfer timeout is 30 minutes.
+func (d *NutanixDriver) getV4TransferClient() (*convergedv4.Client, error) {
+	opts := []types.ClientOption[v4.Client]{}
+	transferTimeout := d.ClusterConfig.TransferTimeout
+	if transferTimeout <= 0 {
+		transferTimeout = 30
+	}
+	opts = append(opts, v4.WithReadTimeout(transferTimeout))
 
 	cacheParams := &v4CacheParams{
 		endpoint: d.ClusterConfig.Endpoint,
@@ -215,7 +240,7 @@ func (d *NutanixDriver) getV4Client() (*convergedv4.Client, error) {
 
 	v4Client, err := convergedV4ClientCache.GetOrCreate(cacheParams, opts...)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get or create V4 client: %w", err)
+		return nil, fmt.Errorf("failed to get or create V4 transfer client: %w", err)
 	}
 	return v4Client, nil
 }
@@ -1038,7 +1063,7 @@ func (d *NutanixDriver) CreateImageURL(ctx context.Context, disk VmDisk, vm VmCo
 
 // CreateImageFile uploads a local file as a new image using Objects Lite.
 func (d *NutanixDriver) CreateImageFile(ctx context.Context, filePath string, vm VmConfig) (*nutanixImage, error) {
-	v4Client, err := d.getV4Client()
+	v4Client, err := d.getV4TransferClient()
 	if err != nil {
 		return nil, fmt.Errorf("error creating V4 client: %s", err.Error())
 	}
@@ -1249,25 +1274,67 @@ func (d *NutanixDriver) ExportOVA(ctx context.Context, ovaName string) (string, 
 	return *fileDetail.Path, nil
 }
 
-func (d *NutanixDriver) ExportImage(ctx context.Context, imageUUID string) (string, error) {
+func (d *NutanixDriver) ExportImage(ctx context.Context, imageUUID string) (io.ReadCloser, error) {
 	log.Printf("downloading image %s", imageUUID)
 
-	v4Client, err := d.getV4Client()
+	v4Client, err := d.getV4TransferClient()
 	if err != nil {
-		return "", fmt.Errorf("error creating V4 client: %s", err.Error())
+		return nil, fmt.Errorf("error creating V4 client: %s", err.Error())
 	}
 
 	fileDetail, err := v4Client.Images.GetFile(ctx, imageUUID)
 	if err != nil {
-		return "", fmt.Errorf("error downloading image: %s", err.Error())
+		log.Printf("v4 image download failed (%s), falling back to v3 download API", err.Error())
+		v3Body, v3Err := d.exportImageViaV3(ctx, imageUUID)
+		if v3Err != nil {
+			return nil, fmt.Errorf("error downloading image via v4 (%s) and v3 fallback (%s)", err.Error(), v3Err.Error())
+		}
+		log.Printf("Image export stream opened via v3 fallback")
+		return v3Body, nil
 	}
 
 	if fileDetail == nil || fileDetail.Path == nil {
-		return "", fmt.Errorf("image download returned no file path")
+		return nil, fmt.Errorf("image download returned no file path")
 	}
 
-	log.Printf("Image downloaded to: %s", *fileDetail.Path)
-	return *fileDetail.Path, nil
+	localFile, err := os.Open(*fileDetail.Path)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open downloaded v4 image file %s: %w", *fileDetail.Path, err)
+	}
+	log.Printf("Image downloaded via v4 to: %s", *fileDetail.Path)
+	return localFile, nil
+}
+
+func (d *NutanixDriver) exportImageViaV3(ctx context.Context, imageUUID string) (io.ReadCloser, error) {
+	configCreds := d.getConfigCreds()
+	url := fmt.Sprintf("https://%s:%d/api/nutanix/v3/images/%s/file", d.ClusterConfig.Endpoint, d.ClusterConfig.Port, imageUUID)
+	httpClient := &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: d.ClusterConfig.Insecure},
+		},
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return nil, fmt.Errorf("error creating v3 download request: %w", err)
+	}
+
+	if strings.EqualFold(configCreds.Username, ntnxAPIKeyHeaderName) && configCreds.Password != "" {
+		req.Header.Set(ntnxAPIKeyHeaderName, configCreds.Password)
+	} else {
+		req.SetBasicAuth(configCreds.Username, configCreds.Password)
+	}
+
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("error executing v3 download request: %w", err)
+	}
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		_ = resp.Body.Close()
+		return nil, fmt.Errorf("v3 download request failed with status: %s", resp.Status)
+	}
+
+	return resp.Body, nil
 }
 
 func (d *NutanixDriver) GetHost(ctx context.Context, hostUUID string) (*nutanixHost, error) {
