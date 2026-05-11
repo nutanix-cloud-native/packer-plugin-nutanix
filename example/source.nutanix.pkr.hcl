@@ -4,9 +4,9 @@ source "nutanix" "centos" {
   nutanix_api_key        = var.nutanix_api_key
   nutanix_custom_headers = var.nutanix_custom_headers
   nutanix_endpoint       = var.nutanix_endpoint
-  nutanix_port     = var.nutanix_port
-  nutanix_insecure = var.nutanix_insecure
-  cluster_name     = var.nutanix_cluster
+  nutanix_port           = var.nutanix_port
+  nutanix_insecure       = var.nutanix_insecure
+  cluster_name           = var.nutanix_cluster
   os_type          = "Linux"
 
   vm_disks {
@@ -52,12 +52,9 @@ source "nutanix" "ubuntu" {
   nutanix_api_key        = var.nutanix_api_key
   nutanix_custom_headers = var.nutanix_custom_headers
   nutanix_endpoint       = var.nutanix_endpoint
-  nutanix_port     = var.nutanix_port
-  nutanix_insecure = var.nutanix_insecure
-
-  # read_timeout_minutes = 30
-
-  cluster_name     = var.nutanix_cluster
+  nutanix_port           = var.nutanix_port
+  nutanix_insecure       = var.nutanix_insecure
+  cluster_name           = var.nutanix_cluster
   os_type          = "Linux"
 
   vm_disks {
@@ -87,9 +84,9 @@ source "nutanix" "centos-kickstart" {
   nutanix_api_key        = var.nutanix_api_key
   nutanix_custom_headers = var.nutanix_custom_headers
   nutanix_endpoint       = var.nutanix_endpoint
-  nutanix_port     = var.nutanix_port
-  nutanix_insecure = var.nutanix_insecure
-  cluster_name     = var.nutanix_cluster
+  nutanix_port           = var.nutanix_port
+  nutanix_insecure       = var.nutanix_insecure
+  cluster_name           = var.nutanix_cluster
   os_type          = "Linux"
 
 
@@ -125,9 +122,9 @@ source "nutanix" "ubuntu-autoinstall" {
   nutanix_api_key        = var.nutanix_api_key
   nutanix_custom_headers = var.nutanix_custom_headers
   nutanix_endpoint       = var.nutanix_endpoint
-  nutanix_port     = var.nutanix_port
-  nutanix_insecure = var.nutanix_insecure
-  cluster_name     = var.nutanix_cluster
+  nutanix_port           = var.nutanix_port
+  nutanix_insecure       = var.nutanix_insecure
+  cluster_name           = var.nutanix_cluster
   os_type          = "Linux"
 
 
@@ -170,8 +167,8 @@ source "nutanix" "windows" {
   nutanix_api_key        = var.nutanix_api_key
   nutanix_custom_headers = var.nutanix_custom_headers
   nutanix_endpoint       = var.nutanix_endpoint
-  nutanix_insecure = var.nutanix_insecure
-  cluster_name     = var.nutanix_cluster
+  nutanix_insecure       = var.nutanix_insecure
+  cluster_name           = var.nutanix_cluster
 
   vm_disks {
       image_type = "ISO_IMAGE"

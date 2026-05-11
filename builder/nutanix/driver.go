@@ -1208,12 +1208,13 @@ type headerInjectingTransport struct {
 }
 
 func (t *headerInjectingTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	clone := req.Clone(req.Context())
 	for k, vs := range t.headers {
 		for _, v := range vs {
-			req.Header.Set(k, v)
+			clone.Header.Set(k, v)
 		}
 	}
-	return t.base.RoundTrip(req)
+	return t.base.RoundTrip(clone)
 }
 
 func (d *NutanixDriver) DeleteImage(ctx context.Context, imageUUID string) error {
