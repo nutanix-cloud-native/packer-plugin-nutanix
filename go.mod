@@ -1,10 +1,10 @@
 module github.com/nutanix-cloud-native/packer-plugin-nutanix
 
-go 1.25.0
+go 1.25.10
 
 require (
 	github.com/hashicorp/hcl/v2 v2.24.0
-	github.com/hashicorp/packer-plugin-sdk v0.6.7
+	github.com/hashicorp/packer-plugin-sdk v0.6.8
 	github.com/mitchellh/go-vnc v0.0.0-20150629162542-723ed9867aed
 	github.com/nutanix-cloud-native/prism-go-client v0.7.2
 	github.com/nutanix/ntnx-api-golang-clients/clustermgmt-go-client/v4 v4.2.2
@@ -23,7 +23,7 @@ require (
 	cloud.google.com/go/iam v1.5.3 // indirect
 	cloud.google.com/go/monitoring v1.24.3 // indirect
 	cloud.google.com/go/storage v1.61.3 // indirect
-	github.com/Azure/go-ntlmssp v0.0.0-20221128193559-754e69321358 // indirect
+	github.com/Azure/go-ntlmssp v0.1.1 // indirect
 	github.com/ChrisTrenkamp/goxpath v0.0.0-20210404020558-97928f7e12b6 // indirect
 	github.com/GoogleCloudPlatform/opentelemetry-operations-go/detectors/gcp v1.30.0 // indirect
 	github.com/GoogleCloudPlatform/opentelemetry-operations-go/exporter/metric v0.55.0 // indirect
