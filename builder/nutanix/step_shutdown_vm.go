@@ -53,19 +53,23 @@ func (s *StepShutdown) Run(ctx context.Context, state multistep.StateBag) multis
 			log.Printf("executing shutdown command: %s", s.Command)
 			cmd := &packersdk.RemoteCmd{Command: s.Command}
 			if err := cmd.RunWithUi(ctx, comm, ui); err != nil {
-				err := fmt.Errorf("failed to send shutdown command: %s", err)
-				state.Put("error", err)
-				ui.Error(err.Error())
-				return multistep.ActionHalt
+				// Communicator errors during shutdown are expected — the
+				// shutdown command (e.g. sysprep /shutdown) may power off
+				// the VM before the communicator can read the exit status.
+				// Log a warning and fall through to the power-state polling
+				// loop, which will detect the VM is off.
+				log.Printf("shutdown command returned error (expected if VM is shutting down): %s", err)
+				ui.Say("Shutdown command disconnected (expected during sysprep/shutdown). Waiting for VM to power off...")
 			}
 
 		} else {
 			ui.Say("Halting the virtual machine...")
 			if err := driver.PowerOff(ctx, vmUUID); err != nil {
-				err := fmt.Errorf("error stopping VM: %s", err)
-				state.Put("error", err)
-				ui.Error(err.Error())
-				return multistep.ActionHalt
+				// PowerOff may fail if the VM is already off (e.g. sysprep
+				// /shutdown ran as the last provisioner). Log a warning and
+				// fall through to the polling loop.
+				log.Printf("PowerOff returned error (may be expected if VM already shut down): %s", err)
+				ui.Say("PowerOff returned error — checking if VM is already off...")
 			}
 		}
 	} else {
