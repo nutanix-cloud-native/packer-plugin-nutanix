@@ -337,12 +337,14 @@ func sourceImageExists(ctx context.Context, v4Client *convergedv4.Client, name, 
 		}
 	}
 
-	// Prefer exact URL match
+	// Prefer exact URL match, selecting newest if multiple exist
 	if len(urlMatched) == 1 {
 		return urlMatched[0], nil
 	}
 	if len(urlMatched) > 1 {
-		return nil, fmt.Errorf("your query returned more than one result with same Name/URI")
+		log.Printf("WARNING: found %d images with same Name/URI '%s', selecting newest", len(urlMatched), name)
+		sortImagesByCreateTimeDesc(urlMatched)
+		return urlMatched[0], nil
 	}
 
 	// Fall back to name-only match (V4 API may not return Source for downloaded images)
@@ -351,7 +353,9 @@ func sourceImageExists(ctx context.Context, v4Client *convergedv4.Client, name, 
 		return nameMatched[0], nil
 	}
 	if len(nameMatched) > 1 {
-		return nil, fmt.Errorf("your query returned more than one result with name '%s'", name)
+		log.Printf("WARNING: found %d images with name '%s', selecting newest", len(nameMatched), name)
+		sortImagesByCreateTimeDesc(nameMatched)
+		return nameMatched[0], nil
 	}
 
 	return nil, nil
