@@ -57,6 +57,7 @@ type Config struct {
 	ForceDeregister                bool           `mapstructure:"force_deregister" json:"force_deregister" required:"false"`
 	ImageDescription               string         `mapstructure:"image_description" json:"image_description" required:"false"`
 	ImageCategories                []Category     `mapstructure:"image_categories" required:"false"`
+	AllowDuplicateImages           bool           `mapstructure:"allow_duplicate_images" json:"allow_duplicate_images" required:"false"`
 	ImageSkip                      bool           `mapstructure:"image_skip" json:"image_skip" required:"false"`
 	ImageDelete                    bool           `mapstructure:"image_delete" json:"image_delete" required:"false"`
 	ImageExport                    bool           `mapstructure:"image_export" json:"image_export" required:"false"`

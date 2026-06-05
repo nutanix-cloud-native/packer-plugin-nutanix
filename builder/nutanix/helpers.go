@@ -64,9 +64,9 @@ func findImageByUUIDHelper(ctx context.Context, client *convergedv4.Client, uuid
 }
 
 // findImageByNameHelper finds an image by name using V4 API.
-// When multiple images share the same name (common in parallel CI), the newest
-// ready image is selected instead of returning an error.
-func findImageByNameHelper(ctx context.Context, client *convergedv4.Client, name string) (*imageModels.Image, error) {
+// When allowDuplicates is true and multiple images share the same name,
+// the newest ready image is selected instead of returning an error.
+func findImageByNameHelper(ctx context.Context, client *convergedv4.Client, name string, allowDuplicates bool) (*imageModels.Image, error) {
 	images, err := client.Images.List(ctx, converged.WithFilter(fmt.Sprintf("name eq '%s'", name)))
 	if err != nil {
 		return nil, err
@@ -84,6 +84,9 @@ func findImageByNameHelper(ctx context.Context, client *convergedv4.Client, name
 	}
 
 	if len(found) > 1 {
+		if !allowDuplicates {
+			return nil, fmt.Errorf("found more than one image with name %s. Use allow_duplicate_images to only select the newest image", name)
+		}
 		log.Printf("WARNING: found %d images with name '%s', selecting the newest ready image", len(found), name)
 		found = selectNewestReadyImage(found)
 		if len(found) == 0 {
