@@ -62,6 +62,7 @@ These parameters allow to configure everything around image creation, from the t
 - `image_skip` (bool) - Skip image creation (default is false).
 - `image_export` (bool) - Export raw image in the current folder (default is false).
 - `fail_if_image_exists` (bool) - Fail the build if an image with the same name already exists (default is false).
+- `allow_duplicate_images` (bool) - When `true`, the plugin tolerates multiple images with the same name in the Prism Central image library. Instead of failing, it selects the newest ready image. This is useful in parallel CI environments where concurrent builds may create images with identical names. When `false` (the default), the plugin returns an error if more than one image matches by name, which is the recommended behavior for production systems.
 - `shutdown_command` (string) - Command line to shutdown your temporary VM.
 - `shutdown_timeout` (string) - Timeout for VM shutdown (format : 2m).
 - `vm_force_delete` (bool) - Delete vm even if build is not succesful (default is false).

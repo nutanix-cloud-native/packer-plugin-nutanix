@@ -3,6 +3,8 @@ package nutanix
 import (
 	"context"
 	"fmt"
+	"log"
+	"sort"
 	"strings"
 
 	"github.com/nutanix-cloud-native/prism-go-client/converged"
@@ -61,8 +63,10 @@ func findImageByUUIDHelper(ctx context.Context, client *convergedv4.Client, uuid
 	return img, nil
 }
 
-// findImageByNameHelper finds an image by name using V4 API
-func findImageByNameHelper(ctx context.Context, client *convergedv4.Client, name string) (*imageModels.Image, error) {
+// findImageByNameHelper finds an image by name using V4 API.
+// When allowDuplicates is true and multiple images share the same name,
+// the newest ready image is selected instead of returning an error.
+func findImageByNameHelper(ctx context.Context, client *convergedv4.Client, name string, allowDuplicates bool) (*imageModels.Image, error) {
 	images, err := client.Images.List(ctx, converged.WithFilter(fmt.Sprintf("name eq '%s'", name)))
 	if err != nil {
 		return nil, err
@@ -75,18 +79,66 @@ func findImageByNameHelper(ctx context.Context, client *convergedv4.Client, name
 		}
 	}
 
-	if len(found) > 1 {
-		return nil, fmt.Errorf("found more than one image with name %s", name)
-	}
-
 	if len(found) == 0 {
 		return nil, fmt.Errorf("image %s not found", name)
+	}
+
+	if len(found) > 1 {
+		if !allowDuplicates {
+			return nil, fmt.Errorf("found more than one image with name %s. Use allow_duplicate_images to only select the newest image", name)
+		}
+		log.Printf("WARNING: found %d images with name '%s', selecting the newest ready image", len(found), name)
+		found = selectNewestReadyImage(found)
+		if len(found) == 0 {
+			return nil, fmt.Errorf("found multiple images with name '%s' but none are ready (SizeBytes > 0)", name)
+		}
 	}
 
 	if found[0].ExtId == nil {
 		return nil, fmt.Errorf("image %s has no ExtId", name)
 	}
 	return findImageByUUIDHelper(ctx, client, *found[0].ExtId)
+}
+
+// sortImagesByCreateTimeDesc sorts images by CreateTime in descending order
+// (newest first). Images without CreateTime are sorted to the end.
+func sortImagesByCreateTimeDesc(images []*imageModels.Image) {
+	sort.Slice(images, func(i, j int) bool {
+		if images[i].CreateTime == nil || images[j].CreateTime == nil {
+			return images[i].CreateTime != nil
+		}
+		return images[i].CreateTime.After(*images[j].CreateTime)
+	})
+}
+
+// selectNewestReadyImage filters to ready images (SizeBytes > 0) and sorts by
+// CreateTime descending so the newest image is first. Returns the filtered and
+// sorted slice (may be empty if no images are ready).
+func selectNewestReadyImage(images []*imageModels.Image) []*imageModels.Image {
+	ready := make([]*imageModels.Image, 0, len(images))
+	for _, img := range images {
+		if img.SizeBytes != nil && *img.SizeBytes > 0 {
+			ready = append(ready, img)
+		} else {
+			extId := ""
+			if img.ExtId != nil {
+				extId = *img.ExtId
+			}
+			log.Printf("skipping image '%s' (extId: %s) - not ready (SizeBytes: %v)", *img.Name, extId, img.SizeBytes)
+		}
+	}
+
+	if len(ready) <= 1 {
+		return ready
+	}
+
+	sortImagesByCreateTimeDesc(ready)
+
+	selected := ready[0]
+	log.Printf("selected newest image '%s' (extId: %s, created: %v) from %d candidates",
+		*selected.Name, *selected.ExtId, selected.CreateTime, len(ready))
+
+	return ready[:1]
 }
 
 // Cluster helpers
