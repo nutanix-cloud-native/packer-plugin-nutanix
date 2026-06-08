@@ -30,6 +30,8 @@ func minimalValidConfig(extra map[string]interface{}) map[string]interface{} {
 func TestPrepareRejectsInvalidWindowsInstallType(t *testing.T) {
 	c := &Config{}
 	_, err := c.Prepare(minimalValidConfig(map[string]interface{}{
+		"nutanix_username":     "admin",
+		"nutanix_password":     "password",
 		"windows_install_type": "fresh",
 	}))
 	if err != nil {
@@ -38,6 +40,8 @@ func TestPrepareRejectsInvalidWindowsInstallType(t *testing.T) {
 
 	c2 := &Config{}
 	_, err = c2.Prepare(minimalValidConfig(map[string]interface{}{
+		"nutanix_username":     "admin",
+		"nutanix_password":     "password",
 		"windows_install_type": "INVALID",
 	}))
 	if err == nil {
