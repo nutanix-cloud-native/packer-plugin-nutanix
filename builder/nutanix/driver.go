@@ -889,6 +889,17 @@ func (d *NutanixDriver) WaitForIP(ctx context.Context, vmUUID string, ipNet *net
 	var IPAddress string
 
 	for {
+		// Bail out immediately if the wait was cancelled (ip_wait_timeout fired,
+		// or the build was interrupted). The v4 SDK's VMs.Get does not honour the
+		// context, so without this explicit check the loop would never observe the
+		// cancellation and the caller's `<-waitDone` would block until an IP is
+		// found (i.e. potentially forever for a VM that never gets one).
+		select {
+		case <-ctx.Done():
+			return "", ctx.Err()
+		default:
+		}
+
 		vm, err := v4Client.VMs.Get(ctx, vmUUID)
 		if err != nil {
 			log.Printf("error getting vm: %s", err.Error())
@@ -930,7 +941,13 @@ func (d *NutanixDriver) WaitForIP(ctx context.Context, vmUUID string, ipNet *net
 			}
 		}
 
-		time.Sleep(5 * time.Second)
+		// Cancellable backoff: wake early if the wait is cancelled rather than
+		// sleeping through the full interval and only noticing on the next loop.
+		select {
+		case <-ctx.Done():
+			return "", ctx.Err()
+		case <-time.After(5 * time.Second):
+		}
 	}
 
 	log.Printf("VM (%s) configured with ip address %s", vmUUID, IPAddress)
