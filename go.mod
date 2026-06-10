@@ -196,7 +196,9 @@ replace (
 	github.com/hashicorp/consul => github.com/hashicorp/consul v1.10.4
 	github.com/hashicorp/vault => github.com/hashicorp/vault v1.4.2
 	github.com/prometheus/client_golang => github.com/prometheus/client_golang v1.23.2
+	github.com/yuin/goldmark => github.com/yuin/goldmark v1.8.2
 	go.mongodb.org/mongo-driver => go.mongodb.org/mongo-driver v1.17.9
+	golang.org/x/image => golang.org/x/image v0.42.0
 )
 
 replace github.com/zclconf/go-cty => github.com/nywilken/go-cty v1.13.3 // added by packer-sdc fix as noted in github.com/hashicorp/packer-plugin-sdk/issues/187
