@@ -4,7 +4,7 @@ go 1.25.10
 
 require (
 	github.com/hashicorp/hcl/v2 v2.24.0
-	github.com/hashicorp/packer-plugin-sdk v0.6.8
+	github.com/hashicorp/packer-plugin-sdk v0.6.9
 	github.com/mitchellh/go-vnc v0.0.0-20150629162542-723ed9867aed
 	github.com/nutanix-cloud-native/prism-go-client v0.7.3
 	github.com/nutanix/ntnx-api-golang-clients/clustermgmt-go-client/v4 v4.2.2
