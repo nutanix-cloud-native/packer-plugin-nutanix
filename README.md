@@ -32,7 +32,7 @@ Then, run [`packer init`](https://www.packer.io/docs/commands/init).
 packer {
   required_plugins {
     nutanix = {
-      version = ">= 1.1.8"
+      version = ">= 1.1.9"
       source  = "github.com/nutanix-cloud-native/nutanix"
     }
   }
