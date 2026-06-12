@@ -1,10 +1,28 @@
 variable "nutanix_username" {
-  type = string
+  type    = string
+  default = ""
 }
 
 variable "nutanix_password" {
-  type =  string
+  type      = string
   sensitive = true
+  default   = ""
+}
+
+# Set nutanix_api_key instead of username/password to authenticate via Prism
+# Central API key. If both are set, the api key wins.
+variable "nutanix_api_key" {
+  type      = string
+  sensitive = true
+  default   = ""
+}
+
+# Optional extra HTTP headers attached to every Prism Central request — useful
+# behind reverse proxies like Cloudflare Access.
+variable "nutanix_custom_headers" {
+  type      = map(string)
+  sensitive = true
+  default   = {}
 }
 
 variable "nutanix_endpoint" {
