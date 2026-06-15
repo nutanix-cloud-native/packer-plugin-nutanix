@@ -11,7 +11,7 @@ require (
 	github.com/nutanix/ntnx-api-golang-clients/networking-go-client/v4 v4.3.1
 	github.com/nutanix/ntnx-api-golang-clients/vmm-go-client/v4 v4.2.2
 	github.com/zclconf/go-cty v1.16.3
-	golang.org/x/net v0.55.0
+	golang.org/x/net v0.56.0
 )
 
 require (
