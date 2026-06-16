@@ -361,9 +361,13 @@ func (*FlatOvaConfig) HCL2Spec() map[string]hcldec.Spec {
 // FlatTemplateConfig is an auto-generated flat version of TemplateConfig.
 // Where the contents of a field with a `mapstructure:,squash` tag are bubbled up.
 type FlatTemplateConfig struct {
-	Create      *bool   `mapstructure:"create" json:"create" required:"false" cty:"create" hcl:"create"`
-	Name        *string `mapstructure:"name" json:"name" required:"false" cty:"name" hcl:"name"`
-	Description *string `mapstructure:"description" json:"description" required:"false" cty:"description" hcl:"description"`
+	Create             *bool   `mapstructure:"create" json:"create" required:"false" cty:"create" hcl:"create"`
+	UpdateTemplate     *bool   `mapstructure:"update_template" json:"update_template" required:"false" cty:"update_template" hcl:"update_template"`
+	ExtID              *string `mapstructure:"ext_id" json:"ext_id" required:"false" cty:"ext_id" hcl:"ext_id"`
+	Name               *string `mapstructure:"name" json:"name" required:"false" cty:"name" hcl:"name"`
+	Description        *string `mapstructure:"description" json:"description" required:"false" cty:"description" hcl:"description"`
+	VersionName        *string `mapstructure:"version_name" json:"version_name" required:"false" cty:"version_name" hcl:"version_name"`
+	VersionDescription *string `mapstructure:"version_description" json:"version_description" required:"false" cty:"version_description" hcl:"version_description"`
 }
 
 // FlatMapstructure returns a new FlatTemplateConfig.
@@ -378,9 +382,13 @@ func (*TemplateConfig) FlatMapstructure() interface{ HCL2Spec() map[string]hclde
 // The decoded values from this spec will then be applied to a FlatTemplateConfig.
 func (*FlatTemplateConfig) HCL2Spec() map[string]hcldec.Spec {
 	s := map[string]hcldec.Spec{
-		"create":      &hcldec.AttrSpec{Name: "create", Type: cty.Bool, Required: false},
-		"name":        &hcldec.AttrSpec{Name: "name", Type: cty.String, Required: false},
-		"description": &hcldec.AttrSpec{Name: "description", Type: cty.String, Required: false},
+		"create":              &hcldec.AttrSpec{Name: "create", Type: cty.Bool, Required: false},
+		"update_template":     &hcldec.AttrSpec{Name: "update_template", Type: cty.Bool, Required: false},
+		"ext_id":              &hcldec.AttrSpec{Name: "ext_id", Type: cty.String, Required: false},
+		"name":                &hcldec.AttrSpec{Name: "name", Type: cty.String, Required: false},
+		"description":         &hcldec.AttrSpec{Name: "description", Type: cty.String, Required: false},
+		"version_name":        &hcldec.AttrSpec{Name: "version_name", Type: cty.String, Required: false},
+		"version_description": &hcldec.AttrSpec{Name: "version_description", Type: cty.String, Required: false},
 	}
 	return s
 }
