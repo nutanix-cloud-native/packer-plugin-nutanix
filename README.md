@@ -57,6 +57,18 @@ If you prefer to build the plugin from its source code, clone the GitHub reposit
 Upon successful compilation, a `packer-plugin-nutanix` plugin binary file can be found in the root directory.
 To install the compiled plugin, please follow the official Packer documentation on [installing a plugin](https://www.packer.io/docs/extending/plugins/#installing-plugins).
 
+## Release Branches and Version Lineage
+
+This repository maintains two release lines with explicit API scope:
+
+- `release-1.2`: clean cut before the v4 API migration.
+- `main`: post-v4 API migration changes and the latest line.
+
+Going forward, release tags are created from the corresponding branch lines:
+
+- `v1.2.x` tags from `release-1.2` (pre-v4 API).
+- `v1.3.x` tags from `main` (post-v4 API, latest line).
+
 ### Configuration
 
 For more information on how to configure the plugin, please find some examples in the  [`example/`](example) directory.

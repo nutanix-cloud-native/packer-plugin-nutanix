@@ -22,6 +22,18 @@ Alternatively, you can use `packer plugins install` to manage installation of th
 $ packer plugins install github.com/nutanix-cloud-native/nutanix
 ```
 
+### Release Branches and Version Lineage
+
+This plugin currently has two maintained release lines:
+
+- `release-1.2`: clean cut before the v4 API migration.
+- `main`: post-v4 API migration changes and the latest line.
+
+Going forward, release tags are created from the corresponding branch lines:
+
+- `v1.2.x` tags from `release-1.2` (pre-v4 API).
+- `v1.3.x` tags from `main` (post-v4 API, latest line).
+
 ### Components
 
 #### Builders
