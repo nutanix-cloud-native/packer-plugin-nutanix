@@ -62,7 +62,7 @@ To install the compiled plugin, please follow the official Packer documentation 
 This repository maintains two release lines with explicit API scope:
 
 - `release-1.2`: clean cut before the v4 API migration, created from the `v1.1.4` baseline.
-- `main`: post-v4 API migration changes and the latest line. `v1.3.0` was introduced from the latest `1.1.x` baseline, and subsequent `v1.3.x` releases are cut from `main`.
+- `main`: post-v4 API migration changes and the latest line. `v1.3.0` was introduced from the `1.1.10` baseline, and subsequent `v1.3.x` releases are cut from `main`.
 
 This structure preserves pre-v4 API compatibility, keeps release ownership clear for maintainers, and allows current development to continue on the post-v4 line.
 
