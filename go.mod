@@ -152,3 +152,5 @@ replace (
 replace github.com/zclconf/go-cty => github.com/nywilken/go-cty v1.13.3 // added by packer-sdc fix as noted in github.com/hashicorp/packer-plugin-sdk/issues/187
 
 replace github.com/yuin/goldmark => github.com/yuin/goldmark v1.8.2
+
+replace github.com/prometheus/client_golang => github.com/prometheus/client_golang v1.23.2
