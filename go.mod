@@ -6,7 +6,7 @@ require (
 	github.com/hashicorp/hcl/v2 v2.24.0
 	github.com/hashicorp/packer-plugin-sdk v0.6.9
 	github.com/mitchellh/go-vnc v0.0.0-20150629162542-723ed9867aed
-	github.com/nutanix-cloud-native/prism-go-client v0.7.3
+	github.com/nutanix-cloud-native/prism-go-client v0.8.0
 	github.com/nutanix/ntnx-api-golang-clients/clustermgmt-go-client/v4 v4.2.2
 	github.com/nutanix/ntnx-api-golang-clients/networking-go-client/v4 v4.3.1
 	github.com/nutanix/ntnx-api-golang-clients/vmm-go-client/v4 v4.2.2
@@ -145,6 +145,7 @@ require (
 	github.com/nu7hatch/gouuid v0.0.0-20131221200532-179d4d0c4d8d // indirect
 	github.com/nutanix/ntnx-api-golang-clients/datapolicies-go-client/v4 v4.2.1 // indirect
 	github.com/nutanix/ntnx-api-golang-clients/iam-go-client/v4 v4.0.1 // indirect
+	github.com/nutanix/ntnx-api-golang-clients/monitoring-go-client/v4 v4.2.2 // indirect
 	github.com/nutanix/ntnx-api-golang-clients/prism-go-client/v4 v4.2.1 // indirect
 	github.com/nutanix/ntnx-api-golang-clients/volumes-go-client/v4 v4.2.1 // indirect
 	github.com/oklog/ulid/v2 v2.1.1 // indirect
