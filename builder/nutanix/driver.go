@@ -12,6 +12,7 @@ import (
 	"net"
 	"net/http"
 	"path"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -918,7 +919,7 @@ func (d *NutanixDriver) CreateImageFile(ctx context.Context, filePath string, vm
 		return nil, err
 	}
 
-	_, file := path.Split(filePath)
+	_, file := filepath.Split(filePath)
 
 	cluster := &v3.ClusterIntentResponse{}
 	if vm.ClusterUUID != "" {
