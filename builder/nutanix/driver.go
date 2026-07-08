@@ -12,11 +12,7 @@ import (
 	"net"
 	"net/http"
 	"path"
-<<<<<<< HEAD
-=======
 	"path/filepath"
-	"sort"
->>>>>>> 6313e87 (use filepath.Split when uploading local image files, path.Split only splits on "/" so paths generated in windows, which use "\" will not split properly (#355))
 	"strings"
 	"time"
 
