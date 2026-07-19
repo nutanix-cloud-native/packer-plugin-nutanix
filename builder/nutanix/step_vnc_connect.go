@@ -75,11 +75,22 @@ func (s *stepVNCConnect) ConnectVNCOverWebsocketClient(ctx context.Context, stat
 		Host:   fmt.Sprintf("%s:%d", s.Config.ClusterConfig.Endpoint, s.Config.ClusterConfig.Port),
 	}
 	header := http.Header{}
-	// Include Basic Auth when not using API key - some IAM-enabled PCs require it for console
-	if s.Config.ClusterConfig.Username != "X-ntnx-api-key" {
-		header.Set("Authorization", "Basic "+basicAuth(s.Config.ClusterConfig.Username, s.Config.ClusterConfig.Password))
-	} else {
+	// Auth: prefer the explicit APIKey field; fall back to the legacy
+	// Username == "X-ntnx-api-key" form; otherwise Basic Auth. IAM-enabled PCs
+	// require auth on the console upgrade request.
+	switch {
+	case s.Config.ClusterConfig.APIKey != "":
+		header.Set(ntnxAPIKeyHeaderKey, s.Config.ClusterConfig.APIKey)
+	case s.Config.ClusterConfig.Username == "X-ntnx-api-key":
 		header.Set(ntnxAPIKeyHeaderKey, s.Config.ClusterConfig.Password)
+	default:
+		header.Set("Authorization", "Basic "+basicAuth(s.Config.ClusterConfig.Username, s.Config.ClusterConfig.Password))
+	}
+	// Custom headers (e.g. Cloudflare Access service tokens) — same set the
+	// HTTP API path uses; without these, the WSS upgrade is rejected by any
+	// service-token gateway in front of Prism Central.
+	for k, v := range s.Config.ClusterConfig.CustomHeaders {
+		header.Set(k, v)
 	}
 	wsConfig := websocket.Config{
 		Location: u,

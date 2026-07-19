@@ -84,12 +84,14 @@ type Category struct {
 }
 
 type ClusterConfig struct {
-	Username        string `mapstructure:"nutanix_username" required:"false"`
-	Password        string `mapstructure:"nutanix_password" required:"false"`
-	Insecure        bool   `mapstructure:"nutanix_insecure" required:"false"`
-	Endpoint        string `mapstructure:"nutanix_endpoint" required:"true"`
-	Port            int32  `mapstructure:"nutanix_port" required:"false"`
-	TransferTimeout int    `mapstructure:"nutanix_transfer_timeout" required:"false"`
+	Username        string            `mapstructure:"nutanix_username" required:"false"`
+	Password        string            `mapstructure:"nutanix_password" required:"false"`
+	APIKey          string            `mapstructure:"nutanix_api_key" required:"false"`
+	CustomHeaders   map[string]string `mapstructure:"nutanix_custom_headers" required:"false"`
+	Insecure        bool              `mapstructure:"nutanix_insecure" required:"false"`
+	Endpoint        string            `mapstructure:"nutanix_endpoint" required:"true"`
+	Port            int32             `mapstructure:"nutanix_port" required:"false"`
+	TransferTimeout int               `mapstructure:"nutanix_transfer_timeout" required:"false"`
 }
 
 type VmDisk struct {
@@ -308,16 +310,16 @@ func (c *Config) Prepare(raws ...interface{}) ([]string, error) {
 		}
 	}
 
-	// Validate Cluster Username
-	if c.ClusterConfig.Username == "" {
-		log.Println("Nutanix Username missing from configuration")
-		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("missing nutanix_username"))
+	// Validate authentication: need either API key or username+password
+	hasAPIKey := c.ClusterConfig.APIKey != ""
+	hasBasicAuth := c.ClusterConfig.Username != "" && c.ClusterConfig.Password != ""
+	if !hasAPIKey && !hasBasicAuth {
+		log.Println("Nutanix authentication missing from configuration")
+		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("authentication required: provide either nutanix_api_key or both nutanix_username and nutanix_password"))
 	}
-
-	// Validate Cluster Password
-	if c.ClusterConfig.Password == "" {
-		log.Println("Nutanix Password missing from configuration")
-		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("missing nutanix_password"))
+	if hasAPIKey && (c.ClusterConfig.Username != "" || c.ClusterConfig.Password != "") {
+		log.Println("Both nutanix_api_key and nutanix_username/nutanix_password are set; nutanix_api_key takes precedence")
+		warnings = append(warnings, "Both nutanix_api_key and nutanix_username/nutanix_password are set; nutanix_api_key takes precedence")
 	}
 
 	if c.VmConfig.VMName == "" {
@@ -441,3 +443,4 @@ func (c *Config) Prepare(raws ...interface{}) ([]string, error) {
 
 	return warnings, nil
 }
+
