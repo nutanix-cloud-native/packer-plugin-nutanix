@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"strings"
 	"time"
 
 	"github.com/hashicorp/packer-plugin-sdk/bootcommand"
@@ -129,6 +130,7 @@ type VmConfig struct {
 	Core                   int64      `mapstructure:"core" json:"core" required:"false"`
 	MemoryMB               int64      `mapstructure:"memory_mb" json:"memory_mb" required:"false"`
 	UserData               string     `mapstructure:"user_data" json:"user_data" required:"false"`
+	WindowsInstallType     string     `mapstructure:"windows_install_type" json:"windows_install_type" required:"false"`
 	VMCategories           []Category `mapstructure:"vm_categories" required:"false"`
 	Project                string     `mapstructure:"project" required:"false"`
 	GPU                    []GPU      `mapstructure:"gpu" required:"false"`
@@ -318,6 +320,14 @@ func (c *Config) Prepare(raws ...interface{}) ([]string, error) {
 	if c.ClusterConfig.Password == "" {
 		log.Println("Nutanix Password missing from configuration")
 		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("missing nutanix_password"))
+	}
+
+	switch strings.ToUpper(c.VmConfig.WindowsInstallType) {
+	case "", "PREPARED", "FRESH":
+		// ok
+	default:
+		errs = packersdk.MultiErrorAppend(errs,
+			fmt.Errorf("windows_install_type must be FRESH or PREPARED, got %q", c.VmConfig.WindowsInstallType))
 	}
 
 	if c.VmConfig.VMName == "" {
