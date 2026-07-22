@@ -44,7 +44,7 @@ jobs:
 
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v7.0.0
+        uses: actions/checkout@v7.0.1
 
       - name: Setup `golang`
         uses: actions/setup-go@v7
@@ -90,7 +90,7 @@ jobs:
 
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v7.0.0
+        uses: actions/checkout@v7.0.1
 
       - name: Setup `packer`
         uses: hashicorp/setup-packer@main
