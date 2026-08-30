@@ -191,6 +191,11 @@ func (n *nutanixImage) SizeBytes() int64 {
 	return 0
 }
 
+// Type returns the Prism image type name (DISK_IMAGE, ISO_IMAGE).
+func (n *nutanixImage) Type() string {
+	return imageTypeName(n.image)
+}
+
 // getConfigCreds returns the credentials for connecting to Prism Central
 func (d *NutanixDriver) getConfigCreds() client.Credentials {
 	return client.Credentials{
@@ -276,9 +281,10 @@ func findProjectByName(ctx context.Context, conn *v3.Client, name string) (*v3.P
 }
 
 // sourceImageExists checks if an image with the given name exists using V4 API.
+// When imageType is set, only images of that type are considered.
 // It verifies images are ready (SizeBytes > 0) and optionally validates the checksum
 // to detect corrupt/partial images. Matching priority: name+URL > name+checksum > name-only.
-func sourceImageExists(ctx context.Context, v4Client *convergedv4.Client, name, uri, expectedChecksum string, allowDuplicates bool) (*imageModels.Image, error) {
+func sourceImageExists(ctx context.Context, v4Client *convergedv4.Client, name, uri, expectedChecksum, imageType string, allowDuplicates bool) (*imageModels.Image, error) {
 	images, err := v4Client.Images.List(ctx, converged.WithFilter(fmt.Sprintf("name eq '%s'", name)))
 	if err != nil {
 		return nil, err
@@ -290,6 +296,9 @@ func sourceImageExists(ctx context.Context, v4Client *convergedv4.Client, name, 
 	for i := range images {
 		img := &images[i]
 		if img.Name == nil || !strings.EqualFold(*img.Name, name) {
+			continue
+		}
+		if imageType != "" && !strings.EqualFold(imageTypeName(img), imageType) {
 			continue
 		}
 
@@ -376,9 +385,10 @@ func findImageByUUID(ctx context.Context, v4Client *convergedv4.Client, uuid str
 	return &nutanixImage{image: img}, nil
 }
 
-// findImageByName finds an image by name using V4 API
-func findImageByName(ctx context.Context, v4Client *convergedv4.Client, name string, allowDuplicates bool) (*nutanixImage, error) {
-	img, err := findImageByNameHelper(ctx, v4Client, name, allowDuplicates)
+// findImageByName finds an image by name using V4 API.
+// imageType, when set (DISK_IMAGE or ISO_IMAGE), restricts the match to that type.
+func findImageByName(ctx context.Context, v4Client *convergedv4.Client, name, imageType string, allowDuplicates bool) (*nutanixImage, error) {
+	img, err := findImageByNameHelper(ctx, v4Client, name, imageType, allowDuplicates)
 	if err != nil {
 		return nil, err
 	}
@@ -536,13 +546,16 @@ func (d *NutanixDriver) CreateRequest(ctx context.Context, vmConfig VmConfig, st
 				if err != nil {
 					return nil, fmt.Errorf("error while findImageByUUID, Error %s", err.Error())
 				}
+				if err := ensureImageType(image.image, disk.ImageType, disk.SourceImageUUID); err != nil {
+					return nil, fmt.Errorf("error while findImageByUUID, %s", err.Error())
+				}
 
 				if disk.SourceImageDelete && disk.SourceImagePath != "" {
 					log.Printf("mark this image to delete %s:", image.Name())
 					imageToDelete = append(imageToDelete, image.UUID())
 				}
 			} else if disk.SourceImageName != "" {
-				image, err = findImageByName(ctx, v4Client, disk.SourceImageName, d.Config.AllowDuplicateImages)
+				image, err = findImageByName(ctx, v4Client, disk.SourceImageName, disk.ImageType, d.Config.AllowDuplicateImages)
 				if err != nil {
 					return nil, fmt.Errorf("error while findImageByName, %s", err.Error())
 				}
@@ -631,13 +644,16 @@ func (d *NutanixDriver) CreateRequest(ctx context.Context, vmConfig VmConfig, st
 				if err != nil {
 					return nil, fmt.Errorf("error while findImageByUUID, %s", err.Error())
 				}
+				if err := ensureImageType(image.image, disk.ImageType, disk.SourceImageUUID); err != nil {
+					return nil, fmt.Errorf("error while findImageByUUID, %s", err.Error())
+				}
 
 				if disk.SourceImageDelete && disk.SourceImagePath != "" {
 					log.Printf("mark this image to delete %s:", image.Name())
 					imageToDelete = append(imageToDelete, image.UUID())
 				}
 			} else if disk.SourceImageName != "" {
-				image, err = findImageByName(ctx, v4Client, disk.SourceImageName, d.Config.AllowDuplicateImages)
+				image, err = findImageByName(ctx, v4Client, disk.SourceImageName, disk.ImageType, d.Config.AllowDuplicateImages)
 				if err != nil {
 					return nil, fmt.Errorf("error while findImageByName, %s", err.Error())
 				}
@@ -974,7 +990,7 @@ func (d *NutanixDriver) CreateImageURL(ctx context.Context, disk VmDisk, vm VmCo
 		return nil, fmt.Errorf("error while getting cluster: %s", err.Error())
 	}
 
-	existingImage, err := sourceImageExists(ctx, v4Client, file, disk.SourceImageURI, disk.SourceImageChecksum, d.Config.AllowDuplicateImages)
+	existingImage, err := sourceImageExists(ctx, v4Client, file, disk.SourceImageURI, disk.SourceImageChecksum, disk.ImageType, d.Config.AllowDuplicateImages)
 	if err != nil {
 		return nil, fmt.Errorf("error while checking if image exists, %s", err.Error())
 	}
@@ -1087,7 +1103,7 @@ func (d *NutanixDriver) CreateImageFile(ctx context.Context, filePath string, vm
 		return nil, fmt.Errorf("error while uploading image: %s", err.Error())
 	}
 
-	createdImage, err := findImageByName(ctx, v4Client, file, d.Config.AllowDuplicateImages)
+	createdImage, err := findImageByName(ctx, v4Client, file, "", d.Config.AllowDuplicateImages)
 	if err != nil {
 		return nil, fmt.Errorf("error while getting created image: %s", err.Error())
 	}
@@ -1116,7 +1132,7 @@ func (d *NutanixDriver) GetImage(ctx context.Context, imagename string) (*nutani
 		return nil, fmt.Errorf("error creating V4 client: %s", err.Error())
 	}
 
-	image, err := findImageByName(ctx, v4Client, imagename, d.Config.AllowDuplicateImages)
+	image, err := findImageByName(ctx, v4Client, imagename, "", d.Config.AllowDuplicateImages)
 	if err != nil {
 		return nil, fmt.Errorf("error while GetImage, %s", err.Error())
 	}
