@@ -64,6 +64,10 @@ type Driver interface {
 	CleanCD(context.Context, string) error
 	PowerOn(context.Context, string) error
 	GenerateConsoleToken(context.Context, string) (token, wsUri string, err error)
+	FindTemplateByName(ctx context.Context, name string) (extID string, err error)
+	InitiateGuestUpdate(ctx context.Context, templateExtID string, versionID string) (vmUUID string, err error)
+	CompleteGuestUpdate(ctx context.Context, templateExtID string, versionName string, versionDescription string) error
+	CancelGuestUpdate(ctx context.Context, templateExtID string) error
 }
 
 // Verify that NutanixDriver implements the Driver interface
@@ -1205,6 +1209,91 @@ func (d *NutanixDriver) CreateTemplate(ctx context.Context, vmUUID string, templ
 	}
 
 	log.Printf("Template %s created successfully", templateConfig.Name)
+	return nil
+}
+
+// FindTemplateByName looks up a template by name using the V4 API filter.
+// Returns the template ext ID if exactly one match is found; errors on 0 or >1.
+func (d *NutanixDriver) FindTemplateByName(ctx context.Context, name string) (string, error) {
+	v4Client, err := d.getV4Client()
+	if err != nil {
+		return "", fmt.Errorf("error creating V4 client: %w", err)
+	}
+
+	filter := fmt.Sprintf("templateName eq '%s'", name)
+	templates, err := v4Client.Templates.List(ctx, converged.WithFilter(filter))
+	if err != nil {
+		return "", fmt.Errorf("error listing templates with filter %q: %w", filter, err)
+	}
+
+	if len(templates) == 0 {
+		return "", fmt.Errorf("no template found with name %q", name)
+	}
+	if len(templates) > 1 {
+		return "", fmt.Errorf("found %d templates with name %q; use template.ext_id to specify which one", len(templates), name)
+	}
+
+	if templates[0].ExtId == nil {
+		return "", fmt.Errorf("template %q has nil ExtId", name)
+	}
+	return *templates[0].ExtId, nil
+}
+
+// InitiateGuestUpdate starts a guest OS update for the given template, creating
+// a temporary VM. Returns the temporary VM UUID.
+func (d *NutanixDriver) InitiateGuestUpdate(ctx context.Context, templateExtID string, versionID string) (string, error) {
+	v4Client, err := d.getV4Client()
+	if err != nil {
+		return "", fmt.Errorf("error creating V4 client: %w", err)
+	}
+
+	log.Printf("Initiating guest update for template %s", templateExtID)
+	template, err := v4Client.Templates.InitiateGuestUpdate(ctx, templateExtID, versionID)
+	if err != nil {
+		return "", fmt.Errorf("error initiating guest update: %w", err)
+	}
+
+	if template.GuestUpdateStatus == nil || template.GuestUpdateStatus.DeployedVmReference == nil {
+		return "", fmt.Errorf("guest update initiated but no temporary VM reference returned")
+	}
+
+	vmUUID := *template.GuestUpdateStatus.DeployedVmReference
+	log.Printf("Guest update initiated, temporary VM UUID: %s", vmUUID)
+	return vmUUID, nil
+}
+
+// CompleteGuestUpdate finalizes a guest OS update, creating a new template version.
+func (d *NutanixDriver) CompleteGuestUpdate(ctx context.Context, templateExtID string, versionName string, versionDescription string) error {
+	v4Client, err := d.getV4Client()
+	if err != nil {
+		return fmt.Errorf("error creating V4 client: %w", err)
+	}
+
+	log.Printf("Completing guest update for template %s", templateExtID)
+	isActive := true
+	_, err = v4Client.Templates.CompleteGuestUpdate(ctx, templateExtID, versionName, versionDescription, isActive)
+	if err != nil {
+		return fmt.Errorf("error completing guest update: %w", err)
+	}
+
+	log.Printf("Guest update completed for template %s, new version: %s", templateExtID, versionName)
+	return nil
+}
+
+// CancelGuestUpdate aborts an in-progress guest OS update on the template.
+func (d *NutanixDriver) CancelGuestUpdate(ctx context.Context, templateExtID string) error {
+	v4Client, err := d.getV4Client()
+	if err != nil {
+		return fmt.Errorf("error creating V4 client: %w", err)
+	}
+
+	log.Printf("Cancelling guest update for template %s", templateExtID)
+	err = v4Client.Templates.CancelGuestUpdate(ctx, templateExtID)
+	if err != nil {
+		return fmt.Errorf("error cancelling guest update: %w", err)
+	}
+
+	log.Printf("Guest update cancelled for template %s", templateExtID)
 	return nil
 }
 

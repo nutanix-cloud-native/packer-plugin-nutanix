@@ -148,9 +148,13 @@ type OvaConfig struct {
 }
 
 type TemplateConfig struct {
-	Create      bool   `mapstructure:"create" json:"create" required:"false"`
-	Name        string `mapstructure:"name" json:"name" required:"false"`
-	Description string `mapstructure:"description" json:"description" required:"false"`
+	Create             bool   `mapstructure:"create" json:"create" required:"false"`
+	UpdateTemplate     bool   `mapstructure:"update_template" json:"update_template" required:"false"`
+	ExtID              string `mapstructure:"ext_id" json:"ext_id" required:"false"`
+	Name               string `mapstructure:"name" json:"name" required:"false"`
+	Description        string `mapstructure:"description" json:"description" required:"false"`
+	VersionName        string `mapstructure:"version_name" json:"version_name" required:"false"`
+	VersionDescription string `mapstructure:"version_description" json:"version_description" required:"false"`
 }
 
 func (c *Config) Prepare(raws ...interface{}) ([]string, error) {
@@ -232,6 +236,20 @@ func (c *Config) Prepare(raws ...interface{}) ([]string, error) {
 		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("missing nutanix_endpoint"))
 	}
 
+	// Validate template.create and template.update_template are mutually exclusive
+	if c.TemplateConfig.Create && c.TemplateConfig.UpdateTemplate {
+		log.Println("template.create and template.update_template are mutually exclusive")
+		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("template.create and template.update_template are mutually exclusive"))
+	}
+
+	// When update_template is set, either ext_id or name must be provided
+	if c.TemplateConfig.UpdateTemplate {
+		if c.TemplateConfig.ExtID == "" && c.TemplateConfig.Name == "" {
+			log.Println("template.update_template requires either template.ext_id or template.name")
+			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("template.update_template requires either template.ext_id or template.name"))
+		}
+	}
+
 	// When trying to export OVA, it should always be created
 	if c.OvaConfig.Export && !c.OvaConfig.Create {
 		log.Println("Setting ova.create to 'true', because ova.export is 'true'")
@@ -268,8 +286,8 @@ func (c *Config) Prepare(raws ...interface{}) ([]string, error) {
 		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("missing cluster_name or cluster_uuid"))
 	}
 
-	// Validate VM disks
-	if len(c.VmConfig.VmDisks) == 0 {
+	// Validate VM disks (not required when updating an existing template)
+	if len(c.VmConfig.VmDisks) == 0 && !c.TemplateConfig.UpdateTemplate {
 		log.Println("Nutanix VM Disks missing from configuration")
 		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("missing vm_disks"))
 	}
