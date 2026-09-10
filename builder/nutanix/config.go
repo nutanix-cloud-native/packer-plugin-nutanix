@@ -66,6 +66,9 @@ type Config struct {
 	VmRetain                       bool           `mapstructure:"vm_retain" json:"vm_retain" required:"false"`
 	DisableStopInstance            bool           `mapstructure:"disable_stop_instance" required:"false"`
 	SkipVMCreateTaskCheck          bool           `mapstructure:"skip_vm_create_task_check" required:"false"`
+	EnableNGT                      bool           `mapstructure:"enable_ngt" json:"enable_ngt" required:"false"`
+	NGTWaitTimeout                 time.Duration  `mapstructure:"ngt_wait_timeout" json:"ngt_wait_timeout" required:"false"`
+	NGTRestartCommand              string         `mapstructure:"ngt_restart_command" json:"ngt_restart_command" required:"false"`
 
 	ctx interpolate.Context
 }
@@ -176,6 +179,12 @@ func (c *Config) Prepare(raws ...interface{}) ([]string, error) {
 	if c.Comm.Type == "" {
 		log.Println("No Communicator Type set, setting to 'ssh'")
 		c.Comm.Type = "ssh"
+	}
+
+	if c.NGTWaitTimeout == 0 {
+		c.NGTWaitTimeout = 10 * time.Minute
+	} else if c.NGTWaitTimeout < 0 {
+		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("ngt_wait_timeout must be >= 0"))
 	}
 
 	// Set Default CPU Configuration

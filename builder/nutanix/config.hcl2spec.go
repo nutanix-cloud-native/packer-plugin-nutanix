@@ -178,6 +178,9 @@ type FlatConfig struct {
 	VmRetain                  *bool               `mapstructure:"vm_retain" json:"vm_retain" required:"false" cty:"vm_retain" hcl:"vm_retain"`
 	DisableStopInstance       *bool               `mapstructure:"disable_stop_instance" required:"false" cty:"disable_stop_instance" hcl:"disable_stop_instance"`
 	SkipVMCreateTaskCheck     *bool               `mapstructure:"skip_vm_create_task_check" required:"false" cty:"skip_vm_create_task_check" hcl:"skip_vm_create_task_check"`
+	EnableNGT                 *bool               `mapstructure:"enable_ngt" json:"enable_ngt" required:"false" cty:"enable_ngt" hcl:"enable_ngt"`
+	NGTWaitTimeout            *string             `mapstructure:"ngt_wait_timeout" json:"ngt_wait_timeout" required:"false" cty:"ngt_wait_timeout" hcl:"ngt_wait_timeout"`
+	NGTRestartCommand         *string             `mapstructure:"ngt_restart_command" json:"ngt_restart_command" required:"false" cty:"ngt_restart_command" hcl:"ngt_restart_command"`
 }
 
 // FlatMapstructure returns a new FlatConfig.
@@ -302,6 +305,9 @@ func (*FlatConfig) HCL2Spec() map[string]hcldec.Spec {
 		"vm_retain":                    &hcldec.AttrSpec{Name: "vm_retain", Type: cty.Bool, Required: false},
 		"disable_stop_instance":        &hcldec.AttrSpec{Name: "disable_stop_instance", Type: cty.Bool, Required: false},
 		"skip_vm_create_task_check":    &hcldec.AttrSpec{Name: "skip_vm_create_task_check", Type: cty.Bool, Required: false},
+		"enable_ngt":                   &hcldec.AttrSpec{Name: "enable_ngt", Type: cty.Bool, Required: false},
+		"ngt_wait_timeout":             &hcldec.AttrSpec{Name: "ngt_wait_timeout", Type: cty.String, Required: false},
+		"ngt_restart_command":          &hcldec.AttrSpec{Name: "ngt_restart_command", Type: cty.String, Required: false},
 	}
 	return s
 }

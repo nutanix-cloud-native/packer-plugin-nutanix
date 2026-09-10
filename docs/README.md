@@ -42,6 +42,20 @@ Going forward, release tags are created from the corresponding branch lines:
 
 - [nutanix](/packer/integrations/nutanix-cloud-native/nutanix/latest/components/builder/nutanix) - The Nutanix builder will create a temporary VM as foundation of your Packer image, apply all providers you define to customize your image, then clone the VM disk image as your final Packer image.
 
+### Nutanix Guest Tools
+
+NGT can be enabled before provisioning and verified after the provisioners complete. If the guest agent is not reachable, the builder can run a guest restart command and check again.
+
+```hcl
+source "nutanix" "windows" {
+  enable_ngt          = true
+  ngt_wait_timeout    = "10m"
+  ngt_restart_command = "Restart-Service -Name 'Nutanix Guest Tools' -Force"
+}
+```
+
+The restart command is optional and should match the service name used by the guest image. It is executed through the configured communicator only when NGT does not become reachable within `ngt_wait_timeout`.
+
 ### Limitations
 #### Building temporary ISOs on MacOS
 If you want to use the `cd_files` option to create an additional ISO image for kickstart files or similar purposes, be aware that macOS does not generate a compatible file by default.  
@@ -62,4 +76,3 @@ Issues and enhancement requests can be submitted in the [Issues tab of this repo
 
 ### License
 The project is released under version 2.0 of the [Apache license](http://www.apache.org/licenses/LICENSE-2.0).
-
