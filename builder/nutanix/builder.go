@@ -62,6 +62,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			Label:   b.config.CDConfig.CDLabel,
 		},
 		&stepBuildVM{},
+		&stepEnableNGT{},
 		&stepVNCConnect{
 			Config: &b.config,
 		},
@@ -77,6 +78,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			Host:      commHost(b.config.Comm.Host()),
 		},
 		new(commonsteps.StepProvision),
+		&stepWaitForNGT{},
 		&StepShutdown{
 			Command:             b.config.ShutdownCommand,
 			Timeout:             b.config.ShutdownTimeout,
