@@ -191,13 +191,16 @@ func (n *nutanixImage) SizeBytes() int64 {
 	return 0
 }
 
-// getConfigCreds returns the credentials for connecting to Prism Central
+// getConfigCreds returns the credentials for connecting to Prism Central.
+// APIKey takes precedence over username/password — prism-go-client's V3 client
+// emits the X-ntnx-api-key header when Credentials.APIKey is set.
 func (d *NutanixDriver) getConfigCreds() client.Credentials {
 	return client.Credentials{
 		URL:      fmt.Sprintf("%s:%d", d.ClusterConfig.Endpoint, d.ClusterConfig.Port),
 		Endpoint: d.ClusterConfig.Endpoint,
 		Username: d.ClusterConfig.Username,
 		Password: d.ClusterConfig.Password,
+		APIKey:   d.ClusterConfig.APIKey,
 		Port:     string(d.ClusterConfig.Port),
 		Insecure: d.ClusterConfig.Insecure,
 	}
@@ -206,23 +209,34 @@ func (d *NutanixDriver) getConfigCreds() client.Credentials {
 // getV4Client returns the V4 converged client from the shared cache (creating it if needed).
 func (d *NutanixDriver) getV4Client() (*convergedv4.Client, error) {
 	cacheParams := &v4CacheParams{
-		endpoint: d.ClusterConfig.Endpoint,
-		port:     d.ClusterConfig.Port,
-		username: d.ClusterConfig.Username,
-		password: d.ClusterConfig.Password,
-		insecure: d.ClusterConfig.Insecure,
+		endpoint:      d.ClusterConfig.Endpoint,
+		port:          d.ClusterConfig.Port,
+		username:      d.ClusterConfig.Username,
+		password:      d.ClusterConfig.Password,
+		apiKey:        d.ClusterConfig.APIKey,
+		customHeaders: d.ClusterConfig.CustomHeaders,
+		insecure:      d.ClusterConfig.Insecure,
 	}
 
-	v4Client, err := convergedV4ClientCache.GetOrCreate(cacheParams)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get or create V4 client: %w", err)
-	}
-	return v4Client, nil
+	return getV4ConvergedClient(cacheParams)
 }
 
 // getV4TransferClient returns a V4 client for upload/download operations.
 // If nutanix_transfer_timeout is not configured, default transfer timeout is 30 minutes.
 func (d *NutanixDriver) getV4TransferClient() (*convergedv4.Client, error) {
+	return d.newV4TransferClient(false)
+}
+
+// getV4UploadClient returns a V4 transfer client for Objects Lite image
+// uploads. Unlike getV4TransferClient it authenticates with username/password
+// instead of the API key, as a build without an API key does, because the
+// upload signs its S3 requests with them. Use it for uploads only; every other
+// client uses the API key when one is configured.
+func (d *NutanixDriver) getV4UploadClient() (*convergedv4.Client, error) {
+	return d.newV4TransferClient(true)
+}
+
+func (d *NutanixDriver) newV4TransferClient(objectsUpload bool) (*convergedv4.Client, error) {
 	opts := []types.ClientOption[v4.Client]{}
 	transferTimeout := d.ClusterConfig.TransferTimeout
 	if transferTimeout <= 0 {
@@ -231,18 +245,18 @@ func (d *NutanixDriver) getV4TransferClient() (*convergedv4.Client, error) {
 	opts = append(opts, v4.WithReadTimeout(transferTimeout))
 
 	cacheParams := &v4CacheParams{
-		endpoint: d.ClusterConfig.Endpoint,
-		port:     d.ClusterConfig.Port,
-		username: d.ClusterConfig.Username,
-		password: d.ClusterConfig.Password,
-		insecure: d.ClusterConfig.Insecure,
+		endpoint:      d.ClusterConfig.Endpoint,
+		port:          d.ClusterConfig.Port,
+		username:      d.ClusterConfig.Username,
+		password:      d.ClusterConfig.Password,
+		apiKey:        d.ClusterConfig.APIKey,
+		customHeaders: d.ClusterConfig.CustomHeaders,
+		insecure:      d.ClusterConfig.Insecure,
+		transfer:      true,
+		objectsUpload: objectsUpload,
 	}
 
-	v4Client, err := convergedV4ClientCache.GetOrCreate(cacheParams, opts...)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get or create V4 transfer client: %w", err)
-	}
-	return v4Client, nil
+	return getV4ConvergedClient(cacheParams, opts...)
 }
 
 func findProjectByName(ctx context.Context, conn *v3.Client, name string) (*v3.Project, error) {
@@ -1076,8 +1090,16 @@ func (d *NutanixDriver) CreateImageURL(ctx context.Context, disk VmDisk, vm VmCo
 }
 
 // CreateImageFile uploads a local file as a new image using Objects Lite.
+//
+// The Objects Lite S3 upload does not go through the converged client's
+// default headers, so nutanix_custom_headers are passed explicitly with
+// WithExtraHeaders to reach Prism Central behind a service-token gateway
+// (e.g. Cloudflare Access). Objects Lite validates the AWS V4 signature
+// against Prism Central's user table, so nutanix_username/nutanix_password
+// are required even when the rest of the build authenticates with
+// nutanix_api_key; getV4UploadClient carries them for this call only.
 func (d *NutanixDriver) CreateImageFile(ctx context.Context, filePath string, vm VmConfig) (*nutanixImage, error) {
-	v4Client, err := d.getV4TransferClient()
+	v4Client, err := d.getV4UploadClient()
 	if err != nil {
 		return nil, fmt.Errorf("error creating V4 client: %s", err.Error())
 	}
@@ -1086,12 +1108,22 @@ func (d *NutanixDriver) CreateImageFile(ctx context.Context, filePath string, vm
 
 	log.Printf("creating and uploading image: %s", file)
 
-	err = v4Client.Images.Upload(ctx, file, filePath)
+	extraHeaders := http.Header{}
+	for k, v := range d.ClusterConfig.CustomHeaders {
+		extraHeaders.Set(k, v)
+	}
+
+	err = v4Client.Images.Upload(ctx, file, filePath, converged.WithExtraHeaders(extraHeaders))
 	if err != nil {
 		return nil, fmt.Errorf("error while uploading image: %s", err.Error())
 	}
 
-	createdImage, err := findImageByName(ctx, v4Client, file, d.Config.AllowDuplicateImages)
+	lookupClient, err := d.getV4Client()
+	if err != nil {
+		return nil, fmt.Errorf("error creating V4 client: %s", err.Error())
+	}
+
+	createdImage, err := findImageByName(ctx, lookupClient, file, d.Config.AllowDuplicateImages)
 	if err != nil {
 		return nil, fmt.Errorf("error while getting created image: %s", err.Error())
 	}
@@ -1250,7 +1282,7 @@ func (d *NutanixDriver) CreateOVA(ctx context.Context, ovaName string, vmUUID st
 func (d *NutanixDriver) ExportOVA(ctx context.Context, ovaName string) (string, error) {
 	log.Printf("starting OVA export for OVA: %s", ovaName)
 
-	v4Client, err := d.getV4Client()
+	v4Client, err := d.getV4TransferClient()
 	if err != nil {
 		return "", fmt.Errorf("error creating V4 client: %s", err.Error())
 	}

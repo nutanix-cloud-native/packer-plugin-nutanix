@@ -7,18 +7,48 @@ The Nutanix plugin will create a temporary VM as foundation of your Packer image
 These parameters allow to define information about platform and temporary VM used to create the image.
 
 ### Required
-  - `nutanix_username` (string) - User used for Prism Central login.
-  - `nutanix_password` (string) - Password of this user for Prism Central login.
   - `nutanix_endpoint` (string) - Prism Central FQDN or IP.
   - `cluster_name` or `cluster_uuid` (string) - Nutanix cluster name or uuid used to create and store image.
   - `os_type` (string) - OS Type ("Linux" or "Windows").
 
-Starting `v1.1.4` the Nutanix Packer Plugin supports Prism Central Service Accounts. To use a Service Account, you need to provide `X-ntnx-api-key` as the `nutanix_username` and the corresponding API Key as the `nutanix_password`.
+Authentication requires either `nutanix_api_key` **or** both `nutanix_username` and `nutanix_password`. If both are provided, `nutanix_api_key` is used for API calls, and `nutanix_username`/`nutanix_password` for Objects Lite image uploads (see below) and the V3 fallback image download.
+
+> **Note:** `source_image_path` and `cd_content`/`cd_files` upload images to Prism Central's Objects Lite S3 endpoint, which always validates using AWS V4 signing derived from `nutanix_username`/`nutanix_password`. Even when using `nutanix_api_key` for API calls, valid Prism Central credentials are required for these upload paths, and validation fails if they are missing. Use `source_image_name` or `source_image_uri` to avoid the Objects Lite path entirely.
+
+Sample using API key and custom headers (e.g. Cloudflare Access):
+```hcl
+variable "nutanix_api_key" {
+  type      = string
+  sensitive = true
+}
+
+variable "nutanix_custom_headers" {
+  type      = map(string)
+  sensitive = true
+  default   = {}
+}
+
+source "nutanix" "example" {
+  nutanix_api_key        = var.nutanix_api_key
+  nutanix_custom_headers = var.nutanix_custom_headers
+  # ...
+}
+```
+
+Values can be supplied via `PKR_VAR_` environment variables:
+```bash
+export PKR_VAR_nutanix_api_key='your-api-key'
+export PKR_VAR_nutanix_custom_headers='{"Cf-Access-Client-Id":"your-client-id","Cf-Access-Client-Secret":"your-client-secret"}'
+```
 
 ### Optional
+  - `nutanix_username` (string) - User used for Prism Central login.
+  - `nutanix_password` (string) - Password of this user for Prism Central login.
+  - `nutanix_api_key` (string) - Prism Central API key. When set, the `X-ntnx-api-key` header is used instead of Basic auth. Use this for Prism Central Service Accounts (preferred over the legacy `nutanix_username = "X-ntnx-api-key"` form, which still works for backwards compatibility).
+  - `nutanix_custom_headers` (map of strings) - Additional HTTP headers attached to requests to Prism Central: v4 REST API calls, VNC console websocket connections (used by `boot_command`), and Objects Lite S3 image uploads (used by `source_image_path`, `cd_files` and `cd_content`). Useful for environments that sit behind a reverse proxy that requires extra auth headers (e.g. Cloudflare Access service tokens). The legacy V3 API calls — the `vm_project` lookup, and the fallback download used when a v4 image download fails — do not send these headers, so they do not work through such a proxy; the V3 fallback download also does not use `nutanix_api_key`.
   - `nutanix_port` (number) - Port used for connection to Prism Central.
   - `nutanix_insecure` (bool) - Authorize connection to Prism Central without valid certificate.
-  - `nutanix_transfer_timeout` (number) - Transfer read timeout in minutes for upload/download operations (`source_image_path` upload, image export download). Default is `30` for transfer APIs. Set `0` to use the default.
+  - `nutanix_transfer_timeout` (number) - Transfer read timeout in minutes for image export and OVA export downloads, and for the API calls around `source_image_path` and `cd_files`/`cd_content` uploads. The Objects Lite upload itself and the V3 fallback image download have no timeout. Default is `30` for transfer APIs. Set `0` to use the default.
   - `vm_name` (string) - Name of the temporary VM to create. If not specified a random `packer-*` name will be used.
   - `cpu` (number) - Number of vCPU for temporary VM (default is 1).
   - `core` (number) - Number of cores per vCPU for temporary VM (default is 1).
