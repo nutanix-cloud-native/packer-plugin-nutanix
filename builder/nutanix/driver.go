@@ -1053,7 +1053,9 @@ func (d *NutanixDriver) CreateImageURL(ctx context.Context, disk VmDisk, vm VmCo
 		verifiedImage, verifyErr := v4Client.Images.Get(ctx, imageUUID)
 		if verifyErr != nil {
 			log.Printf("Error verifying image (attempt %d/%d): %s", i+1, maxRetries, verifyErr.Error())
-			time.Sleep(5 * time.Second)
+			if err := sleepCtx(ctx, 5*time.Second); err != nil {
+				return nil, err
+			}
 			continue
 		}
 
@@ -1064,7 +1066,9 @@ func (d *NutanixDriver) CreateImageURL(ctx context.Context, disk VmDisk, vm VmCo
 		}
 
 		log.Printf("Image %s not ready yet (SizeBytes is nil or 0), waiting... (attempt %d/%d)", imageUUID, i+1, maxRetries)
-		time.Sleep(5 * time.Second)
+		if err := sleepCtx(ctx, 5*time.Second); err != nil {
+			return nil, err
+		}
 	}
 
 	log.Printf("WARNING: Image %s readiness check timed out, proceeding anyway...", imageUUID)
@@ -1260,7 +1264,9 @@ func (d *NutanixDriver) ExportOVA(ctx context.Context, ovaName string) (string, 
 			log.Printf("error finding OVA: %s", err.Error())
 		}
 		if ovaUUID == "" {
-			<-time.After(5 * time.Second)
+			if err := sleepCtx(ctx, 5*time.Second); err != nil {
+				return "", err
+			}
 		} else {
 			break
 		}

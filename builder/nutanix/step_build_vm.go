@@ -114,10 +114,15 @@ func (s *stepBuildVM) Cleanup(state multistep.StateBag) {
 	if !ok {
 		ctx = context.Background()
 	}
+	// Cleanup also runs after the build is cancelled; detach from that
+	// cancellation so the delete requests are still sent.
+	ctx = context.WithoutCancel(ctx)
 
 	if cdUUID, ok := state.GetOk("cd_uuid"); ok {
 		ui.Say("Deleting temporary CD disk...")
-		err := d.DeleteImage(ctx, cdUUID.(string))
+		err := withCleanupTimeout(ctx, func(ctx context.Context) error {
+			return d.DeleteImage(ctx, cdUUID.(string))
+		})
 		if err != nil {
 			ui.Error("An error occurred while deleting CD disk")
 			log.Println(err)
@@ -129,7 +134,9 @@ func (s *stepBuildVM) Cleanup(state multistep.StateBag) {
 
 	for _, image := range imageToDelete.([]string) {
 		ui.Say(fmt.Sprintf("Deleting marked source_image: %s...", image))
-		err := d.DeleteImage(ctx, image)
+		err := withCleanupTimeout(ctx, func(ctx context.Context) error {
+			return d.DeleteImage(ctx, image)
+		})
 		if err != nil {
 			ui.Error(fmt.Sprintf("An error occurred while deleting image %s", image))
 			log.Println(err)
@@ -152,7 +159,9 @@ func (s *stepBuildVM) Cleanup(state multistep.StateBag) {
 		ui.Say("Deleting virtual machine...")
 	}
 
-	err := d.Delete(ctx, vmUUID.(string))
+	err := withCleanupTimeout(ctx, func(ctx context.Context) error {
+		return d.Delete(ctx, vmUUID.(string))
+	})
 	if err != nil {
 		ui.Error("An error occurred while deleting the Virtual machine")
 		log.Println(err)
