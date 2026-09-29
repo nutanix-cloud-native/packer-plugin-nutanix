@@ -865,7 +865,7 @@ func (d *NutanixDriver) PowerOn(ctx context.Context, vmUUID string) error {
 	}
 
 	log.Printf("powering on vm %s...", vmUUID)
-	powerOnOp, err := v4Client.VMs.PowerOnVM(vmUUID)
+	powerOnOp, err := v4Client.VMs.PowerOnVM(ctx, vmUUID)
 	if err != nil {
 		log.Printf("error initiating power on for vm: %s", err.Error())
 		return fmt.Errorf("failed to power on VM: %s", err.Error())
@@ -1053,7 +1053,9 @@ func (d *NutanixDriver) CreateImageURL(ctx context.Context, disk VmDisk, vm VmCo
 		verifiedImage, verifyErr := v4Client.Images.Get(ctx, imageUUID)
 		if verifyErr != nil {
 			log.Printf("Error verifying image (attempt %d/%d): %s", i+1, maxRetries, verifyErr.Error())
-			time.Sleep(5 * time.Second)
+			if err := sleepCtx(ctx, 5*time.Second); err != nil {
+				return nil, err
+			}
 			continue
 		}
 
@@ -1064,7 +1066,9 @@ func (d *NutanixDriver) CreateImageURL(ctx context.Context, disk VmDisk, vm VmCo
 		}
 
 		log.Printf("Image %s not ready yet (SizeBytes is nil or 0), waiting... (attempt %d/%d)", imageUUID, i+1, maxRetries)
-		time.Sleep(5 * time.Second)
+		if err := sleepCtx(ctx, 5*time.Second); err != nil {
+			return nil, err
+		}
 	}
 
 	log.Printf("WARNING: Image %s readiness check timed out, proceeding anyway...", imageUUID)
@@ -1260,7 +1264,9 @@ func (d *NutanixDriver) ExportOVA(ctx context.Context, ovaName string) (string, 
 			log.Printf("error finding OVA: %s", err.Error())
 		}
 		if ovaUUID == "" {
-			<-time.After(5 * time.Second)
+			if err := sleepCtx(ctx, 5*time.Second); err != nil {
+				return "", err
+			}
 		} else {
 			break
 		}
@@ -1369,7 +1375,7 @@ func (d *NutanixDriver) PowerOff(ctx context.Context, vmUUID string) error {
 
 	log.Printf("stopping VM: %s", d.Config.VMName)
 
-	operation, err := v4Client.VMs.PowerOffVM(vmUUID)
+	operation, err := v4Client.VMs.PowerOffVM(ctx, vmUUID)
 	if err != nil {
 		return fmt.Errorf("error while PowerOff VM: %s", err.Error())
 	}

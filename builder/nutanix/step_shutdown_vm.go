@@ -28,7 +28,13 @@ type StepShutdown struct {
 	Command             string
 	Timeout             time.Duration
 	DisableStopInstance bool
+
+	// pollInterval is how often the VM's power state is checked; zero means
+	// defaultShutdownPollInterval. Set by tests.
+	pollInterval time.Duration
 }
+
+const defaultShutdownPollInterval = 15 * time.Second
 
 func (s *StepShutdown) Run(ctx context.Context, state multistep.StateBag) multistep.StepAction {
 	comm := state.Get("communicator").(packersdk.Communicator)
@@ -74,22 +80,46 @@ func (s *StepShutdown) Run(ctx context.Context, state multistep.StateBag) multis
 
 	// Wait for the machine to actually shut down
 	log.Printf("waiting max %s for shutdown to complete", s.Timeout)
-	shutdownTimer := time.After(s.Timeout)
+	// The deadline is checked after each poll, so the VM's state is always
+	// checked once more after the timeout expires, as before.
+	deadline := time.Now().Add(s.Timeout)
+	pollInterval := s.pollInterval
+	if pollInterval == 0 {
+		pollInterval = defaultShutdownPollInterval
+	}
+	// lastGetVMErr holds the most recent poll's GetVM error, and is reported if
+	// the wait times out, so a persistent error (e.g. 401 or 404) is not hidden
+	// behind a bare timeout. A successful poll clears it.
+	var lastGetVMErr error
 	for {
-		running, _ := driver.GetVM(ctx, vmUUID)
-		if running.PowerState() == "OFF" {
+		// GetVM honours ctx, so it errors once the build is cancelled; a nil
+		// VM must not be dereferenced.
+		running, err := driver.GetVM(ctx, vmUUID)
+		lastGetVMErr = err
+		if err != nil {
+			log.Printf("error getting VM power state: %s", err)
+		} else if running.PowerState() == "OFF" {
 			log.Printf("VM powered off")
 			break
 		}
 
-		select {
-		case <-shutdownTimer:
+		if time.Now().After(deadline) {
 			err := errors.New("timeout while waiting for machine to shutdown")
+			if lastGetVMErr != nil {
+				err = fmt.Errorf("timeout while waiting for machine to shutdown; last error getting VM power state: %w", lastGetVMErr)
+			}
 			state.Put("error", err)
 			ui.Error(err.Error())
 			return multistep.ActionHalt
-		default:
-			time.Sleep(15 * time.Second)
+		}
+
+		select {
+		case <-ctx.Done():
+			err := fmt.Errorf("build cancelled while waiting for machine to shutdown: %w", ctx.Err())
+			state.Put("error", err)
+			ui.Error(err.Error())
+			return multistep.ActionHalt
+		case <-time.After(pollInterval):
 		}
 	}
 
