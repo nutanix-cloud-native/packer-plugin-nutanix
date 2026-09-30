@@ -28,7 +28,12 @@ func (s *stepCreateImage) Run(ctx context.Context, state multistep.StateBag) mul
 	ui := state.Get("ui").(packer.Ui)
 	vmUUID := state.Get("vm_uuid").(string)
 	d := state.Get("driver").(Driver)
-	vm, _ := d.GetVM(ctx, vmUUID)
+	vm, err := d.GetVM(ctx, vmUUID)
+	if err != nil {
+		ui.Error("Error getting virtual machine: " + err.Error())
+		state.Put("error", err)
+		return multistep.ActionHalt
+	}
 
 	ui.Say(fmt.Sprintf("Creating image(s) from virtual machine %s...", s.Config.VMName))
 
@@ -107,6 +112,9 @@ func (s *stepCreateImage) Cleanup(state multistep.StateBag) {
 	if !ok {
 		ctx = context.Background()
 	}
+	// Cleanup also runs after the build is cancelled; detach from that
+	// cancellation so the delete request is still sent.
+	ctx = context.WithoutCancel(ctx)
 
 	if !s.Config.ImageDelete {
 		return
@@ -117,7 +125,9 @@ func (s *stepCreateImage) Cleanup(state multistep.StateBag) {
 
 		for _, image := range imgUUID.([]imageArtefact) {
 
-			err := d.DeleteImage(ctx, image.uuid)
+			err := withCleanupTimeout(ctx, func(ctx context.Context) error {
+				return d.DeleteImage(ctx, image.uuid)
+			})
 			if err != nil {
 				ui.Error("An error occurred while deleting image")
 				return
