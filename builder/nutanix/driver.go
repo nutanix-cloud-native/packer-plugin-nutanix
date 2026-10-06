@@ -724,6 +724,18 @@ func (d *NutanixDriver) CreateRequest(ctx context.Context, vmConfig VmConfig, st
 		}
 		v4Nic.NicNetworkInfo = nicNetworkInfoWrapper
 
+		if nic.MacAddress != "" {
+			nicBackingInfo := vmmModels.NewVirtualEthernetNic()
+			macAddr := nic.MacAddress
+			nicBackingInfo.MacAddress = &macAddr
+
+			nicBackingInfoWrapper := vmmModels.NewOneOfNicNicBackingInfo()
+			if err := nicBackingInfoWrapper.SetValue(*nicBackingInfo); err != nil {
+				return nil, fmt.Errorf("error setting NIC backing info for vm_nics %d: %s", i+1, err.Error())
+			}
+			v4Nic.NicBackingInfo = nicBackingInfoWrapper
+		}
+
 		v4vm.Nics = append(v4vm.Nics, *v4Nic)
 	}
 
