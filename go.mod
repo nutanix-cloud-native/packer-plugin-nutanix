@@ -174,9 +174,9 @@ require (
 	golang.org/x/crypto v0.57.0 // indirect
 	golang.org/x/exp v0.0.0-20230321023759-10a507213a29 // indirect
 	golang.org/x/mobile v0.0.0-20260312152759-81488f6aeb60 // indirect
-	golang.org/x/mod v0.40.0 // indirect
+	golang.org/x/mod v0.41.0 // indirect
 	golang.org/x/oauth2 v0.36.0 // indirect
-	golang.org/x/sync v0.22.0 // indirect
+	golang.org/x/sync v0.23.0 // indirect
 	golang.org/x/sys v0.48.0 // indirect
 	golang.org/x/term v0.46.0 // indirect
 	golang.org/x/text v0.42.0 // indirect
@@ -199,7 +199,7 @@ replace (
 	github.com/yuin/goldmark => github.com/yuin/goldmark v1.8.2
 	go.mongodb.org/mongo-driver => go.mongodb.org/mongo-driver v1.17.9
 	golang.org/x/image => golang.org/x/image v0.42.0
-	golang.org/x/mod => golang.org/x/mod v0.40.0
+	golang.org/x/mod => golang.org/x/mod v0.41.0
 	golang.org/x/text => golang.org/x/text v0.42.0
 )
 
