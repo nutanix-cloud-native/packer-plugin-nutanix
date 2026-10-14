@@ -94,10 +94,15 @@ func (s *stepBuildVM) Run(ctx context.Context, state multistep.StateBag) multist
 	}
 	ui.Say(fmt.Sprintf("Virtual machine %s created", config.VMName))
 	state.Put("destroy_vm", true)
-	state.Put("vm_uuid", vmInstance.UUID())
-	state.Put("cluster_uuid", vmInstance.ClusterUUID())
+	setVMState(state, vmInstance)
 
 	return multistep.ActionContinue
+}
+
+func setVMState(state multistep.StateBag, vmInstance *nutanixInstance) {
+	state.Put("instance_id", vmInstance.UUID())
+	state.Put("vm_uuid", vmInstance.UUID())
+	state.Put("cluster_uuid", vmInstance.ClusterUUID())
 }
 
 // Cleanup will tear down the VM once the build is complete
