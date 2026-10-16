@@ -63,10 +63,111 @@ func findImageByUUIDHelper(ctx context.Context, client *convergedv4.Client, uuid
 	return img, nil
 }
 
+// imageTypeName returns the Prism image type name (DISK_IMAGE, ISO_IMAGE).
+func imageTypeName(img *imageModels.Image) string {
+	if img == nil || img.Type == nil {
+		return ""
+	}
+	return img.Type.GetName()
+}
+
+// uniqueImageTypeNames returns distinct type names from images, sorted.
+func uniqueImageTypeNames(images []*imageModels.Image) []string {
+	seen := map[string]struct{}{}
+	var types []string
+	for _, img := range images {
+		t := imageTypeName(img)
+		if t == "" {
+			t = "UNKNOWN"
+		}
+		if _, ok := seen[t]; ok {
+			continue
+		}
+		seen[t] = struct{}{}
+		types = append(types, t)
+	}
+	sort.Strings(types)
+	return types
+}
+
+// selectImageByNameAndType picks one image from name matches.
+// When imageType is set, only that type is considered. allowDuplicates then
+// applies only among remaining same-type images.
+func selectImageByNameAndType(found []*imageModels.Image, name, imageType string, allowDuplicates bool) (*imageModels.Image, error) {
+	if len(found) == 0 {
+		if imageType != "" {
+			return nil, fmt.Errorf("image %s of type %s not found", name, imageType)
+		}
+		return nil, fmt.Errorf("image %s not found", name)
+	}
+
+	candidates := found
+	if imageType != "" {
+		typed := make([]*imageModels.Image, 0, len(found))
+		var otherTypes []*imageModels.Image
+		for _, img := range found {
+			if strings.EqualFold(imageTypeName(img), imageType) {
+				typed = append(typed, img)
+			} else {
+				otherTypes = append(otherTypes, img)
+			}
+		}
+		if len(typed) == 0 {
+			if len(otherTypes) > 0 {
+				return nil, fmt.Errorf(
+					"image %s of type %s not found (found type(s) %s with that name)",
+					name, imageType, strings.Join(uniqueImageTypeNames(otherTypes), ", "),
+				)
+			}
+			return nil, fmt.Errorf("image %s of type %s not found", name, imageType)
+		}
+		candidates = typed
+	}
+
+	if len(candidates) == 1 {
+		if candidates[0].ExtId == nil {
+			return nil, fmt.Errorf("image %s has no ExtId", name)
+		}
+		return candidates[0], nil
+	}
+
+	typeLabel := "image"
+	if imageType != "" {
+		typeLabel = imageType
+	}
+	if !allowDuplicates {
+		return nil, fmt.Errorf("found more than one %s with name %s. Use allow_duplicate_images to only select the newest image", typeLabel, name)
+	}
+	log.Printf("WARNING: found %d %s images with name '%s', selecting the newest ready image", len(candidates), typeLabel, name)
+	ready := selectNewestReadyImage(candidates)
+	if len(ready) == 0 {
+		return nil, fmt.Errorf("found multiple %s images with name '%s' but none are ready (SizeBytes > 0)", typeLabel, name)
+	}
+	if ready[0].ExtId == nil {
+		return nil, fmt.Errorf("image %s has no ExtId", name)
+	}
+	return ready[0], nil
+}
+
+func ensureImageType(img *imageModels.Image, expectedType, identifier string) error {
+	if expectedType == "" || img == nil {
+		return nil
+	}
+	actual := imageTypeName(img)
+	if actual == "" {
+		return fmt.Errorf("image %s has no type; expected %s", identifier, expectedType)
+	}
+	if !strings.EqualFold(actual, expectedType) {
+		return fmt.Errorf("image %s is type %s, expected %s", identifier, actual, expectedType)
+	}
+	return nil
+}
+
 // findImageByNameHelper finds an image by name using V4 API.
-// When allowDuplicates is true and multiple images share the same name,
+// When imageType is non-empty, only images of that type are considered.
+// When allowDuplicates is true and multiple images share the same name (and type),
 // the newest ready image is selected instead of returning an error.
-func findImageByNameHelper(ctx context.Context, client *convergedv4.Client, name string, allowDuplicates bool) (*imageModels.Image, error) {
+func findImageByNameHelper(ctx context.Context, client *convergedv4.Client, name, imageType string, allowDuplicates bool) (*imageModels.Image, error) {
 	images, err := client.Images.List(ctx, converged.WithFilter(fmt.Sprintf("name eq '%s'", name)))
 	if err != nil {
 		return nil, err
@@ -79,25 +180,11 @@ func findImageByNameHelper(ctx context.Context, client *convergedv4.Client, name
 		}
 	}
 
-	if len(found) == 0 {
-		return nil, fmt.Errorf("image %s not found", name)
+	selected, err := selectImageByNameAndType(found, name, imageType, allowDuplicates)
+	if err != nil {
+		return nil, err
 	}
-
-	if len(found) > 1 {
-		if !allowDuplicates {
-			return nil, fmt.Errorf("found more than one image with name %s. Use allow_duplicate_images to only select the newest image", name)
-		}
-		log.Printf("WARNING: found %d images with name '%s', selecting the newest ready image", len(found), name)
-		found = selectNewestReadyImage(found)
-		if len(found) == 0 {
-			return nil, fmt.Errorf("found multiple images with name '%s' but none are ready (SizeBytes > 0)", name)
-		}
-	}
-
-	if found[0].ExtId == nil {
-		return nil, fmt.Errorf("image %s has no ExtId", name)
-	}
-	return findImageByUUIDHelper(ctx, client, *found[0].ExtId)
+	return findImageByUUIDHelper(ctx, client, *selected.ExtId)
 }
 
 // sortImagesByCreateTimeDesc sorts images by CreateTime in descending order
