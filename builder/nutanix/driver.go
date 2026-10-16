@@ -818,16 +818,16 @@ func (d *NutanixDriver) CreateRequest(ctx context.Context, vmConfig VmConfig, st
 		}
 	}
 
-	// Project lookup still uses V3 API
+	// Project lookup still uses V3 API. Assign via Vm.Project (project ExtId),
+	// not OwnershipInfo.Owner — Owner.ExtId is a user identity.
 	if vmConfig.Project != "" {
 		project, err := findProjectByName(ctx, conn, vmConfig.Project)
 		if err != nil {
 			return nil, fmt.Errorf("error while findProjectByName, %s", err.Error())
 		}
 		if project.Metadata != nil && project.Metadata.UUID != nil {
-			v4vm.OwnershipInfo = vmmModels.NewOwnershipInfo()
-			v4vm.OwnershipInfo.Owner = vmmModels.NewOwnerReference()
-			v4vm.OwnershipInfo.Owner.ExtId = project.Metadata.UUID
+			v4vm.Project = vmmModels.NewProjectReference()
+			v4vm.Project.ExtId = project.Metadata.UUID
 		}
 	}
 
