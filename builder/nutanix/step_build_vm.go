@@ -27,7 +27,7 @@ func (s *stepBuildVM) Run(ctx context.Context, state multistep.StateBag) multist
 		ui.Say("Uploading CD disk...")
 		cdFilesPath := cdPathRaw.(string)
 		log.Println("CD disk found " + cdFilesPath)
-		cdfilesImage, err := d.CreateImageFile(ctx, cdFilesPath, config.VmConfig)
+		cdfilesImage, err := d.CreateImageFile(ctx, cdFilesPath, ImageTypeISOImage, config.VmConfig)
 		if err != nil {
 			ui.Error("Error uploading CD disk:" + err.Error())
 			state.Put("error", err)
@@ -36,7 +36,7 @@ func (s *stepBuildVM) Run(ctx context.Context, state multistep.StateBag) multist
 		ui.Sayf("CD disk uploaded %s", cdfilesImage.Name())
 		state.Put("cd_uuid", cdfilesImage.UUID())
 		temp_cd := VmDisk{
-			ImageType:       "ISO_IMAGE",
+			ImageType:       ImageTypeISOImage,
 			SourceImageUUID: cdfilesImage.UUID(),
 		}
 		config.VmConfig.VmDisks = append(config.VmConfig.VmDisks, temp_cd)
@@ -53,7 +53,7 @@ func (s *stepBuildVM) Run(ctx context.Context, state multistep.StateBag) multist
 
 			ui.Sayf("Uploading %s for disk %d ...", filename, i)
 			log.Println("Disk source image path found: " + disk.SourceImagePath)
-			uploadedImage, err := d.CreateImageFile(ctx, disk.SourceImagePath, config.VmConfig)
+			uploadedImage, err := d.CreateImageFile(ctx, disk.SourceImagePath, disk.ImageType, config.VmConfig)
 			if err != nil {
 				ui.Error(fmt.Sprintf("Error uploading disk %d: %s", i, err.Error()))
 				state.Put("error", err)

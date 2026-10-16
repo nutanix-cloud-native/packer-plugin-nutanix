@@ -52,7 +52,7 @@ type Driver interface {
 	GetHost(context.Context, string) (*nutanixHost, error)
 	PowerOff(context.Context, string) error
 	CreateImageURL(context.Context, VmDisk, VmConfig) (*nutanixImage, error)
-	CreateImageFile(context.Context, string, VmConfig) (*nutanixImage, error)
+	CreateImageFile(context.Context, string, string, VmConfig) (*nutanixImage, error)
 	DeleteImage(context.Context, string) error
 	GetImage(context.Context, string) (*nutanixImage, error)
 	CreateTemplate(context.Context, string, TemplateConfig) error
@@ -1088,7 +1088,9 @@ func (d *NutanixDriver) CreateImageURL(ctx context.Context, disk VmDisk, vm VmCo
 }
 
 // CreateImageFile uploads a local file as a new image using Objects Lite.
-func (d *NutanixDriver) CreateImageFile(ctx context.Context, filePath string, vm VmConfig) (*nutanixImage, error) {
+// imageType (DISK_IMAGE or ISO_IMAGE) restricts the post-upload name lookup so a
+// same-named image of the other type is not treated as a duplicate.
+func (d *NutanixDriver) CreateImageFile(ctx context.Context, filePath, imageType string, vm VmConfig) (*nutanixImage, error) {
 	v4Client, err := d.getV4TransferClient()
 	if err != nil {
 		return nil, fmt.Errorf("error creating V4 client: %s", err.Error())
@@ -1096,14 +1098,14 @@ func (d *NutanixDriver) CreateImageFile(ctx context.Context, filePath string, vm
 
 	_, file := filepath.Split(filePath)
 
-	log.Printf("creating and uploading image: %s", file)
+	log.Printf("creating and uploading image: %s (type: %s)", file, imageType)
 
 	err = v4Client.Images.Upload(ctx, file, filePath)
 	if err != nil {
 		return nil, fmt.Errorf("error while uploading image: %s", err.Error())
 	}
 
-	createdImage, err := findImageByName(ctx, v4Client, file, "", d.Config.AllowDuplicateImages)
+	createdImage, err := findImageByName(ctx, v4Client, file, imageType, d.Config.AllowDuplicateImages)
 	if err != nil {
 		return nil, fmt.Errorf("error while getting created image: %s", err.Error())
 	}
