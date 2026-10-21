@@ -64,6 +64,8 @@ type Driver interface {
 	CleanCD(context.Context, string) error
 	PowerOn(context.Context, string) error
 	GenerateConsoleToken(context.Context, string) (token, wsUri string, err error)
+	EnableNGT(context.Context, string) error
+	GetNGTStatus(context.Context, string) (ngtStatus, error)
 }
 
 // Verify that NutanixDriver implements the Driver interface
@@ -74,10 +76,17 @@ type NutanixDriver struct {
 	Config        Config
 	ClusterConfig ClusterConfig
 	vmEndCh       <-chan int
+	rawV4Client   *v4.Client
 }
 
 type nutanixInstance struct {
 	vm *vmmModels.Vm
+}
+
+type ngtStatus struct {
+	Installed bool
+	Reachable bool
+	Enabled   bool
 }
 
 // UUID returns the VM's external ID (UUID)
@@ -243,6 +252,91 @@ func (d *NutanixDriver) getV4TransferClient() (*convergedv4.Client, error) {
 		return nil, fmt.Errorf("failed to get or create V4 transfer client: %w", err)
 	}
 	return v4Client, nil
+}
+
+func (d *NutanixDriver) getRawV4Client() (*v4.Client, error) {
+	if d.rawV4Client != nil {
+		return d.rawV4Client, nil
+	}
+
+	client, err := v4.NewV4Client(d.getConfigCreds())
+	if err != nil {
+		return nil, fmt.Errorf("failed to get raw V4 client: %w", err)
+	}
+	d.rawV4Client = client
+	return client, nil
+}
+
+func (d *NutanixDriver) getNGT(ctx context.Context, vmUUID string) (*vmmModels.GuestTools, string, error) {
+	v4Client, err := d.getRawV4Client()
+	if err != nil {
+		return nil, "", err
+	}
+
+	response, err := v4Client.VmApiInstance.GetGuestToolsById(&vmUUID)
+	if err != nil {
+		return nil, "", fmt.Errorf("failed to get NGT configuration for VM %s: %w", vmUUID, err)
+	}
+	if response == nil || response.Data == nil {
+		return nil, "", fmt.Errorf("NGT configuration for VM %s was empty", vmUUID)
+	}
+
+	value := response.Data.GetValue()
+	guestTools, ok := value.(vmmModels.GuestTools)
+	if !ok {
+		return nil, "", fmt.Errorf("NGT configuration for VM %s contained an unexpected response", vmUUID)
+	}
+
+	etag := convergedv4.GetEtag(guestTools)
+	return &guestTools, etag, nil
+}
+
+func (d *NutanixDriver) EnableNGT(ctx context.Context, vmUUID string) error {
+	guestTools, etag, err := d.getNGT(ctx, vmUUID)
+	if err != nil {
+		return err
+	}
+	if guestTools.IsEnabled != nil && *guestTools.IsEnabled {
+		return nil
+	}
+	if etag == "" {
+		return fmt.Errorf("NGT configuration for VM %s did not include an ETag", vmUUID)
+	}
+
+	enabled := true
+	request := &vmmModels.GuestTools{IsEnabled: &enabled}
+	v4Client, err := d.getRawV4Client()
+	if err != nil {
+		return err
+	}
+	ifMatch := etag
+	_, err = v4Client.VmApiInstance.UpdateGuestToolsById(&vmUUID, request, map[string]interface{}{
+		"If-Match": &ifMatch,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to enable NGT for VM %s: %w", vmUUID, err)
+	}
+
+	return nil
+}
+
+func (d *NutanixDriver) GetNGTStatus(ctx context.Context, vmUUID string) (ngtStatus, error) {
+	guestTools, _, err := d.getNGT(ctx, vmUUID)
+	if err != nil {
+		return ngtStatus{}, err
+	}
+
+	status := ngtStatus{}
+	if guestTools.IsInstalled != nil {
+		status.Installed = *guestTools.IsInstalled
+	}
+	if guestTools.IsReachable != nil {
+		status.Reachable = *guestTools.IsReachable
+	}
+	if guestTools.IsEnabled != nil {
+		status.Enabled = *guestTools.IsEnabled
+	}
+	return status, nil
 }
 
 func findProjectByName(ctx context.Context, conn *v3.Client, name string) (*v3.Project, error) {
