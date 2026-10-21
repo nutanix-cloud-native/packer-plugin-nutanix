@@ -159,6 +159,7 @@ type FlatConfig struct {
 	Core                      *int64              `mapstructure:"core" json:"core" required:"false" cty:"core" hcl:"core"`
 	MemoryMB                  *int64              `mapstructure:"memory_mb" json:"memory_mb" required:"false" cty:"memory_mb" hcl:"memory_mb"`
 	UserData                  *string             `mapstructure:"user_data" json:"user_data" required:"false" cty:"user_data" hcl:"user_data"`
+	WindowsInstallType        *string             `mapstructure:"windows_install_type" json:"windows_install_type" required:"false" cty:"windows_install_type" hcl:"windows_install_type"`
 	VMCategories              []FlatCategory      `mapstructure:"vm_categories" required:"false" cty:"vm_categories" hcl:"vm_categories"`
 	Project                   *string             `mapstructure:"project" required:"false" cty:"project" hcl:"project"`
 	GPU                       []FlatGPU           `mapstructure:"gpu" required:"false" cty:"gpu" hcl:"gpu"`
@@ -283,6 +284,7 @@ func (*FlatConfig) HCL2Spec() map[string]hcldec.Spec {
 		"core":                         &hcldec.AttrSpec{Name: "core", Type: cty.Number, Required: false},
 		"memory_mb":                    &hcldec.AttrSpec{Name: "memory_mb", Type: cty.Number, Required: false},
 		"user_data":                    &hcldec.AttrSpec{Name: "user_data", Type: cty.String, Required: false},
+		"windows_install_type":         &hcldec.AttrSpec{Name: "windows_install_type", Type: cty.String, Required: false},
 		"vm_categories":                &hcldec.BlockListSpec{TypeName: "vm_categories", Nested: hcldec.ObjectSpec((*FlatCategory)(nil).HCL2Spec())},
 		"project":                      &hcldec.AttrSpec{Name: "project", Type: cty.String, Required: false},
 		"gpu":                          &hcldec.BlockListSpec{TypeName: "gpu", Nested: hcldec.ObjectSpec((*FlatGPU)(nil).HCL2Spec())},
@@ -449,6 +451,7 @@ type FlatVmConfig struct {
 	Core                   *int64         `mapstructure:"core" json:"core" required:"false" cty:"core" hcl:"core"`
 	MemoryMB               *int64         `mapstructure:"memory_mb" json:"memory_mb" required:"false" cty:"memory_mb" hcl:"memory_mb"`
 	UserData               *string        `mapstructure:"user_data" json:"user_data" required:"false" cty:"user_data" hcl:"user_data"`
+	WindowsInstallType     *string        `mapstructure:"windows_install_type" json:"windows_install_type" required:"false" cty:"windows_install_type" hcl:"windows_install_type"`
 	VMCategories           []FlatCategory `mapstructure:"vm_categories" required:"false" cty:"vm_categories" hcl:"vm_categories"`
 	Project                *string        `mapstructure:"project" required:"false" cty:"project" hcl:"project"`
 	GPU                    []FlatGPU      `mapstructure:"gpu" required:"false" cty:"gpu" hcl:"gpu"`
@@ -483,6 +486,7 @@ func (*FlatVmConfig) HCL2Spec() map[string]hcldec.Spec {
 		"core":                    &hcldec.AttrSpec{Name: "core", Type: cty.Number, Required: false},
 		"memory_mb":               &hcldec.AttrSpec{Name: "memory_mb", Type: cty.Number, Required: false},
 		"user_data":               &hcldec.AttrSpec{Name: "user_data", Type: cty.String, Required: false},
+		"windows_install_type":    &hcldec.AttrSpec{Name: "windows_install_type", Type: cty.String, Required: false},
 		"vm_categories":           &hcldec.BlockListSpec{TypeName: "vm_categories", Nested: hcldec.ObjectSpec((*FlatCategory)(nil).HCL2Spec())},
 		"project":                 &hcldec.AttrSpec{Name: "project", Type: cty.String, Required: false},
 		"gpu":                     &hcldec.BlockListSpec{TypeName: "gpu", Nested: hcldec.ObjectSpec((*FlatGPU)(nil).HCL2Spec())},
