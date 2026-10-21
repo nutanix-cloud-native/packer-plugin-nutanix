@@ -129,7 +129,7 @@ require (
 	github.com/jcmturner/rpc/v2 v2.0.3 // indirect
 	github.com/jehiah/go-strftime v0.0.0-20171201141054-1d33003b3869 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
-	github.com/klauspost/compress v1.18.5 // indirect
+	github.com/klauspost/compress v1.18.7 // indirect
 	github.com/kr/fs v0.1.0 // indirect
 	github.com/masterzen/simplexml v0.0.0-20190410153822-31eea3082786 // indirect
 	github.com/masterzen/winrm v0.0.0-20250927112105-5f8e6c707321 // indirect
@@ -195,6 +195,7 @@ replace (
 	github.com/antchfx/xpath => github.com/antchfx/xpath v1.3.6
 	github.com/hashicorp/consul => github.com/hashicorp/consul v1.10.4
 	github.com/hashicorp/vault => github.com/hashicorp/vault v1.4.2
+	github.com/klauspost/compress => github.com/klauspost/compress v1.18.7
 	github.com/prometheus/client_golang => github.com/prometheus/client_golang v1.23.2
 	github.com/yuin/goldmark => github.com/yuin/goldmark v1.8.2
 	go.mongodb.org/mongo-driver => go.mongodb.org/mongo-driver v1.17.9
