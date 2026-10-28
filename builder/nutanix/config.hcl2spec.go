@@ -411,7 +411,8 @@ func (*FlatVTPM) HCL2Spec() map[string]hcldec.Spec {
 // FlatVmClean is an auto-generated flat version of VmClean.
 // Where the contents of a field with a `mapstructure:,squash` tag are bubbled up.
 type FlatVmClean struct {
-	Cdrom *bool `mapstructure:"cdrom" json:"cdrom" required:"false" cty:"cdrom" hcl:"cdrom"`
+	Cdrom          *bool `mapstructure:"cdrom" json:"cdrom" required:"false" cty:"cdrom" hcl:"cdrom"`
+	KeepEmptyCdrom *bool `mapstructure:"keep_empty_cdrom" json:"keep_empty_cdrom" required:"false" cty:"keep_empty_cdrom" hcl:"keep_empty_cdrom"`
 }
 
 // FlatMapstructure returns a new FlatVmClean.
@@ -426,7 +427,8 @@ func (*VmClean) FlatMapstructure() interface{ HCL2Spec() map[string]hcldec.Spec 
 // The decoded values from this spec will then be applied to a FlatVmClean.
 func (*FlatVmClean) HCL2Spec() map[string]hcldec.Spec {
 	s := map[string]hcldec.Spec{
-		"cdrom": &hcldec.AttrSpec{Name: "cdrom", Type: cty.Bool, Required: false},
+		"cdrom":            &hcldec.AttrSpec{Name: "cdrom", Type: cty.Bool, Required: false},
+		"keep_empty_cdrom": &hcldec.AttrSpec{Name: "keep_empty_cdrom", Type: cty.Bool, Required: false},
 	}
 	return s
 }

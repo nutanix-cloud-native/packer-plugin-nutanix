@@ -137,7 +137,8 @@ type VmConfig struct {
 }
 
 type VmClean struct {
-	Cdrom bool `mapstructure:"cdrom" json:"cdrom" required:"false"`
+	Cdrom          bool `mapstructure:"cdrom" json:"cdrom" required:"false"`
+	KeepEmptyCdrom bool `mapstructure:"keep_empty_cdrom" json:"keep_empty_cdrom" required:"false"`
 }
 
 type OvaConfig struct {
@@ -249,6 +250,12 @@ func (c *Config) Prepare(raws ...interface{}) ([]string, error) {
 	if c.FailIfImageExists && c.ForceDeregister {
 		log.Println("fail_if_image_exists and force_deregister are mutually exclusive, please use only one of them")
 		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("fail_if_image_exists and force_deregister are mutually exclusive, please use only one of them"))
+	}
+
+	// Removing every CD-ROM and leaving one empty CD-ROM are different outcomes.
+	if c.Clean.Cdrom && c.Clean.KeepEmptyCdrom {
+		log.Println("vm_clean.cdrom and vm_clean.keep_empty_cdrom are mutually exclusive, please use only one of them")
+		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("vm_clean.cdrom and vm_clean.keep_empty_cdrom are mutually exclusive, please use only one of them"))
 	}
 
 	// Set OVA format if not provided
