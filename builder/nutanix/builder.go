@@ -84,7 +84,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 		},
 	}
 
-	if b.config.Clean.Cdrom {
+	if b.config.Clean.Cdrom || b.config.Clean.KeepEmptyCdrom {
 		steps = append(steps, &stepCleanVM{
 			Config: &b.config,
 		})

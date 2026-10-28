@@ -62,7 +62,7 @@ These parameters allow to configure everything around image creation, from the t
 - `image_skip` (bool) - Skip image creation (default is false).
 - `image_export` (bool) - Export raw image in the current folder (default is false).
 - `fail_if_image_exists` (bool) - Fail the build if an image with the same name already exists (default is false).
-- `allow_duplicate_images` (bool) - When `true`, the plugin tolerates multiple images with the same name in the Prism Central image library. Instead of failing, it selects the newest ready image. This is useful in parallel CI environments where concurrent builds may create images with identical names. When `false` (the default), the plugin returns an error if more than one image matches by name, which is the recommended behavior for production systems.
+- `allow_duplicate_images` (bool) - When `true`, the plugin tolerates multiple images with the same name **and type** in the Prism Central image library. Instead of failing, it selects the newest ready image. This is useful in parallel CI environments where concurrent builds may create images with identical names. When `false` (the default), the plugin returns an error if more than one image matches by name and type. Images that share a name but have different types (`DISK_IMAGE` vs `ISO_IMAGE`) are not treated as duplicates; lookup uses `image_type` to select the correct one.
 - `shutdown_command` (string) - Command line to shutdown your temporary VM.
 - `shutdown_timeout` (string) - Timeout for VM shutdown (format : 2m).
 - `vm_force_delete` (bool) - Delete vm even if build is not succesful (default is false).
@@ -152,12 +152,20 @@ It can be useful to remove unnecessary components or reset the VM to a clean sta
 
 All parameters of this `vm_clean` section are described below.
 
-- `cdrom` (bool) - Remove all CD-ROMs from the VM (default is false).
+- `cdrom` (bool) - Remove all CD-ROM devices from the VM (default is false).
+- `keep_empty_cdrom` (bool) - Eject inserted ISOs and leave one empty CD-ROM device (default is false). Extra CD-ROM devices from the build (OS ISO, VirtIO ISO, kickstart CD) are removed. The remaining device has no media. Mutually exclusive with `cdrom`. Use this when the build VM becomes a template, so clones keep a CD-ROM slot without Packer's build discs. The VM must be powered off. If the VM has no CD-ROM devices, this option does nothing.
 
 Sample:
 ```hcl
   vm_clean {
       cdrom = true
+  }
+```
+
+Leave one empty CD-ROM instead of removing every device:
+```hcl
+  vm_clean {
+      keep_empty_cdrom = true
   }
 ```
 

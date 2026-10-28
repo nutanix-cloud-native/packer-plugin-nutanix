@@ -20,7 +20,7 @@ func (s *stepCleanVM) Run(ctx context.Context, state multistep.StateBag) multist
 	d := state.Get("driver").(Driver)
 	vmUUID := state.Get("vm_uuid").(string)
 
-	if !s.Config.Clean.Cdrom {
+	if !s.Config.Clean.Cdrom && !s.Config.Clean.KeepEmptyCdrom {
 		log.Printf("No vm cleaning requested, skipping step.")
 		return multistep.ActionContinue
 	}
@@ -29,6 +29,14 @@ func (s *stepCleanVM) Run(ctx context.Context, state multistep.StateBag) multist
 		ui.Say("Cleaning up CD-ROM in virtual machine...")
 		if err := d.CleanCD(ctx, vmUUID); err != nil {
 			ui.Error("Error removing CdRoms: " + err.Error())
+			return multistep.ActionHalt
+		}
+	}
+
+	if s.Config.Clean.KeepEmptyCdrom {
+		ui.Say("Leaving a single empty CD-ROM on the virtual machine...")
+		if err := d.EmptyCD(ctx, vmUUID); err != nil {
+			ui.Error("Error leaving an empty CD-ROM: " + err.Error())
 			return multistep.ActionHalt
 		}
 	}
