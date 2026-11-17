@@ -15,6 +15,30 @@ import (
 	imageModels "github.com/nutanix/ntnx-api-golang-clients/vmm-go-client/v4/models/vmm/v4/content"
 )
 
+const errNoViewClusterPermission = "the Prism Central user does not have View Cluster permission"
+
+// isClusterViewPermissionDenied reports whether err indicates the caller lacked
+// permission to view/list clusters (e.g. PLAT-10007 / RBAC_AUTHORIZATION_ERROR).
+func isClusterViewPermissionDenied(err error) bool {
+	if err == nil {
+		return false
+	}
+	msg := strings.ToLower(err.Error())
+	return strings.Contains(msg, "plat-10007") ||
+		strings.Contains(msg, "rbac_authorization_error") ||
+		strings.Contains(msg, "access denied")
+}
+
+func wrapClusterLookupError(err error) error {
+	if err == nil {
+		return nil
+	}
+	if isClusterViewPermissionDenied(err) {
+		return fmt.Errorf("%s: %w", errNoViewClusterPermission, err)
+	}
+	return err
+}
+
 // VM helpers
 
 // findVMByUUID finds a VM by UUID using V4 API
@@ -160,7 +184,7 @@ func isPECluster(cluster *clusterModels.Cluster) bool {
 func findClusterByName(ctx context.Context, client *convergedv4.Client, name string) (string, error) {
 	clusters, err := client.Clusters.List(ctx, converged.WithFilter(fmt.Sprintf("name eq '%s'", name)))
 	if err != nil {
-		return "", err
+		return "", wrapClusterLookupError(err)
 	}
 
 	found := make([]clusterModels.Cluster, 0)
@@ -189,7 +213,7 @@ func getClusterUUID(ctx context.Context, client *convergedv4.Client, clusterName
 	if clusterUUID != "" {
 		cluster, err := client.Clusters.Get(ctx, clusterUUID)
 		if err != nil {
-			return "", fmt.Errorf("failed to get cluster by UUID %s: %s", clusterUUID, err.Error())
+			return "", wrapClusterLookupError(fmt.Errorf("failed to get cluster by UUID %s: %w", clusterUUID, err))
 		}
 		return *cluster.ExtId, nil
 	}
