@@ -55,72 +55,101 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 	// so we put it in the state bag to be used by the cleanup step
 	state.Put("ctx", ctx)
 
-	steps := []multistep.Step{
-		&commonsteps.StepCreateCD{
-			Files:   b.config.CDConfig.CDFiles,
-			Content: b.config.CDConfig.CDContent,
-			Label:   b.config.CDConfig.CDLabel,
-		},
-		&stepBuildVM{},
-		&stepVNCConnect{
-			Config: &b.config,
-		},
-		&stepVNCBootCommand{
-			Config: &b.config,
-		},
-		&stepWaitForIp{
-			Config: &b.config.WaitIpConfig,
-		},
-		&communicator.StepConnect{
-			Config:    &b.config.Comm,
-			SSHConfig: b.config.Comm.SSHConfigFunc(),
-			Host:      commHost(b.config.Comm.Host()),
-		},
-		new(commonsteps.StepProvision),
-		&StepShutdown{
-			Command:             b.config.ShutdownCommand,
-			Timeout:             b.config.ShutdownTimeout,
-			DisableStopInstance: b.config.DisableStopInstance,
-		},
-	}
+	var steps []multistep.Step
 
-	if b.config.Clean.Cdrom {
-		steps = append(steps, &stepCleanVM{
-			Config: &b.config,
-		})
-	}
+	if b.config.TemplateConfig.UpdateTemplate {
+		// Template update flow: initiate guest update -> provision -> shutdown -> complete
+		steps = []multistep.Step{
+			&stepInitiateGuestUpdate{
+				Config: &b.config,
+			},
+			&stepWaitForIp{
+				Config: &b.config.WaitIpConfig,
+			},
+			&communicator.StepConnect{
+				Config:    &b.config.Comm,
+				SSHConfig: b.config.Comm.SSHConfigFunc(),
+				Host:      commHost(b.config.Comm.Host()),
+			},
+			new(commonsteps.StepProvision),
+			&StepShutdown{
+				Command:             b.config.ShutdownCommand,
+				Timeout:             b.config.ShutdownTimeout,
+				DisableStopInstance: b.config.DisableStopInstance,
+			},
+			&stepCompleteGuestUpdate{
+				Config: &b.config,
+			},
+		}
+	} else {
+		// Normal build flow: create VM -> VNC -> provision -> shutdown -> create image/template/OVA
+		steps = []multistep.Step{
+			&commonsteps.StepCreateCD{
+				Files:   b.config.CDConfig.CDFiles,
+				Content: b.config.CDConfig.CDContent,
+				Label:   b.config.CDConfig.CDLabel,
+			},
+			&stepBuildVM{},
+			&stepVNCConnect{
+				Config: &b.config,
+			},
+			&stepVNCBootCommand{
+				Config: &b.config,
+			},
+			&stepWaitForIp{
+				Config: &b.config.WaitIpConfig,
+			},
+			&communicator.StepConnect{
+				Config:    &b.config.Comm,
+				SSHConfig: b.config.Comm.SSHConfigFunc(),
+				Host:      commHost(b.config.Comm.Host()),
+			},
+			new(commonsteps.StepProvision),
+			&StepShutdown{
+				Command:             b.config.ShutdownCommand,
+				Timeout:             b.config.ShutdownTimeout,
+				DisableStopInstance: b.config.DisableStopInstance,
+			},
+		}
 
-	if !b.config.ImageSkip {
-		steps = append(steps, &stepCreateImage{
-			Config: &b.config,
-		})
-	}
+		if b.config.Clean.Cdrom {
+			steps = append(steps, &stepCleanVM{
+				Config: &b.config,
+			})
+		}
 
-	if b.config.ImageExport {
-		steps = append(steps, &stepExportImage{
-			VMName:    b.config.VMName,
-			ImageName: b.config.VmConfig.ImageName,
-		})
-	}
+		if !b.config.ImageSkip {
+			steps = append(steps, &stepCreateImage{
+				Config: &b.config,
+			})
+		}
 
-	if b.config.TemplateConfig.Create {
-		steps = append(steps, &stepCreateTemplate{
-			Config: &b.config,
-		})
-	}
+		if b.config.ImageExport {
+			steps = append(steps, &stepExportImage{
+				VMName:    b.config.VMName,
+				ImageName: b.config.VmConfig.ImageName,
+			})
+		}
 
-	if b.config.OvaConfig.Create {
-		steps = append(steps, &StepCreateOVA{
-			VMName:    b.config.VMName,
-			OvaConfig: b.config.OvaConfig,
-		})
-	}
+		if b.config.TemplateConfig.Create {
+			steps = append(steps, &stepCreateTemplate{
+				Config: &b.config,
+			})
+		}
 
-	if b.config.OvaConfig.Export {
-		steps = append(steps, &StepExportOVA{
-			VMName:    b.config.VMName,
-			OvaConfig: b.config.OvaConfig,
-		})
+		if b.config.OvaConfig.Create {
+			steps = append(steps, &StepCreateOVA{
+				VMName:    b.config.VMName,
+				OvaConfig: b.config.OvaConfig,
+			})
+		}
+
+		if b.config.OvaConfig.Export {
+			steps = append(steps, &StepExportOVA{
+				VMName:    b.config.VMName,
+				OvaConfig: b.config.OvaConfig,
+			})
+		}
 	}
 
 	b.runner = commonsteps.NewRunnerWithPauseFn(steps, b.config.PackerConfig, ui, state)
