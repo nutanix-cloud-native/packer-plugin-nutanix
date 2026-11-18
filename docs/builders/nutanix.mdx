@@ -161,12 +161,20 @@ It can be useful to remove unnecessary components or reset the VM to a clean sta
 
 All parameters of this `vm_clean` section are described below.
 
-- `cdrom` (bool) - Remove all CD-ROMs from the VM (default is false).
+- `cdrom` (bool) - Remove all CD-ROM devices from the VM (default is false).
+- `keep_empty_cdrom` (bool) - Eject inserted ISOs and leave one empty CD-ROM device (default is false). Extra CD-ROM devices from the build (OS ISO, VirtIO ISO, kickstart CD) are removed. The remaining device has no media. Mutually exclusive with `cdrom`. Use this when the build VM becomes a template, so clones keep a CD-ROM slot without Packer's build discs. The VM must be powered off. If the VM has no CD-ROM devices, this option does nothing.
 
 Sample:
 ```hcl
   vm_clean {
       cdrom = true
+  }
+```
+
+Leave one empty CD-ROM instead of removing every device:
+```hcl
+  vm_clean {
+      keep_empty_cdrom = true
   }
 ```
 
