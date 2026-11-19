@@ -15,6 +15,37 @@ import (
 	imageModels "github.com/nutanix/ntnx-api-golang-clients/vmm-go-client/v4/models/vmm/v4/content"
 )
 
+// Prism Central permission cited when cluster lookup fails due to RBAC.
+const permViewCluster = "View Cluster"
+
+// isPermissionDenied reports whether err indicates an RBAC / access denial.
+// Prefer typed converged.ErrUnauthorized from prism-go-client; keep a narrow
+// fallback for RBAC_AUTHORIZATION_ERROR / PLAT-10007 until that errorGroup is
+// mapped in prism-go-client.
+func isPermissionDenied(err error) bool {
+	if err == nil {
+		return false
+	}
+	if converged.IsUnauthorized(err) {
+		return true
+	}
+	msg := strings.ToLower(err.Error())
+	return strings.Contains(msg, "plat-10007") ||
+		strings.Contains(msg, "rbac_authorization_error")
+}
+
+// wrapPermissionDeniedError adds a clear View Cluster permission hint when err
+// is an RBAC denial; otherwise returns err unchanged.
+func wrapPermissionDeniedError(err error, permission string) error {
+	if err == nil {
+		return nil
+	}
+	if isPermissionDenied(err) {
+		return fmt.Errorf("the Prism Central user does not have %q permission: %w", permission, err)
+	}
+	return err
+}
+
 // VM helpers
 
 // findVMByUUID finds a VM by UUID using V4 API
@@ -160,7 +191,7 @@ func isPECluster(cluster *clusterModels.Cluster) bool {
 func findClusterByName(ctx context.Context, client *convergedv4.Client, name string) (string, error) {
 	clusters, err := client.Clusters.List(ctx, converged.WithFilter(fmt.Sprintf("name eq '%s'", name)))
 	if err != nil {
-		return "", err
+		return "", wrapPermissionDeniedError(err, permViewCluster)
 	}
 
 	found := make([]clusterModels.Cluster, 0)
@@ -189,7 +220,7 @@ func getClusterUUID(ctx context.Context, client *convergedv4.Client, clusterName
 	if clusterUUID != "" {
 		cluster, err := client.Clusters.Get(ctx, clusterUUID)
 		if err != nil {
-			return "", fmt.Errorf("failed to get cluster by UUID %s: %s", clusterUUID, err.Error())
+			return "", wrapPermissionDeniedError(fmt.Errorf("failed to get cluster by UUID %s: %w", clusterUUID, err), permViewCluster)
 		}
 		return *cluster.ExtId, nil
 	}
