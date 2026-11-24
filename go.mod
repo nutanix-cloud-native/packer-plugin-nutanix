@@ -6,12 +6,12 @@ require (
 	github.com/hashicorp/hcl/v2 v2.24.0
 	github.com/hashicorp/packer-plugin-sdk v0.6.9
 	github.com/mitchellh/go-vnc v0.0.0-20150629162542-723ed9867aed
-	github.com/nutanix-cloud-native/prism-go-client v0.7.3
-	github.com/nutanix/ntnx-api-golang-clients/clustermgmt-go-client/v4 v4.2.2
-	github.com/nutanix/ntnx-api-golang-clients/networking-go-client/v4 v4.3.1
-	github.com/nutanix/ntnx-api-golang-clients/vmm-go-client/v4 v4.2.2
+	github.com/nutanix-cloud-native/prism-go-client v0.8.3
+	github.com/nutanix/ntnx-api-golang-clients/clustermgmt-go-client/v4 v4.3.1
+	github.com/nutanix/ntnx-api-golang-clients/networking-go-client/v4 v4.4.1
+	github.com/nutanix/ntnx-api-golang-clients/vmm-go-client/v4 v4.3.1
 	github.com/zclconf/go-cty v1.16.3
-	golang.org/x/net v0.60.0
+	golang.org/x/net v0.62.0
 )
 
 require (
@@ -68,7 +68,7 @@ require (
 	github.com/envoyproxy/protoc-gen-validate v1.3.3 // indirect
 	github.com/fatih/color v1.16.0 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
-	github.com/go-jose/go-jose/v4 v4.1.4 // indirect
+	github.com/go-jose/go-jose/v4 v4.1.6 // indirect
 	github.com/go-logr/logr v1.4.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-logr/zapr v1.3.0 // indirect
@@ -143,16 +143,18 @@ require (
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/mitchellh/reflectwalk v1.0.2 // indirect
 	github.com/nu7hatch/gouuid v0.0.0-20131221200532-179d4d0c4d8d // indirect
-	github.com/nutanix/ntnx-api-golang-clients/datapolicies-go-client/v4 v4.2.1 // indirect
-	github.com/nutanix/ntnx-api-golang-clients/iam-go-client/v4 v4.0.1 // indirect
-	github.com/nutanix/ntnx-api-golang-clients/prism-go-client/v4 v4.2.1 // indirect
-	github.com/nutanix/ntnx-api-golang-clients/volumes-go-client/v4 v4.2.1 // indirect
+	github.com/nutanix/ntnx-api-golang-clients/datapolicies-go-client/v4 v4.3.1 // indirect
+	github.com/nutanix/ntnx-api-golang-clients/iam-go-client/v4 v4.1.2-beta.3 // indirect
+	github.com/nutanix/ntnx-api-golang-clients/monitoring-go-client/v4 v4.3.1 // indirect
+	github.com/nutanix/ntnx-api-golang-clients/multidomain-go-client/v4 v4.4.1-beta.1 // indirect
+	github.com/nutanix/ntnx-api-golang-clients/prism-go-client/v4 v4.4.1 // indirect
+	github.com/nutanix/ntnx-api-golang-clients/volumes-go-client/v4 v4.3.1 // indirect
 	github.com/oklog/ulid/v2 v2.1.1 // indirect
 	github.com/packer-community/winrmcp v0.0.0-20221126162354-6e900dd2c68f // indirect
 	github.com/pkg/sftp v1.13.10 // indirect
 	github.com/planetscale/vtprotobuf v0.6.1-0.20240319094008-0393e58bdf10 // indirect
 	github.com/ryanuber/go-glob v1.0.0 // indirect
-	github.com/sirupsen/logrus v1.9.3 // indirect
+	github.com/sirupsen/logrus v1.9.4 // indirect
 	github.com/spiffe/go-spiffe/v2 v2.7.0 // indirect
 	github.com/tidwall/transform v0.0.0-20201103190739-32f242e2dbde // indirect
 	github.com/ugorji/go/codec v1.3.1 // indirect
@@ -171,17 +173,17 @@ require (
 	go.uber.org/multierr v1.10.0 // indirect
 	go.uber.org/zap v1.27.0 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
-	golang.org/x/crypto v0.57.0 // indirect
+	golang.org/x/crypto v0.58.0 // indirect
 	golang.org/x/exp v0.0.0-20230321023759-10a507213a29 // indirect
 	golang.org/x/mobile v0.0.0-20260312152759-81488f6aeb60 // indirect
 	golang.org/x/mod v0.41.0 // indirect
 	golang.org/x/oauth2 v0.36.0 // indirect
-	golang.org/x/sync v0.23.0 // indirect
-	golang.org/x/sys v0.48.0 // indirect
-	golang.org/x/term v0.46.0 // indirect
-	golang.org/x/text v0.42.0 // indirect
+	golang.org/x/sync v0.24.0 // indirect
+	golang.org/x/sys v0.49.0 // indirect
+	golang.org/x/term v0.47.0 // indirect
+	golang.org/x/text v0.43.0 // indirect
 	golang.org/x/time v0.15.0 // indirect
-	golang.org/x/tools v0.49.0 // indirect
+	golang.org/x/tools v0.51.0 // indirect
 	google.golang.org/api v0.272.0 // indirect
 	google.golang.org/genproto v0.0.0-20260217215200-42d3e9bedb6d // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20260526163538-3dc84a4a5aaa // indirect
@@ -193,6 +195,7 @@ require (
 
 replace (
 	github.com/antchfx/xpath => github.com/antchfx/xpath v1.3.6
+	github.com/go-jose/go-jose/v4 => github.com/go-jose/go-jose/v4 v4.1.6
 	github.com/hashicorp/consul => github.com/hashicorp/consul v1.10.4
 	github.com/hashicorp/vault => github.com/hashicorp/vault v1.4.2
 	github.com/klauspost/compress => github.com/klauspost/compress v1.18.7
@@ -201,7 +204,8 @@ replace (
 	go.mongodb.org/mongo-driver => go.mongodb.org/mongo-driver v1.17.9
 	golang.org/x/image => golang.org/x/image v0.42.0
 	golang.org/x/mod => golang.org/x/mod v0.41.0
-	golang.org/x/text => golang.org/x/text v0.42.0
+	golang.org/x/net => golang.org/x/net v0.62.0
+	golang.org/x/text => golang.org/x/text v0.43.0
 )
 
 replace github.com/zclconf/go-cty => github.com/nywilken/go-cty v1.13.3 // added by packer-sdc fix as noted in github.com/hashicorp/packer-plugin-sdk/issues/187

@@ -893,7 +893,7 @@ func (d *NutanixDriver) PowerOn(ctx context.Context, vmUUID string) error {
 	}
 
 	log.Printf("powering on vm %s...", vmUUID)
-	powerOnOp, err := v4Client.VMs.PowerOnVM(vmUUID)
+	powerOnOp, err := v4Client.VMs.PowerOnVM(ctx, vmUUID)
 	if err != nil {
 		log.Printf("error initiating power on for vm: %s", err.Error())
 		return fmt.Errorf("failed to power on VM: %s", err.Error())
@@ -1399,7 +1399,7 @@ func (d *NutanixDriver) PowerOff(ctx context.Context, vmUUID string) error {
 
 	log.Printf("stopping VM: %s", d.Config.VMName)
 
-	operation, err := v4Client.VMs.PowerOffVM(vmUUID)
+	operation, err := v4Client.VMs.PowerOffVM(ctx, vmUUID)
 	if err != nil {
 		return fmt.Errorf("error while PowerOff VM: %s", err.Error())
 	}
