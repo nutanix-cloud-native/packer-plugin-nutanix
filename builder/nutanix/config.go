@@ -41,6 +41,15 @@ const (
 
 	// NutanixIdentifierChecksunTypeSHA1 is a resource identifier identifying the SHA-1 checksum type for virtual machines.
 	NutanixIdentifierChecksunTypeSHA1 string = "sha1"
+
+	// ImageTypeDisk is an empty disk attached to the temporary VM.
+	ImageTypeDisk string = "DISK"
+
+	// ImageTypeDiskImage is a disk created from a Prism Central DISK_IMAGE.
+	ImageTypeDiskImage string = "DISK_IMAGE"
+
+	// ImageTypeISOImage is a CD-ROM created from a Prism Central ISO_IMAGE.
+	ImageTypeISOImage string = "ISO_IMAGE"
 )
 
 type Config struct {
@@ -399,7 +408,7 @@ func (c *Config) Prepare(raws ...interface{}) ([]string, error) {
 		}
 
 		// Validate storage container defined only with disk type
-		if (disk.StorageContainerUUID != "") && disk.ImageType != "DISK" {
+		if (disk.StorageContainerUUID != "") && disk.ImageType != ImageTypeDisk {
 			log.Printf("disk %d: Storage container UUID can be set only with DISK image type\n", index)
 			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("disk %d: storage_container_uuid can be set only with DISK image type", index))
 		}
