@@ -62,6 +62,7 @@ type Driver interface {
 	SaveVMDisk(context.Context, string, int, []Category) (*nutanixImage, error)
 	WaitForShutdown(string, <-chan struct{}) bool
 	CleanCD(context.Context, string) error
+	EmptyCD(context.Context, string) error
 	PowerOn(context.Context, string) error
 	GenerateConsoleToken(context.Context, string) (token, wsUri string, err error)
 }
